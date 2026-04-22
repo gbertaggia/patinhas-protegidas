@@ -1,16 +1,19 @@
 from flask import Flask, render_template, request, session, redirect
 import pymysql
+import os
+from dotenv import load_dotenv
+
+# Carrega as variáveis do arquivo .env
+load_dotenv()
 
 app = Flask(__name__)
-
-# CHAVE SECRETA: Obrigatória para usar sessões. O Flask usa isso para criptografar o crachá.
 app.secret_key = 'chave_super_secreta_do_projeto' 
 
 def conectar_banco():
     return pymysql.connect(
         host="127.0.0.1",
         user="root",
-        password="Cobinhakai16*16",  
+        password=os.getenv("DB_PASSWORD"),  # <-- A mágica acontece aqui!
         database="patinhas_protegidas"
     )
 
