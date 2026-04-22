@@ -7,13 +7,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'chave_super_secreta_do_projeto' 
+app.secret_key = 'chave_do_projeto' 
 
 def conectar_banco():
     return pymysql.connect(
         host="127.0.0.1",
         user="root",
-        password=os.getenv("DB_PASSWORD"),  # <-- A mágica acontece aqui!
+        password=os.getenv("DB_PASSWORD"),  
         database="patinhas_protegidas"
     )
 
@@ -66,8 +66,7 @@ def fazer_login():
         conexao.close()
 
         if usuario_encontrado:
-            # === A MÁGICA ACONTECE AQUI ===
-            # Em vez de só mostrar um texto, nós criamos o "crachá" e redirecionamos pro painel!
+            # Em vez de só mostrar um texto, nós criamos o "crachá" e redirecionamos pro painel
             session['usuario_logado'] = email_digitado
             return redirect('/painel')
         else:
