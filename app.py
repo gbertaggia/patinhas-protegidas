@@ -130,48 +130,33 @@ def cadastrar_animal():
     except Exception as e:
         return f"<h1>Ops! Erro ao registrar o animal 🚨</h1> <p>Detalhes: {e}</p>"
 
-
-
 # 5. ROTAS PROTEGIDAS (Apenas para quem tem crachá)
 @app.route('/painel')
 def painel():
-    # 1. Porta de segurança (Fica no topo)
+    
     if 'usuario_logado' not in session:
         return redirect('/')
     
-    # 2. Lemos as gavetas da sessão (O e-mail pra tela e o ID pro banco)
     email_da_protetora = session['usuario_logado']
     id_protetora = session['id_usuario'] 
 
-    # 3. O novo bloco de extração de dados
     try:
-        # A. Conecta no banco e cria cursor
         conexao = conectar_banco()
         cursor = conexao.cursor()
 
-        # B. Escreve a string SQL (O seu SELECT) e a tupla solitária (id_protetora,)
-        comando_sql = "SELECT * FROM animais where id_usuario = %s"
+        comando_sql = "SELECT * FROM animais where usuario_id = %s"
         valores = (id_protetora,)
         
-        # C. Executa o SQL e usa o fetchall() para guardar tudo na variável lista_animais
         cursor.execute(comando_sql, valores)
         lista_animais = cursor.fetchall()
         
-        # D. Fecha cursor e conexão
-
+        cursor.close()
         conexao.close()
-        cursor.close
         
-        # E. O Grande Final! Mandamos TUDO para o HTML (o email e a lista nova)
         return render_template('painel.html', email=email_da_protetora, animais=lista_animais)
 
     except Exception as e:
         return f"<h1>Ops! Erro ao carregar o painel 🚨</h1> <p>Detalhes: {e}</p>"
-
-
-
-
-
 
 @app.route('/logout')
 def sair():
