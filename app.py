@@ -158,6 +158,84 @@ def deletar_animal(id_animal):
 
     except Exception as e:
         return f"<h1>Ops! Erro ao deletar o animal 🚨</h1> <p>Detalhes: {e}</p>"
+    
+#rota para editar o cadastro de um animal
+@app.route('/editar_animal/<int:id_animal>')
+def carregar_edicao_animal(id_animal):
+    if 'usuario_logado' not in session:
+        return redirect('/')
+    
+    id_protetora = session['id_usuario']
+
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
+
+        comando_sql = "SELECT * FROM animais WHERE id = %s AND usuario_id = %s"
+        
+        # veio da URL: id_animal
+        valores = (id_animal, id_protetora)
+
+        cursor.execute(comando_sql, valores)
+        
+        # Como é apenas UM animal, usamos o fetchone()
+        # O animal_para_editar será um dicionário (ou tupla) com os dados atuais
+        animal_para_editar = cursor.fetchone()
+        
+        cursor.close()
+        conexao.close()
+
+        # Se por acaso o animal não for encontrado (ID errado ou não é daquela protetora)
+        if not animal_para_editar:
+            return "<h1>Animal não encontrado! 🔍</h1>"
+
+        # Entregamos o animal para a tela de edição
+        return render_template('editar_animal.html', animal=animal_para_editar)
+
+    except Exception as e:
+        return f"<h1>Erro ao carregar os dados 🚨</h1> <p>{e}</p>"
+    
+# rota de edição
+# O 'POST' garante que essa rota só aceita dados enviados por um formulário HTML
+@app.route('/salvar_edicao/<int:id_animal>', methods=['POST'])
+def salvar_edicao_animal(id_animal):
+    
+    if 'usuario_logado' not in session:
+        return redirect('/')
+    
+    id_protetora = session['id_usuario']
+
+
+    novo_nome = request.form.get('nome')
+    nova_especie = request.form.get('especie')
+    nova_idade = request.form.get('idade')
+    nova_raca = request.form.get('raca')
+
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
+
+        comando_sql = """
+            UPDATE animais 
+            SET nome = %s, especie = %s, idade = %s, raca = %s 
+            WHERE id = %s AND usuario_id = %s
+        """
+        
+        # A Tupla na ordem EXATA dos %s (4 dados novos + 2 travas de segurança)
+        valores = (novo_nome, nova_especie, nova_idade, nova_raca, id_animal, id_protetora)
+
+        # 5. Executa e Salva (commit é obrigatório no UPDATE)
+        cursor.execute(comando_sql, valores)
+        conexao.commit()
+        
+        cursor.close()
+        conexao.close()
+
+        # Manda a usuária de volta pro painel com a lista atualizada
+        return redirect('/painel')
+
+    except Exception as e:
+        return f"<h1>Ops! Erro ao atualizar o animal 🚨</h1> <p>Detalhes: {e}</p>"
 
 # 5. ROTAS PROTEGIDAS (Apenas para quem tem crachá)
 @app.route('/painel')
