@@ -93,20 +93,20 @@ def fazer_login():
     
 @app.route('/cadastrar_animal', methods=['POST'])
 def cadastrar_animal():
-    # 1. VERIFICAÇÃO DE SEGURANÇA (se o usuário não está logado, então é redirecionado para pag principal)
+    # VERIFICAÇÃO DE SEGURANÇA (se o usuário não está logado, então é redirecionado para pag principal)
     if 'usuario_logado' not in session:
         return redirect('/')
 
-    # 2. IDENTIFICAÇÃO 
+    # IDENTIFICAÇÃO 
     id_protetora = session['id_usuario']
 
-    # 3. CAPTURA DOS DADOS DO HTML
+    # CAPTURA DOS DADOS DO HTML
     nome_animal = request.form.get('nome')
     especie_animal = request.form.get('especie')
     idade_animal = request.form.get('idade')
     raca_animal = request.form.get('raca')
     
-    # 4. INGESTÃO NO BANCO DE DADOS
+    # INGESTÃO NO BANCO DE DADOS
     try:
         # abrindo conexão e cursor
         conexao = conectar_banco()
@@ -115,10 +115,10 @@ def cadastrar_animal():
         # Comando SQL de inserção
         comando_sql = "INSERT INTO animais (usuario_id, nome, especie, idade, raca) VALUES (%s, %s, %s, %s, %s)"
         
-        # C. A tupla já está pronta aguardando a inserção
+        # A tupla aguardando a inserção
         valores = (id_protetora, nome_animal, especie_animal, idade_animal, raca_animal)
 
-        # D. Como você salva no disco e libera os recursos do banco?
+        # salva no disco e libera os recursos do banco
         cursor.execute(comando_sql, valores)
         conexao.commit()
         
@@ -129,6 +129,35 @@ def cadastrar_animal():
 
     except Exception as e:
         return f"<h1>Ops! Erro ao registrar o animal 🚨</h1> <p>Detalhes: {e}</p>"
+    
+#rota para deletar animal vinculado a um usuario_id específico   
+@app.route('/deletar_animal/<int:id_animal>')
+def deletar_animal(id_animal):
+    if 'usuario_logado' not in session:
+        return redirect('/')
+
+    # Pega quem está logado no momento
+    id_protetora = session['id_usuario']
+
+    # comando de exclusão
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
+
+        comando_sql = "DELETE FROM animais WHERE id = %s AND usuario_id = %s"
+        
+        valores = (id_animal, id_protetora)
+
+        cursor.execute(comando_sql, valores)
+        conexao.commit()
+        
+        cursor.close()
+        conexao.close()
+
+        return redirect('/painel')
+
+    except Exception as e:
+        return f"<h1>Ops! Erro ao deletar o animal 🚨</h1> <p>Detalhes: {e}</p>"
 
 # 5. ROTAS PROTEGIDAS (Apenas para quem tem crachá)
 @app.route('/painel')
