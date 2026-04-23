@@ -82,6 +82,7 @@ def fazer_login():
         if usuario_encontrado:
             # Cria o crachá assinado guardando o e-mail dela e manda pro painel
             session['usuario_logado'] = email_digitado
+            session['id_usuario'] = usuario_encontrado[0]
             return redirect('/painel')
         else:
             # Se trouxe None (False), barra a entrada
@@ -89,17 +90,88 @@ def fazer_login():
 
     except Exception as e:
         return f"<h1>Ops! Ocorreu um erro no Banco de Dados 🚨</h1> <p>Detalhes: {e}</p>"
+    
+@app.route('/cadastrar_animal', methods=['POST'])
+def cadastrar_animal():
+    # 1. VERIFICAÇÃO DE SEGURANÇA (se o usuário não está logado, então é redirecionado para pag principal)
+    if 'usuario_logado' not in session:
+        return redirect('/')
+
+    # 2. IDENTIFICAÇÃO 
+    id_protetora = session['id_usuario']
+
+    # 3. CAPTURA DOS DADOS DO HTML
+    nome_animal = request.form.get('nome')
+    especie_animal = request.form.get('especie')
+    idade_animal = request.form.get('idade')
+    raca_animal = request.form.get('raca')
+    
+    # 4. INGESTÃO NO BANCO DE DADOS
+    try:
+        # abrindo conexão e cursor
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
+
+        # Comando SQL de inserção
+        comando_sql = "INSERT INTO animais (usuario_id, nome, especie, idade, raca) VALUES (%s, %s, %s, %s, %s)"
+        
+        # C. A tupla já está pronta aguardando a inserção
+        valores = (id_protetora, nome_animal, especie_animal, idade_animal, raca_animal)
+
+        # D. Como você salva no disco e libera os recursos do banco?
+        cursor.execute(comando_sql, valores)
+        conexao.commit()
+        
+        cursor.close()
+        conexao.close()
+
+        return "<h1>Sucesso! 🐾</h1> <p>Animalzinho registrado no sistema.</p> <a href='/painel'>Voltar ao Painel</a>"
+
+    except Exception as e:
+        return f"<h1>Ops! Erro ao registrar o animal 🚨</h1> <p>Detalhes: {e}</p>"
+
+
 
 # 5. ROTAS PROTEGIDAS (Apenas para quem tem crachá)
 @app.route('/painel')
 def painel():
-    # Se não tiver crachá na memória, expulsa de volta para a porta principal
+    # 1. Porta de segurança (Fica no topo)
     if 'usuario_logado' not in session:
         return redirect('/')
     
-    # Lê o nome no crachá e entrega a tela do painel 
+    # 2. Lemos as gavetas da sessão (O e-mail pra tela e o ID pro banco)
     email_da_protetora = session['usuario_logado']
-    return render_template('painel.html', email=email_da_protetora)
+    id_protetora = session['id_usuario'] 
+
+    # 3. O novo bloco de extração de dados
+    try:
+        # A. Conecta no banco e cria cursor
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
+
+        # B. Escreve a string SQL (O seu SELECT) e a tupla solitária (id_protetora,)
+        comando_sql = "SELECT * FROM animais where id_usuario = %s"
+        valores = (id_protetora,)
+        
+        # C. Executa o SQL e usa o fetchall() para guardar tudo na variável lista_animais
+        cursor.execute(comando_sql, valores)
+        lista_animais = cursor.fetchall()
+        
+        # D. Fecha cursor e conexão
+
+        conexao.close()
+        cursor.close
+        
+        # E. O Grande Final! Mandamos TUDO para o HTML (o email e a lista nova)
+        return render_template('painel.html', email=email_da_protetora, animais=lista_animais)
+
+    except Exception as e:
+        return f"<h1>Ops! Erro ao carregar o painel 🚨</h1> <p>Detalhes: {e}</p>"
+
+
+
+
+
 
 @app.route('/logout')
 def sair():
