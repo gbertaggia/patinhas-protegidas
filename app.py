@@ -93,7 +93,7 @@ def fazer_login():
     
 @app.route('/cadastrar_animal', methods=['POST'])
 def cadastrar_animal():
-    # VERIFICAÇÃO DE SEGURANÇA (se o usuário não está logado, então é redirecionado para pag principal)
+    # VERIFICAÇÃO DE SEGURANÇA (se o usuário não está logado, então é redirecionado para página principal)
     if 'usuario_logado' not in session:
         return redirect('/')
 
