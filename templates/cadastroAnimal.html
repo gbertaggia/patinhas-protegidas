@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Patinhas Protegidas - Cadastro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Esconde o campo de data por padrão */
+        #container-data {
+            display: none;
+            margin-top: 10px;
+        }
+
+        /* Se o rádio com ID "sim" for marcado, mostra o irmão #container-data */
+        #sim:checked~#container-data {
+            display: block;
+        }
+    </style>
+</head>
+
+<body class="bg-light d-flex align-items-center justify-content-center" style="height: 100vh;">
+
+    <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
+        <h3 class="text-center text-success mb-4">🐾 Novo Animal</h3>
+
+        <form method="POST" action="/cadastrar_animal">
+            <div class="mb-3">
+                <label for="foto-perfil">Foto do pet:</label>
+                <input type="file" class="form-control" id="foto-perfil" name="imagem" accept="image/*">
+            </div>
+            <div class="mb-3">
+                <label for="nome" class="form-label">Nome</label>
+                <input type="text" class="form-control" id="nome" name="nome" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="especie-resgatada" class="form-label">Espécie do Animal:</label>
+                <select name="especie" id="especie-resgatada" class="form-control" required>
+                    <option value="" disabled selected>Selecione a espécie...</option>
+
+                    <optgroup label="Mais Comuns">
+                        <option value="cao">Cachorro</option>
+                        <option value="gato">Gato</option>
+                    </optgroup>
+
+                    <optgroup label="Outros">
+                        <option value="coelho">Coelho</option>
+                        <option value="ave">Ave</option>
+                        <option value="ave">Tartaruga</option>
+                        <option value="porquinho-da-india">Porquinho-da-índia</option>
+                        <option value="equino">Cavalo/Burro </option>
+                        <option value="outro">Outra espécie</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="idade" class="form-label">Idade</label>
+                <input type="number" class="form-control" id="idade" name="idade" required>
+            </div>
+            <div class="mb-3">
+                <label for="raca">Raça do Animal:</label>
+                <select name="raca" id="raca" class="form-control">
+                    <option value="" disabled selected>Selecione a raça...</option>
+
+                    <optgroup label="Cachorros">
+                        <option value="srd-cao">Sem Raça Definida (Vira-lata)</option>
+                        <option value="shih-tzu">Shih Tzu</option>
+                        <option value="poodle">Poodle</option>
+                        <option value="buldogue-frances">Buldogue Francês</option>
+                        <option value="golden-retriever">Golden Retriever</option>
+                        <option value="labrador">Labrador</option>
+                        <option value="pinscher">Pinscher</option>
+                        <option value="pastor-alemao">Pastor Alemão</option>
+                        <option value="yorkshire">Yorkshire</option>
+                        <option value="pit-bull">Pit Bull</option>
+                    </optgroup>
+
+                    <optgroup label="Gatos">
+                        <option value="srd-gato">Sem Raça Definida (Vira-lata)</option>
+                        <option value="siames">Siamês</option>
+                        <option value="persa">Persa</option>
+                        <option value="maine-coon">Maine Coon</option>
+                        <option value="angora">Angorá</option>
+                        <option value="bengal">Bengal</option>
+                        <option value="ragdoll">Ragdoll</option>
+                    </optgroup>
+
+                    <option value="outra">Outra raça...</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <fieldset>
+                    <p>Animal já castrado?</p>
+
+                    <input type="radio" id="sim" name="escolha" value="sim">
+                    <label for="sim">Sim</label>
+
+                    <input type="radio" id="nao" name="escolha" value="nao">
+                    <label for="nao">Não</label>
+
+                    <div id="container-data">
+                        <label for="data-agendamento">Data da Castração:</label>
+                        <input type="date" id="data-agendamento" name="data">
+                    </div>
+                </fieldset>
+            </div>
+            
+
+
+            <button type="submit" class="btn btn-success w-100 mb-2">Cadastrar animal</button>
+
+        </form>
+    </div>
+
+</body>
+
+</html>
