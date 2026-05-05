@@ -101,11 +101,13 @@ def cadastrar_animal():
     id_protetora = session['id_usuario']
 
     # CAPTURA DOS DADOS DO HTML
+    nome_animal = request.form.get('foto')
     nome_animal = request.form.get('nome')
     especie_animal = request.form.get('especie')
     idade_animal = request.form.get('idade')
     raca_animal = request.form.get('raca')
-    
+    castrado = request.form.get('castrado')
+    data_castracao = request.form.get('data')
     # INGESTÃO NO BANCO DE DADOS
     try:
         # abrindo conexão e cursor
@@ -275,3 +277,5 @@ def sair():
 if __name__ == '__main__':
     # Mantém o servidor ligado infinitamente na porta 5000
     app.run(host='0.0.0.0', debug=True)
+
+    
