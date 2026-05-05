@@ -11,14 +11,14 @@ app.secret_key = 'chave_do_projeto' # Carimbo de segurança para assinar os crac
 
 # 2. PONTE COM O BANCO DE DADOS
 def conectar_banco():
-    # Abre o "cano" de comunicação com o MySQL local usando a senha protegida
+    # comunicação com banco na nuvem Aiven
     return pymysql.connect(
-        host="127.0.0.1",
-        user="root",
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
-        database="patinhas_protegidas"
+        database=os.getenv("DB_NAME"),
+        port=int(os.getenv("DB_PORT"))  
     )
-
 # 3. ROTAS VISUAIS (Telas que apenas entregam HTML)
 @app.route('/')
 def home():
