@@ -130,7 +130,7 @@ def fazer_login():
         return f"<h1>Ops! Ocorreu um erro no Banco de Dados 🚨</h1> <p>Detalhes: {e}</p>"
 
 @app.route('/cadastro_Animal')
-def tela_cadastro():
+def tela_cadastro_pet():
     return render_template('cadastroAnimal.html')   
 
 
@@ -151,6 +151,7 @@ def cadastrar_animal():
     raca_animal = request.form.get('raca')
     escolha = request.form.get('escolha')
     data_castracao = request.form.get('data')
+    chip_identificação = request.form.get('chip')
     
     # INGESTÃO NO BANCO DE DADOS
     try:
@@ -171,7 +172,7 @@ def cadastrar_animal():
         cursor.close()
         conexao.close()
 
-        return "<h1>Sucesso! 🐾</h1> <p>Animalzinho registrado no sistema.</p> <a href='/painel'>Voltar ao Painel</a>"
+        return redirect('/painel')
 
     except Exception as e:
         return f"<h1>Ops! Erro ao registrar o animal 🚨</h1> <p>Detalhes: {e}</p>"
