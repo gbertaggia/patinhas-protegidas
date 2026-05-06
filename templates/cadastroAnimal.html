@@ -27,7 +27,7 @@
         <form method="POST" action="/cadastrar_animal">
             <div class="mb-3">
                 <label for="foto-pet">Foto do pet:</label>
-                <input type="file" class="form-control" id="foto-pet" name="foto-pet" accept="image/*">
+                <input type="text" class="form-control" id="foto-pet" name="foto-pet" placeholder="url da foto do seu pet">
             </div>
             <div class="mb-3">
                 <label for="nome" class="form-label">Nome</label>
@@ -104,6 +104,10 @@
                         <input type="date" id="data" name="data">
                     </div>
                 </fieldset>
+            </div>
+             <div class="mb-3">
+                <label for="chip" class="form-label">Chip de identificação</label>
+                <input type="text" class="form-control" id="chip" name="chip" required>
             </div>
             
 
