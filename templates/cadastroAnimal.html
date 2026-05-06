@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Patinhas Protegidas - Cadastro</title>
+    <title>Patinhas Protegidas - Cadastro Animal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         /* Esconde o campo de data por padrão */
@@ -26,8 +26,8 @@
 
         <form method="POST" action="/cadastrar_animal">
             <div class="mb-3">
-                <label for="foto-perfil">Foto do pet:</label>
-                <input type="file" class="form-control" id="foto-perfil" name="imagem" accept="image/*">
+                <label for="foto-pet">Foto do pet:</label>
+                <input type="file" class="form-control" id="foto-pet" name="foto-pet" accept="image/*">
             </div>
             <div class="mb-3">
                 <label for="nome" class="form-label">Nome</label>
@@ -35,8 +35,8 @@
             </div>
 
             <div class="mb-3">
-                <label for="especie-resgatada" class="form-label">Espécie do Animal:</label>
-                <select name="especie" id="especie-resgatada" class="form-control" required>
+                <label for="especie" class="form-label">Espécie do Animal:</label>
+                <select name="especie" id="especie" class="form-control" required>
                     <option value="" disabled selected>Selecione a espécie...</option>
 
                     <optgroup label="Mais Comuns">
@@ -100,8 +100,8 @@
                     <label for="nao">Não</label>
 
                     <div id="container-data">
-                        <label for="data-agendamento">Data da Castração:</label>
-                        <input type="date" id="data-agendamento" name="data">
+                        <label for="data">Data da Castração:</label>
+                        <input type="date" id="data" name="data">
                     </div>
                 </fieldset>
             </div>

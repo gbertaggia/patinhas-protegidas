@@ -13,11 +13,49 @@ app.secret_key = 'chave_do_projeto' # Carimbo de segurança para assinar os crac
 def conectar_banco():
     # Abre o "cano" de comunicação com o MySQL local usando a senha protegida
     return pymysql.connect(
-        host="127.0.0.1",
-        user="root",
+        host= os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
-        database="patinhas_protegidas"
+        database=os.getenv("DB_NAME"),
+        port=19851
     )
+def criar_tabelas_na_nuvem():
+    try:
+        conexao = conectar_banco() # Sua função que usa os dados do .env
+        cursor = conexao.cursor()
+        
+        # SQL para criar a tabela de usuários
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(100) NOT NULL UNIQUE,
+                senha VARCHAR(255) NOT NULL
+            )
+        ''')
+        
+        # SQL para criar a tabela de animais
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS animais (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                usuario_id INT,
+                nome VARCHAR(100),
+                especie VARCHAR(50),
+                idade INT,
+                raca VARCHAR(50),
+                foto_path VARCHAR(255),
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+            )
+        ''')
+        
+        conexao.commit()
+        cursor.close()
+        conexao.close()
+        print("✅ Tabelas verificadas/criadas com sucesso na nuvem!")
+    except Exception as e:
+        print(f"❌ Erro ao criar tabelas: {e}")
+
+# Chame a função
+criar_tabelas_na_nuvem()
 
 # 3. ROTAS VISUAIS (Telas que apenas entregam HTML)
 @app.route('/')
@@ -52,7 +90,7 @@ def criar_conta():
         conexao.close()
 
         # Resposta rápida (Mock) para testar se funcionou (se der tempo, podemos criar separadamente e fazer render_template('sucesso.html') por ex)
-        return "<h1>Sucesso! 🎉</h1> <p>Conta criada! Agora você pode fazer login.</p> <a href='/'>Voltar para o Login</a>"
+        return redirect('/painel')
 
     except Exception as e:
         return f"<h1>Ops! Erro ao criar conta 🚨</h1> <p>Detalhes: {e}</p>"
@@ -90,7 +128,12 @@ def fazer_login():
 
     except Exception as e:
         return f"<h1>Ops! Ocorreu um erro no Banco de Dados 🚨</h1> <p>Detalhes: {e}</p>"
-    
+
+@app.route('/cadastro_Animal')
+def tela_cadastro():
+    return render_template('cadastroAnimal.html')   
+
+
 @app.route('/cadastrar_animal', methods=['POST'])
 def cadastrar_animal():
     # VERIFICAÇÃO DE SEGURANÇA (se o usuário não está logado, então é redirecionado para página principal)
@@ -101,13 +144,14 @@ def cadastrar_animal():
     id_protetora = session['id_usuario']
 
     # CAPTURA DOS DADOS DO HTML
-    nome_animal = request.form.get('foto')
+    foto_pet = request.form.get('foto-pet')
     nome_animal = request.form.get('nome')
     especie_animal = request.form.get('especie')
     idade_animal = request.form.get('idade')
     raca_animal = request.form.get('raca')
-    castrado = request.form.get('castrado')
+    escolha = request.form.get('escolha')
     data_castracao = request.form.get('data')
+    
     # INGESTÃO NO BANCO DE DADOS
     try:
         # abrindo conexão e cursor
@@ -273,9 +317,9 @@ def sair():
     session.pop('usuario_logado', None)
     return redirect('/')
 
+ 
+
 # 6. LIGAÇÃO DO MOTOR PRINCIPAL
 if __name__ == '__main__':
     # Mantém o servidor ligado infinitamente na porta 5000
     app.run(host='0.0.0.0', debug=True)
-
-    
