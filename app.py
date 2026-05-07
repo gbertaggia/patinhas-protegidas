@@ -4,64 +4,83 @@ import os
 from dotenv import load_dotenv
 
 # 1. SETUP DE SEGURANÇA E AMBIENTE
-load_dotenv() # Lê o arquivo .env
+load_dotenv()  # Lê o arquivo .env
 
-app = Flask(__name__) # Cria o motor do site
-app.secret_key = 'chave_do_projeto' # Carimbo de segurança para assinar os crachás (sessões)
+app = Flask(__name__)  # Cria o motor do site
+# Carimbo de segurança para assinar os crachás (sessões)
+app.secret_key = 'chave_do_projeto'
 
 # 2. PONTE COM O BANCO DE DADOS
+
+
 def conectar_banco():
     # Abre o "cano" de comunicação com o MySQL local usando a senha protegida
     return pymysql.connect(
-        host= os.getenv("DB_HOST"),
+        host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
+        password=os.getenv("DB_PASSWORD"),  # type: ignore
         database=os.getenv("DB_NAME"),
         port=19851
-    )
+    )  # type: ignore
+
+
 def criar_tabelas_na_nuvem():
     try:
-        conexao = conectar_banco() # Sua função que usa os dados do .env
+        conexao = conectar_banco()
         cursor = conexao.cursor()
-        
-        # SQL para criar a tabela de usuários
+
+        # SQL para deletar
+        cursor.execute("DROP TABLE IF EXISTS animais")
+        cursor.execute("DROP TABLE IF EXISTS usuarios")
+
+        # SQL para criar usuários
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS usuarios (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 email VARCHAR(100) NOT NULL UNIQUE,
-                senha VARCHAR(255) NOT NULL
+                senha VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        
-        # SQL para criar a tabela de animais
+
+        # SQL para criar animais
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS animais (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                usuario_id INT,
-                nome VARCHAR(100),
-                especie VARCHAR(50),
+                usuario_id INT NOT NULL,
+                nome VARCHAR(100) NOT NULL,
+                especie VARCHAR(50) NOT NULL,
+                raca VARCHAR(50) DEFAULT 'SRD',
                 idade INT,
-                raca VARCHAR(50),
-                foto_path VARCHAR(255),
+                foto_pet VARCHAR(255),
+                castrado BOOLEAN DEFAULT FALSE,
+                data_castracao DATE NULL,
+                chip VARCHAR(100) UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
-            )
+            ) 
         ''')
-        
+
         conexao.commit()
         cursor.close()
         conexao.close()
-        print("✅ Tabelas verificadas/criadas com sucesso na nuvem!")
-    except Exception as e:
-        print(f"❌ Erro ao criar tabelas: {e}")
+        print("✅ Tabelas criadas com sucesso!")
 
-# Chame a função
-criar_tabelas_na_nuvem()
+    except Exception as e:
+        print(f"❌ Erro: {e}")
+
+
+# Chame a função aqui no final, sem espaços no início da linha
+#criar_tabelas_na_nuvem()
 
 # 3. ROTAS VISUAIS (Telas que apenas entregam HTML)
+
+
 @app.route('/')
 def home():
     # entrega a tela visual de Login
     return render_template('login.html')
+
 
 @app.route('/cadastro')
 def tela_cadastro():
@@ -69,6 +88,8 @@ def tela_cadastro():
     return render_template('cadastro.html')
 
 # 4. ROTAS DE PROCESSAMENTO (Recebem dados, falam com o banco e tomam decisões)
+
+
 @app.route('/cadastrar', methods=['POST'])
 def criar_conta():
     # Pega o que a protetora digitou no HTML
@@ -77,14 +98,15 @@ def criar_conta():
 
     try:
         conexao = conectar_banco()
-        cursor = conexao.cursor() # Cria a ferramenta para executar comandos
+        cursor = conexao.cursor()  # Cria a ferramenta para executar comandos
 
         # Comando SQL protegido contra hackers (%s)
         comando_sql = "INSERT INTO usuarios (email, senha) VALUES (%s, %s)"
         valores = (email_novo, senha_nova)
-        
-        cursor.execute(comando_sql, valores) # Envia para a prateleira do banco
-        conexao.commit() # Salva definitivamente no disco rígido do banco
+
+        # Envia para a prateleira do banco
+        cursor.execute(comando_sql, valores)
+        conexao.commit()  # Salva definitivamente no disco rígido do banco
 
         cursor.close()
         conexao.close()
@@ -94,6 +116,7 @@ def criar_conta():
 
     except Exception as e:
         return f"<h1>Ops! Erro ao criar conta 🚨</h1> <p>Detalhes: {e}</p>"
+
 
 @app.route('/login', methods=['POST'])
 def fazer_login():
@@ -129,9 +152,10 @@ def fazer_login():
     except Exception as e:
         return f"<h1>Ops! Ocorreu um erro no Banco de Dados 🚨</h1> <p>Detalhes: {e}</p>"
 
-@app.route('/cadastro_Animal')
+
+@app.route('/cadastro_animal')
 def tela_cadastro_pet():
-    return render_template('cadastroAnimal.html')   
+    return render_template('cadastroAnimal.html')
 
 
 @app.route('/cadastrar_animal', methods=['POST'])
@@ -140,19 +164,19 @@ def cadastrar_animal():
     if 'usuario_logado' not in session:
         return redirect('/')
 
-    # IDENTIFICAÇÃO 
+    # IDENTIFICAÇÃO
     id_protetora = session['id_usuario']
 
     # CAPTURA DOS DADOS DO HTML
-    foto_pet = request.form.get('foto-pet')
+    foto_animal = request.form.get('foto-pet')
     nome_animal = request.form.get('nome')
     especie_animal = request.form.get('especie')
     idade_animal = request.form.get('idade')
     raca_animal = request.form.get('raca')
-    escolha = request.form.get('escolha')
+    castrado = request.form.get('castrado')
     data_castracao = request.form.get('data')
     chip_identificação = request.form.get('chip')
-    
+
     # INGESTÃO NO BANCO DE DADOS
     try:
         # abrindo conexão e cursor
@@ -160,24 +184,27 @@ def cadastrar_animal():
         cursor = conexao.cursor()
 
         # Comando SQL de inserção
-        comando_sql = "INSERT INTO animais (usuario_id, nome, especie, idade, raca) VALUES (%s, %s, %s, %s, %s)"
-        
+        comando_sql = "INSERT INTO animais (usuario_id, nome, especie,  raca, idade, foto_pet, castrado, data_castracao, chip ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+
         # A tupla aguardando a inserção
-        valores = (id_protetora, nome_animal, especie_animal, idade_animal, raca_animal)
+        valores = (id_protetora, nome_animal, especie_animal, raca_animal,
+                   idade_animal, foto_animal, castrado, data_castracao, chip_identificação)
 
         # salva no disco e libera os recursos do banco
         cursor.execute(comando_sql, valores)
         conexao.commit()
-        
+
         cursor.close()
         conexao.close()
 
         return redirect('/painel')
 
     except Exception as e:
-        return f"<h1>Ops! Erro ao registrar o animal 🚨</h1> <p>Detalhes: {e}</p>"
-    
-#rota para deletar animal vinculado a um usuario_id específico   
+        return f"<h1> Ops! Erro ao registrar o animal 🚨</h1> <p>Detalhes: {e}</p>"
+
+# rota para deletar animal vinculado a um usuario_id específico
+
+
 @app.route('/deletar_animal/<int:id_animal>')
 def deletar_animal(id_animal):
     if 'usuario_logado' not in session:
@@ -192,12 +219,12 @@ def deletar_animal(id_animal):
         cursor = conexao.cursor()
 
         comando_sql = "DELETE FROM animais WHERE id = %s AND usuario_id = %s"
-        
+
         valores = (id_animal, id_protetora)
 
         cursor.execute(comando_sql, valores)
         conexao.commit()
-        
+
         cursor.close()
         conexao.close()
 
@@ -205,13 +232,15 @@ def deletar_animal(id_animal):
 
     except Exception as e:
         return f"<h1>Ops! Erro ao deletar o animal 🚨</h1> <p>Detalhes: {e}</p>"
-    
-#rota para editar o cadastro de um animal
+
+# rota para editar o cadastro de um animal
+
+
 @app.route('/editar_animal/<int:id_animal>')
 def carregar_edicao_animal(id_animal):
     if 'usuario_logado' not in session:
         return redirect('/')
-    
+
     id_protetora = session['id_usuario']
 
     try:
@@ -219,16 +248,16 @@ def carregar_edicao_animal(id_animal):
         cursor = conexao.cursor()
 
         comando_sql = "SELECT * FROM animais WHERE id = %s AND usuario_id = %s"
-        
+
         # veio da URL: id_animal
         valores = (id_animal, id_protetora)
 
         cursor.execute(comando_sql, valores)
-        
+
         # Como é apenas UM animal, usamos o fetchone()
         # O animal_para_editar será um dicionário (ou tupla) com os dados atuais
         animal_para_editar = cursor.fetchone()
-        
+
         cursor.close()
         conexao.close()
 
@@ -241,17 +270,18 @@ def carregar_edicao_animal(id_animal):
 
     except Exception as e:
         return f"<h1>Erro ao carregar os dados 🚨</h1> <p>{e}</p>"
-    
+
 # rota de edição
 # O 'POST' garante que essa rota só aceita dados enviados por um formulário HTML
+
+
 @app.route('/salvar_edicao/<int:id_animal>', methods=['POST'])
 def salvar_edicao_animal(id_animal):
-    
+
     if 'usuario_logado' not in session:
         return redirect('/')
-    
-    id_protetora = session['id_usuario']
 
+    id_protetora = session['id_usuario']
 
     novo_nome = request.form.get('nome')
     nova_especie = request.form.get('especie')
@@ -267,14 +297,15 @@ def salvar_edicao_animal(id_animal):
             SET nome = %s, especie = %s, idade = %s, raca = %s 
             WHERE id = %s AND usuario_id = %s
         """
-        
+
         # A Tupla na ordem EXATA dos %s (4 dados novos + 2 travas de segurança)
-        valores = (novo_nome, nova_especie, nova_idade, nova_raca, id_animal, id_protetora)
+        valores = (novo_nome, nova_especie, nova_idade,
+                   nova_raca, id_animal, id_protetora)
 
         # 5. Executa e Salva (commit é obrigatório no UPDATE)
         cursor.execute(comando_sql, valores)
         conexao.commit()
-        
+
         cursor.close()
         conexao.close()
 
@@ -285,14 +316,16 @@ def salvar_edicao_animal(id_animal):
         return f"<h1>Ops! Erro ao atualizar o animal 🚨</h1> <p>Detalhes: {e}</p>"
 
 # 5. ROTAS PROTEGIDAS (Apenas para quem tem crachá)
+
+
 @app.route('/painel')
 def painel():
-    
+
     if 'usuario_logado' not in session:
         return redirect('/')
-    
+
     email_da_protetora = session['usuario_logado']
-    id_protetora = session['id_usuario'] 
+    id_protetora = session['id_usuario']
 
     try:
         conexao = conectar_banco()
@@ -300,17 +333,18 @@ def painel():
 
         comando_sql = "SELECT * FROM animais where usuario_id = %s"
         valores = (id_protetora,)
-        
+
         cursor.execute(comando_sql, valores)
         lista_animais = cursor.fetchall()
-        
+
         cursor.close()
         conexao.close()
-        
+
         return render_template('painel.html', email=email_da_protetora, animais=lista_animais)
 
     except Exception as e:
         return f"<h1>Ops! Erro ao carregar o painel 🚨</h1> <p>Detalhes: {e}</p>"
+
 
 @app.route('/logout')
 def sair():
@@ -318,7 +352,6 @@ def sair():
     session.pop('usuario_logado', None)
     return redirect('/')
 
- 
 
 # 6. LIGAÇÃO DO MOTOR PRINCIPAL
 if __name__ == '__main__':
