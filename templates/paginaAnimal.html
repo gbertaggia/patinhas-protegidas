@@ -111,6 +111,41 @@
         border-color: #e8f5e9 ;
 
       }
+      #grid-principal {
+  display: grid;
+  /* MOBILE FIRST: Começa com 1 coluna */
+  grid-template-columns: 1fr; 
+  gap: 1rem;
+  padding: 1rem;
+}
+
+/* 2. MEDIA QUERIES (A Mágica da Responsividade) */
+
+/* Para Tablets (Telas maiores que 768px) */
+@media (min-width: 768px) {
+  #grid-principal {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Para Laptops (Telas maiores que 1024px) */
+@media (min-width: 1024px) {
+  #grid-principal {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Para Monitores Grandes (Telas maiores que 1400px) */
+@media (min-width: 1400px) {
+  #grid-principal {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* Ajuste fino para os cards não ficarem gigantes no mobile */
+.card {
+  height: fit-content;
+}
     </style>
   </head>
   <body>
