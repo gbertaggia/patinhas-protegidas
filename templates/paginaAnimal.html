@@ -1,67 +1,340 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Patinhas Protegidas - Página Animal</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body style="height: 100vh;">
-
-   <nav class="navbar navbar-expand-lg bg-body-tertiary">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="#">🐾 Patinhas Protegidas</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNavDropdown">
-      <ul class="navbar-nav">
-        <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="#">Vacinas</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">Histórico Veterinário</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">Medicação</a>
-        </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Dropdown link
-          </a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#">Action</a></li>
-            <li><a class="dropdown-item" href="#">Another action</a></li>
-            <li><a class="dropdown-item" href="#">Something else here</a></li>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body style="height: 100vh">
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">🐾 Patinhas Protegidas</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNavDropdown"
+          aria-controls="navbarNavDropdown"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavDropdown">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="#"
+                >Vacinas</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#">Histórico Veterinário</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#">Medicação</a>
+            </li>
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link dropdown-toggle"
+                href="#"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Dropdown link
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#">Action</a></li>
+                <li><a class="dropdown-item" href="#">Another action</a></li>
+                <li>
+                  <a class="dropdown-item" href="#">Something else here</a>
+                </li>
+              </ul>
+            </li>
           </ul>
-        </li>
-      </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div
+      style="
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+        gap: 1rem;
+        padding: 1rem;
+        min-height: 90vh;
+      "
+    >
+      <div class="card">
+        <img
+          src="https://static.nationalgeographicbrasil.com/files/styles/image_3200/public/01-domesticated-dog.webp?w=760&h=507"
+          class="card-img-top"
+          alt="..."
+        />
+        <div class="card-body">
+          <h3>Pipoca</h3>
+          <p>Fêmea</p>
+          <p>3 anos</p>
+          <p>Chip: 1.234.456</p>
+          <p>Castração no dia 14/03/2024</p>
+          <p>Cachorro: Border Colie</p>
+        </div>
+      </div>
+
+      <!-- <div class="card" >
+        <h3 class="card-header">Vacinas</h3>
+        <div style="padding: 1rem">
+          <p>vacina 1 - 14/03/2025</p>
+          <p>vacina 2 - 14/03/2025</p>
+          <p>vacina 3 - 14/03/2025</p>
+          <p>vacina 4 - 14/03/2025</p>
+        </div>
+      </div> -->
+
+      <div class="card">
+        <h3 class="card-header">Vacinas</h3>
+        <div
+          class="vacina-container"
+          style="padding: 1rem; max-height: 300px; overflow-y: auto"
+        >
+          <div
+            class="vacina-item"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 1rem;
+              border-bottom: 1px solid #eee;
+              padding-bottom: 0.5rem;
+            "
+          >
+            <div>
+              <strong style="display: block; color: #333"
+                >V10 (Polivalente)</strong
+              >
+              <small style="color: #666">Aplicada em: 14/03/2025</small>
+            </div>
+            <span
+              style="
+                background-color: #e8f5e9;
+                color: #2e7d32;
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-size: 0.75rem;
+                font-weight: bold;
+              "
+              >OK</span
+            >
+          </div>
+
+          <div
+            class="vacina-item"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 1rem;
+              border-bottom: 1px solid #eee;
+              padding-bottom: 0.5rem;
+            "
+          >
+            <div>
+              <strong style="display: block; color: #333">Antirrábica</strong>
+              <small style="color: #666">Próxima: 14/03/2026</small>
+            </div>
+            <span
+              style="
+                background-color: #fff3e0;
+                color: #ef6c00;
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-size: 0.75rem;
+                font-weight: bold;
+              "
+              >AGENDADA</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- <div class="card" >
+        <h3 class="card-header">Histórico Veterinário</h3>
+        <div style="padding: 1rem">
+          <p>14/03/2025 - </p>
+          <p>14/06/2025</p>
+          <p>14/08/2025</p>
+          <p>14/09/2025</p>
+        </div>
+      </div> -->
+      <div class="card">
+        <h3 class="card-header">Histórico Veterinário</h3>
+        <div
+          class="historico-container"
+          style="padding: 1rem; max-height: 300px; overflow-y: auto"
+        >
+          <div
+            class="historico-item"
+            style="
+              border-left: 3px solid #4caf50;
+              padding-left: 10px;
+              margin-bottom: 1.5rem;
+            "
+          >
+            <small style="color: #666; font-weight: bold">14/03/2025</small>
+            <p style="margin: 0.2rem 0">
+              <strong>Queixa:</strong> Prostração e vômito. <br />
+              <strong>Avaliação:</strong> Suspeita de intoxicação. <br />
+              <strong>Conduta:</strong> Fluido+Carvão ativado.
+            </p>
+          </div>
+
+          <div
+            class="historico-item"
+            style="
+              border-left: 3px solid #2196f3;
+              padding-left: 10px;
+              margin-bottom: 1.5rem;
+            "
+          >
+            <small style="color: #666; font-weight: bold">14/06/2025</small>
+            <p style="margin: 0.2rem 0">
+              <strong>Queixa:</strong> Vacinação anual. <br />
+              <strong>Conduta:</strong> Aplicada V10 e Raiva. S/
+              intercorrências.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- <div class="card" >
+        <h3 class="card-header">Medicação</h3>
+        <div style="padding: 1rem">
+          <p>vacina 1 - 14/03/2025</p>
+          <p>vacina 2 - 14/03/2025</p>
+          <p>vacina 3 - 14/03/2025</p>
+          <p>vacina 4 - 14/03/2025</p>
+        </div>
+      </div> -->
+     
+      <div class="card">
+        <h3 class="card-header">Medicação</h3>
+        <div
+          class="medicacao-container"
+          style="padding: 1rem; max-height: 300px; overflow-y: auto"
+        >
+          <div
+            class="medicacao-item"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 1.2rem;
+              border-left: 4px solid #9c27b0;
+              padding-left: 12px;
+            "
+          >
+            <div>
+              <strong style="display: block; color: #333; font-size: 1rem"
+                >Antibiótico (Amoxicilina)</strong
+              >
+              <p style="margin: 0; font-size: 0.85rem; color: #666">
+                <strong>Dose:</strong> 1 comprimido <br />
+                <span style="color: #d32f2f"
+                  ><strong>Frequência:</strong> a cada 8 horas</span
+                >
+              </p>
+              <small
+                style="
+                  display: block;
+                  margin-top: 5px;
+                  color: #333;
+                  background: #f3e5f5;
+                  padding: 2px 5px;
+                  border-radius: 4px;
+                  width: fit-content;
+                "
+              >
+                ⏰ Próxima dose: 22:00
+              </small>
+            </div>
+          </div>
+
+          <div
+            class="medicacao-item"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 1.2rem;
+              border-left: 4px solid #00bcd4;
+              padding-left: 12px;
+            "
+          >
+            <div>
+              <strong style="display: block; color: #333; font-size: 1rem"
+                >Suplemento Vitamínico</strong
+              >
+              <p style="margin: 0; font-size: 0.85rem; color: #666">
+                <strong>Dose:</strong> 5ml no alimento <br />
+                <span
+                  ><strong>Frequência:</strong> a cada 24 horas (1x ao
+                  dia)</span
+                >
+              </p>
+              <small style="display: block; margin-top: 5px; color: #666">
+                🗓️ Início: 05/05 | Término: 12/05
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- <div class="card">
+        <h3 class="card-header">Clendário de Consultas</h3>
+        <div style="padding: 1rem">
+          <p>vacina 1 - 14/03/2025</p>
+          <p>vacina 2 - 14/03/2025</p>
+          <p>vacina 3 - 14/03/2025</p>
+          <p>vacina 4 - 14/03/2025</p>
+        </div>
+      </div> -->
+
+      <div class="card">
+    <h3 class="card-header">Próximas Consultas</h3>
+    <div class="calendario-container" style="padding: 1rem; max-height: 300px; overflow-y: auto;">
+        
+        <div class="consulta-item" style="display: flex; align-items: center; margin-bottom: 1.5rem; gap: 15px;">
+            <div class="data-icon" style="background-color: #fce4ec; color: #d81b60; width: 50px; height: 55px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; border: 1px solid #f8bbd0;">
+                <span style="font-size: 0.7rem; text-transform: uppercase;">Jun</span>
+                <span style="font-size: 1.2rem;">15</span>
+            </div>
+            
+            <div style="flex: 1;">
+                <strong style="display: block; color: #333; font-size: 0.95rem;">Check-up Semestral</strong>
+                <small style="color: #666; display: block;">📍 Clínica Bicho Feliz</small>
+                <small style="color: #4CAF50; font-weight: bold;">⏰ 14:30</small>
+            </div>
+        </div>
+
+        <div class="consulta-item" style="display: flex; align-items: center; margin-bottom: 1.5rem; gap: 15px;">
+            <div class="data-icon" style="background-color: #e3f2fd; color: #1976d2; width: 50px; height: 55px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; border: 1px solid #bbdefb;">
+                <span style="font-size: 0.7rem; text-transform: uppercase;">Jul</span>
+                <span style="font-size: 1.2rem;">02</span>
+            </div>
+            
+            <div style="flex: 1;">
+                <strong style="display: block; color: #333; font-size: 0.95rem;">Exame de Sangue</strong>
+                <small style="color: #666; display: block;">📍 LabVet</small>
+                <small style="color: #1976d2; font-weight: bold;">⏰ 09:00</small>
+            </div>
+        </div>
+
     </div>
-  </div>
-</nav>
-
-<div class="card" style="width: 18rem; margin:1rem 1rem ;">
-  <img src="https://static.nationalgeographicbrasil.com/files/styles/image_3200/public/01-domesticated-dog.webp?w=760&h=507" class="card-img-top" alt="...">
-  <div class="card-body">
-    <h4>Pipoca</h4>
-    <p>Fêmea</p>
-    <p>3 anos</p>
-    <p>Chip: 1.234.456</p>
-    <p>Castração no dia 14/03/2024 </p>
-    <p>Cachorro: Border Colie</p>
-  </div>
 </div>
-
-<div class="card" style="width: 18rem;">
-  <div class="card-header">
-    Featured
-  </div>
-  <ul class="list-group list-group-flush">
-    <li class="list-group-item">An item</li>
-    <li class="list-group-item">A second item</li>
-    <li class="list-group-item">A third item</li>
-  </ul>
-</div>
-
-</body>
+    </div>
+  </body>
 </html>
