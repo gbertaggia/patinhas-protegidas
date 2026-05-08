@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patinhas Protegidas - Cadastro Animal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Ajuste para permitir rolagem em telas pequenas */
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0; /* Espaço para não encostar no topo/rodapé do celular */
+        }
+
+        #container-data {
+            display: none;
+            margin-top: 10px;
+        }
+
+        #sim:checked~#container-data {
+            display: block;
+        }
+
+        /* Ajuste fino para o card em telas muito pequenas */
+        @media (max-width: 450px) {
+            .card {
+                border: none;
+                box-shadow: none !important;
+                background-color: transparent !important;
+            }
+            body {
+                background-color: #fff !important; /* Fundo branco no mobile para parecer app */
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <div class="container d-flex justify-content-center">
+
+    <div class="card shadow p-4 mt-4" style="width: 100%; max-width: 450px;">
+    <h3 class="text-center text-warning text-dark mb-4">💊 Prescrição de Medicamento</h3>
+
+    <form method="POST" action="/salvar_medicacao">
+        
+        <div class="mb-3">
+            <label for="medicacao" class="form-label fw-bold">Medicação:</label>
+            <input type="text" class="form-control" id="medicacao" name="medicacao" placeholder="Ex: Amoxilina" required>
+        </div>
+
+        <div class="row">
+            <div class="col-6 mb-3">
+                <label for="dose_med" class="form-label fw-bold">Dose:</label>
+                <input type="text" class="form-control" id="dose_med" name="dose_med" placeholder="Ex: 1 comp.">
+            </div>
+
+            <div class="col-6 mb-3">
+                <label for="frequencia" class="form-label fw-bold">Frequência:</label>
+                <select id="frequencia" name="frequencia" class="form-select" onchange="gerarHorarios(this.value)">
+                    <option value="">Selecione...</option>
+                    <option value="24">Uma vez ao dia (24h)</option>
+                    <option value="12">12h em 12h</option>
+                    <option value="8">8h em 8h</option>
+                    <option value="6">6h em 6h</option>
+                    <option value="4">4h em 4h</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="container-horarios" class="p-3 bg-light rounded border mb-3" style="display: none;">
+            <label class="form-label fw-bold mb-2 text-primary">Defina os horários das doses:</label>
+            <div id="lista-inputs-horarios" class="row g-2">
+                </div>
+        </div>
+
+        <button type="submit" class="btn btn-warning w-100 btn-lg shadow-sm fw-bold">Agendar Medicação</button>
+    </form>
+</div>
+
+<script>
+function gerarHorarios(frequencia) {
+    const container = document.getElementById('container-horarios');
+    const lista = document.getElementById('lista-inputs-horarios');
+    
+    // Limpa a lista anterior
+    lista.innerHTML = '';
+    
+    if (!frequencia) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+    
+    // Calcula quantas doses cabem em 24h
+    const numDoses = 24 / parseInt(frequencia);
+
+    for (let i = 1; i <= numDoses; i++) {
+        const divCol = document.createElement('div');
+        divCol.className = 'col-4'; // 3 inputs por linha no mobile
+        
+        divCol.innerHTML = `
+            <div class="form-floating mb-2">
+                <input type="time" class="form-control form-control-sm" id="hora_${i}" name="horarios[]" required>
+                <label for="hora_${i}">${i}ª dose</label>
+            </div>
+        `;
+        lista.appendChild(divCol);
+    }
+}
+</script>
+
+               
+    </div>
+
+</body>
+</html>
