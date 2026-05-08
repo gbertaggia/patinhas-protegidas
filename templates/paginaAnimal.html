@@ -118,7 +118,22 @@
   gap: 1rem;
   padding: 1rem;
 }
+#btn-cad-container{
+  display: flex;
+  justify-content: space-between;
+  
+}
 
+.btn-cadastro{
+  border-radius: 10px;
+  border: none;
+  
+  
+
+}
+.btn-cadastro:hover{
+ background-color: #b9b9c2;
+}
 /* 2. MEDIA QUERIES (A Mágica da Responsividade) */
 
 /* Para Tablets (Telas maiores que 768px) */
@@ -177,9 +192,12 @@
         </div>
       </div>
 
-      <div class="card">
-        <h3 class="card-header h5" style="background-color: #c3dfec;">Vacinas</h3> 
-        <div class="card-scroll-container">
+        <div class="card" >
+          <div class="card-header h5" id="btn-cad-container" style="background-color: #bfc9e7;">
+            <h5 >Vacinas</h5> 
+             <a href="cadastroVacinas.html"><button class="btn-cadastro"><small>Cadastro</small></button></a>
+          </div>
+          <div class="card-scroll-container">
           <div class="vacina-item">
             <div>
               <strong class="d-block text-dark">V10 (Polivalente)</strong>
@@ -209,7 +227,11 @@
       
 
       <div class="card">
-        <h3 class="card-header h5" style="background-color: #f4faa8;">Medicação</h3>
+        <div class="card-header h5" id="btn-cad-container" style="background-color: #f4faa8;">
+          <h5>Medicação</h5>
+          <a href="cadastroMedicacao.html"><button class="btn-cadastro"><small>Cadastro</small></button></a>
+        </div>
+
         <div class="card-scroll-container">
           <div class="medicacao-item">
             <strong class="d-block text-dark small">Amoxilina</strong>
@@ -228,7 +250,11 @@
       </div>
 
       <div class="card">
-        <h3 class="card-header h5"style="background-color: #e8f5e9;" >Próximas Consultas</h3>
+        <div class="card-header h5" id="btn-cad-container" style="background-color: #b5e9b5;"">
+          <h5>Consultas</h5>
+          <a href="cadastroConsultas.html"><button class="btn-cadastro"><small>Cadastro</small></button></a>
+        </div>
+       
         <div class="card-scroll-container">
           <div class="consulta-item">
             <div class="data-icon" >
@@ -252,7 +278,11 @@
 
 
       <div class="card">
-        <h3 class="card-header h5" style="background-color: #fabba8;">Histórico Veterinário</h3>
+        <div class="card-header h5" id="btn-cad-container" style="background-color: #fabba8;"">
+          <h5>Histórico Veterinário</h5>
+          <a href="cadastroHistórico.html"><button class="btn-cadastro"><small>Cadastro</small></button></a>
+        </div>
+        
         <div class="card-scroll-container">
           <div class="historico-item">
             <small class="text-muted fw-bold">14/03/2025</small>
