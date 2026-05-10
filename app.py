@@ -53,7 +53,6 @@ def criar_conta():
         cursor.execute(comando_sql, valores)
         conexao.commit() 
 
-        # --- A MÁGICA ACONTECE AQUI ---
         # Pega o ID numérico que o banco acabou de gerar para essa pessoa
         id_nova_protetora = cursor.lastrowid
 
@@ -64,7 +63,7 @@ def criar_conta():
         cursor.close()
         conexao.close()
 
-        # Agora, quando redirecionar pro painel, ela já tem o crachá e vai entrar direto!
+        # Agora, quando redirecionar pro painel, ela já tem o crachá e vai entrar direto
         return redirect('/painel')
 
     except Exception as e:
