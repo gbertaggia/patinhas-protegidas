@@ -14,73 +14,21 @@ app.secret_key = 'chave_do_projeto'
 
 
 def conectar_banco():
-    # Abre o "cano" de comunicação com o MySQL local usando a senha protegida
     return pymysql.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),  # type: ignore
-        database=os.getenv("DB_NAME"),
-        port=19851
-    )  # type: ignore
+        host=os.getenv("DB_HOST").strip(),
+        user=os.getenv("DB_USER").strip(),
+        password=os.getenv("DB_PASSWORD").strip(),
+        database=os.getenv("DB_NAME").strip(),
+        port=int(os.getenv("DB_PORT"))
+    )
 
-
-def criar_tabelas_na_nuvem():
-    try:
-        conexao = conectar_banco()
-        cursor = conexao.cursor()
-
-        # SQL para deletar
-        cursor.execute("DROP TABLE IF EXISTS animais")
-        cursor.execute("DROP TABLE IF EXISTS usuarios")
-
-        # SQL para criar usuários
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                email VARCHAR(100) NOT NULL UNIQUE,
-                senha VARCHAR(255) NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-
-        # SQL para criar animais
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS animais (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                usuario_id INT NOT NULL,
-                nome VARCHAR(100) NOT NULL,
-                especie VARCHAR(50) NOT NULL,
-                raca VARCHAR(50) DEFAULT 'SRD',
-                idade INT,
-                foto_pet VARCHAR(255),
-                castrado BOOLEAN DEFAULT FALSE,
-                data_castracao DATE NULL,
-                chip VARCHAR(100) UNIQUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
-            ) 
-        ''')
-
-        conexao.commit()
-        cursor.close()
-        conexao.close()
-        print("✅ Tabelas criadas com sucesso!")
-
-    except Exception as e:
-        print(f"❌ Erro: {e}")
-
-
-# Chame a função aqui no final, sem espaços no início da linha
-#criar_tabelas_na_nuvem()
 
 # 3. ROTAS VISUAIS (Telas que apenas entregam HTML)
-
 
 @app.route('/')
 def home():
     # entrega a tela visual de Login
     return render_template('login.html')
-
 
 @app.route('/cadastro')
 def tela_cadastro():
@@ -88,7 +36,6 @@ def tela_cadastro():
     return render_template('cadastro.html')
 
 # 4. ROTAS DE PROCESSAMENTO (Recebem dados, falam com o banco e tomam decisões)
-
 
 @app.route('/cadastrar', methods=['POST'])
 def criar_conta():
@@ -98,20 +45,26 @@ def criar_conta():
 
     try:
         conexao = conectar_banco()
-        cursor = conexao.cursor()  # Cria a ferramenta para executar comandos
+        cursor = conexao.cursor() 
 
-        # Comando SQL protegido contra hackers (%s)
         comando_sql = "INSERT INTO usuarios (email, senha) VALUES (%s, %s)"
         valores = (email_novo, senha_nova)
 
-        # Envia para a prateleira do banco
         cursor.execute(comando_sql, valores)
-        conexao.commit()  # Salva definitivamente no disco rígido do banco
+        conexao.commit() 
+
+        # --- A MÁGICA ACONTECE AQUI ---
+        # Pega o ID numérico que o banco acabou de gerar para essa pessoa
+        id_nova_protetora = cursor.lastrowid
+
+        # Cria o crachá de acesso (sessão) imediatamente
+        session['usuario_logado'] = email_novo
+        session['id_usuario'] = id_nova_protetora
 
         cursor.close()
         conexao.close()
 
-        # Resposta rápida (Mock) para testar se funcionou (se der tempo, podemos criar separadamente e fazer render_template('sucesso.html') por ex)
+        # Agora, quando redirecionar pro painel, ela já tem o crachá e vai entrar direto!
         return redirect('/painel')
 
     except Exception as e:
@@ -355,5 +308,5 @@ def sair():
 
 # 6. LIGAÇÃO DO MOTOR PRINCIPAL
 if __name__ == '__main__':
-    # Mantém o servidor ligado infinitamente na porta 5000
-    app.run(host='0.0.0.0', debug=True)
+    # Mudamos a porta para 5001 para fugir de bloqueios
+    app.run(host='0.0.0.0', port=5001, debug=True)
