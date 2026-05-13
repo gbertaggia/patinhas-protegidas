@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS animais (
     especie VARCHAR(50) NOT NULL,
     raca VARCHAR(50) DEFAULT 'SRD',
     idade INT,
-    foto_pet VARCHAR(255),
+    foto_url VARCHAR(255),
     castrado BOOLEAN DEFAULT FALSE,
     data_castracao DATE NULL,
     chip VARCHAR(100) UNIQUE,
