@@ -1,31 +1,14 @@
 from flask import Flask, render_template, request, session, redirect
-import pymysql
-import os
-from dotenv import load_dotenv
-
+from database.connection import conectar_banco
+from dotenv import os 
 # 1. CONFIGURAÇÃO DO AMBIENTE E INICIALIZAÇÃO
-load_dotenv()  # Carrega as variáveis de ambiente do arquivo .env
+#  # Carrega as variáveis de ambiente do arquivo .env
 
 app = Flask(__name__)  # Instancia a aplicação web Flask
 
 # Chave criptográfica necessária para o gerenciamento de estado (sessões HTTP)
-app.secret_key = 'chave_do_projeto'
+app.secret_key = os.getenv("SECRET_KEY")
 
-
-# 2. CONEXÃO COM O BANCO DE DADOS
-def conectar_banco():
-    """
-    Estabelece e retorna a conexão com o banco de dados MySQL instanciado na nuvem.
-    Utiliza SSL para garantir a segurança da transferência de dados.
-    """
-    return pymysql.connect(
-        host=os.getenv("DB_HOST").strip(),
-        user=os.getenv("DB_USER").strip(),
-        password=os.getenv("DB_PASSWORD").strip(),
-        database=os.getenv("DB_NAME").strip(),
-        port=int(os.getenv("DB_PORT")),
-        ssl={'ssl': True}  # Obrigatório para conexões seguras em provedores cloud (ex: Aiven)
-    )
 
 
 # 3. ROTAS DE RENDERIZAÇÃO (MÉTODO GET)
