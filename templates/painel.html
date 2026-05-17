@@ -26,7 +26,7 @@
                 
                 <div class="card shadow p-4 text-center mb-5">
                     <h2 class="text-success">Bem-vinda ao seu Painel de Controle!</h2>
-                    <p class="text-muted">Em breve, aqui você poderá cadastrar animais, vacinas e controlar as finanças.</p>
+                    <p class="text-muted">Em breve, aqui você poderá  controlar as finanças.</p>
                     <div>
                         <a href="/cadastro_animal" class="btn btn-outline-success btn-sm">Cadastrar animal</a>
                     </div>
@@ -38,16 +38,16 @@
                         {% for bichinho in animais %}
                             <div class="col">
                                 <div class="card shadow-sm h-100" style="width: 18rem;">
-                                    <img src="https://static.nationalgeographicbrasil.com/files/styles/image_3200/public/01-domesticated-dog.webp?w=760&h=507" class="card-img-top" alt="Foto do animal">
+                                    <img src=" {{ bichinho.foto_url}} " class="card-img-top" alt="Foto do animal">
                                     
                                     <div class="card-body">
-                                        <h5 class="card-title text-primary fw-bold">{{ bichinho[2] }}</h5>
+                                        <h5 class="card-title text-primary fw-bold">{{ bichinho.nome}}</h5>
                                         <div class="card-text text-muted mb-3">
-                                            <p class="mb-1"><strong>Idade:</strong> {{ bichinho[5] }} anos</p>
-                                            <p class="mb-1"><strong>Raça:</strong> {{ bichinho[4] }}</p>
-                                            <p class="mb-1"><strong>Espécie:</strong> {{ bichinho[3] }}</p>
+                                            <p class="mb-1"><strong>Idade:</strong> {{ bichinho.idade}} anos</p>
+                                            <p class="mb-1"><strong>Raça:</strong> {{ bichinho.raca}}</p>
+                                            <p class="mb-1"><strong>Espécie:</strong> {{ bichinho.especie}}</p>
                                         </div>
-                                        <a href="#" class="btn btn-primary w-100">Página Pet</a>
+                                        <a href="{{ url_for('pagina_animal', id_animal=bichinho.id) }}"  class="btn btn-primary w-100">Página Pet</a>
                                     </div>
                                 </div>
                             </div>

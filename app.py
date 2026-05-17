@@ -1,31 +1,14 @@
 from flask import Flask, render_template, request, session, redirect
-import pymysql
+from database.connection import conectar_banco
 import os
-from dotenv import load_dotenv
-
+import pymysql
 # 1. CONFIGURAÇÃO DO AMBIENTE E INICIALIZAÇÃO
-load_dotenv()  # Carrega as variáveis de ambiente do arquivo .env
+#  # Carrega as variáveis de ambiente do arquivo .env
 
 app = Flask(__name__)  # Instancia a aplicação web Flask
 
 # Chave criptográfica necessária para o gerenciamento de estado (sessões HTTP)
-app.secret_key = 'chave_do_projeto'
-
-
-# 2. CONEXÃO COM O BANCO DE DADOS
-def conectar_banco():
-    """
-    Estabelece e retorna a conexão com o banco de dados MySQL instanciado na nuvem.
-    Utiliza SSL para garantir a segurança da transferência de dados.
-    """
-    return pymysql.connect(
-        host=os.getenv("DB_HOST").strip(),
-        user=os.getenv("DB_USER").strip(),
-        password=os.getenv("DB_PASSWORD").strip(),
-        database=os.getenv("DB_NAME").strip(),
-        port=int(os.getenv("DB_PORT")),
-        ssl={'ssl': True}  # Obrigatório para conexões seguras em provedores cloud (ex: Aiven)
-    )
+app.secret_key = os.getenv("SECRET_KEY")
 
 
 # 3. ROTAS DE RENDERIZAÇÃO (MÉTODO GET)
@@ -47,6 +30,63 @@ def tela_cadastro_pet():
     return render_template('cadastroAnimal.html')
 
 
+@app.route('/pagina_animal/<int:id_animal>')
+def pagina_animal(id_animal):
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor(pymysql.cursors.DictCursor)
+
+    comando_sql = "SELECT * FROM animais WHERE id = %s"
+    cursor.execute(comando_sql, (id_animal,))
+
+    animal = cursor.fetchone()
+
+    cursor.close()
+    conexao.close()
+
+    return render_template('paginaAnimal.html', animal=animal)
+
+
+@app.route('/animal/<int:id_animal>/vacina')
+def cadastro_vacina(id_animal):
+
+    return render_template(
+        'cadastroVacinas.html',
+        id_animal=id_animal
+    )
+
+
+@app.route('/salvar_vacina/<int:id_animal>', methods=['POST'])
+def salvar_vacina(id_animal):
+
+    try:
+        nome_vacina = (
+        request.form.get('nome_vacina_outra')
+        if request.form.get('vacina') == 'outro'
+        else request.form.get('vacina'))
+        data_vacina = request.form.get('data_vacina')
+        status_vacina = request.form.get('status_vacina')
+        dose_vacina = request.form.get('dose')
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO vacinas
+            (animal_id, nome_vacina, data_vacina, status_vacina, dose_vacina)
+            VALUES (%s, %s, %s, %s,%s)
+            """,
+            (id_animal, nome_vacina, data_vacina, status_vacina, dose_vacina)
+        )
+
+        conexao.commit()
+
+        cursor.close()
+        conexao.close()
+
+        return redirect(f'/animal/{id_animal}')
+    except Exception as e:
+        return f"Erro: {e}"      
 # 4. ROTAS DE PROCESSAMENTO E REGRA DE NEGÓCIO (CRUD DE USUÁRIOS E AUTENTICAÇÃO)
 @app.route('/cadastrar', methods=['POST'])
 def criar_conta():
@@ -162,7 +202,7 @@ def cadastrar_animal():
     especie_animal = request.form.get('especie')
     idade_animal = request.form.get('idade')
     raca_animal = request.form.get('raca')
-    castrado = request.form.get('castrado')
+    castrado = 1 if request.form.get('castrado') else 0
     data_castracao = request.form.get('data')
     chip_identificacao = request.form.get('chip')
 
@@ -172,7 +212,7 @@ def cadastrar_animal():
 
         comando_sql = """
             INSERT INTO animais 
-            (usuario_id, nome, especie, raca, idade, foto_pet, castrado, data_castracao, chip) 
+            (usuario_id, nome, especie, raca, idade, foto_url, castrado, data_castracao, chip) 
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
 

@@ -181,10 +181,10 @@
     <div id="grid-principal">
       
       <div class="card">
-        <img src="https://static.nationalgeographicbrasil.com/files/styles/image_3200/public/01-domesticated-dog.webp?w=760&h=507" class="card-img-top" alt="Pipoca" />
+        <img src="{{ animal.foto_url}}" class="card-img-top" alt="{ animal.nome }}" />
         <div class="card-body">
-          <h3>Pipoca</h3>
-          <p>Fêmea • 3 anos<br>Chip: 1.234.456<br>Border Colie</p>
+          <h3>{{ animal.nome }}</h3>
+          <p>{{ animal.idade }} anos<br>Chip: {{ animal.chip }}<br>{{ animal.raca }}</p>
            <div class="acoes-btn">
                 <button class="btn btn-outline-secondary btn-mini">✏️</button>
                 <button class="btn btn-outline-danger btn-mini">🗑️</button>
@@ -195,8 +195,11 @@
         <div class="card" >
           <div class="card-header h5" id="btn-cad-container" style="background-color: #bfc9e7;">
             <h5 >Vacinas</h5> 
-             <a href="cadastroVacinas.html"><button class="btn-cadastro"><small>Cadastro</small></button></a>
-          </div>
+            <a href="{{ url_for('cadastro_vacina', id_animal=animal.id) }}">
+              <button class="btn-cadastro">
+                  <small>Cadastro</small>
+              </button>
+          </a>          </div>
           <div class="card-scroll-container">
           <div class="vacina-item">
             <div>
