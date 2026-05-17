@@ -23,3 +23,15 @@ CREATE TABLE IF NOT EXISTS animais (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS vacinas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    animal_id INT NOT NULL,
+    nome_vacina VARCHAR(100),
+    data_vacina DATE,
+    status_vacina VARCHAR(100) DEFAULT 'Agendado',
+    dose_vacina VARCHAR(100),
+
+    FOREIGN KEY (animal_id)
+    REFERENCES animais(id)
+);

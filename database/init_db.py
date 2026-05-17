@@ -1,7 +1,7 @@
-from connection import get_connection
+from connection import conectar_banco
 
 def run_migration():
-    connection = get_connection()
+    connection = conectar_banco()
 
     with open("database/schema.sql", "r", encoding="utf-8") as file:
         sql_script = file.read()
