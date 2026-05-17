@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, session, redirect
+from ast import Try
+from flask import Flask, render_template, request, session, redirect, url_for
 from database.connection import conectar_banco
 import os
 import pymysql
@@ -34,17 +35,33 @@ def tela_cadastro_pet():
 def pagina_animal(id_animal):
 
     conexao = conectar_banco()
+
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
-    comando_sql = "SELECT * FROM animais WHERE id = %s"
-    cursor.execute(comando_sql, (id_animal,))
+    # Busca animal
+    cursor.execute(
+        "SELECT * FROM animais WHERE id = %s",
+        (id_animal,)
+    )
 
-    animal = cursor.fetchone()
+    animal = cursor.fetchone()#retorna um dicionario
+
+    # Busca vacinas
+    cursor.execute(
+        "SELECT * FROM vacinas WHERE animal_id = %s",
+        (id_animal,)
+    )
+
+    vacinas = cursor.fetchall()#retorna uma lista
 
     cursor.close()
     conexao.close()
 
-    return render_template('paginaAnimal.html', animal=animal)
+    return render_template(
+        'paginaAnimal.html',
+        animal=animal,
+        vacinas=vacinas
+    )
 
 
 @app.route('/animal/<int:id_animal>/vacina')
@@ -62,8 +79,9 @@ def salvar_vacina(id_animal):
     try:
         nome_vacina = (
         request.form.get('nome_vacina_outra')
-        if request.form.get('vacina') == 'outro'
+        if request.form.get('vacina') == 'outros'
         else request.form.get('vacina'))
+
         data_vacina = request.form.get('data_vacina')
         status_vacina = request.form.get('status_vacina')
         dose_vacina = request.form.get('dose')
@@ -84,9 +102,40 @@ def salvar_vacina(id_animal):
         cursor.close()
         conexao.close()
 
-        return redirect(f'/animal/{id_animal}')
+        return redirect(f'/pagina_animal/{id_animal}')
     except Exception as e:
-        return f"Erro: {e}"      
+        return f"Erro: {e}"     
+
+@app.route('/deletar_vacina/<int:id_vacina>/<int:id_animal>')
+def deletar_vacina(id_vacina, id_animal):
+
+    try:
+
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
+
+        comando_sql = """
+            DELETE FROM vacinas
+            WHERE id = %s
+        """
+
+        cursor.execute(comando_sql, (id_vacina,))
+
+        conexao.commit()
+
+        cursor.close()
+        conexao.close()
+
+        return redirect(
+            url_for(
+                'pagina_animal',
+                id_animal=id_animal
+            )
+        )
+
+    except Exception as e:
+        return f"Erro ao deletar vacina: {e}" 
+
 # 4. ROTAS DE PROCESSAMENTO E REGRA DE NEGÓCIO (CRUD DE USUÁRIOS E AUTENTICAÇÃO)
 @app.route('/cadastrar', methods=['POST'])
 def criar_conta():

@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS animais (
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
+
 CREATE TABLE IF NOT EXISTS vacinas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     animal_id INT NOT NULL,
@@ -32,6 +33,5 @@ CREATE TABLE IF NOT EXISTS vacinas (
     status_vacina VARCHAR(100) DEFAULT 'Agendado',
     dose_vacina VARCHAR(100),
 
-    FOREIGN KEY (animal_id)
-    REFERENCES animais(id)
+    FOREIGN KEY (animal_id) REFERENCES animais(id)
 );
