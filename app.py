@@ -343,8 +343,10 @@ def salvar_edicao_medicacao(id_medicamento, id_animal):
 
     except Exception as e:
         return f"<h1>Erro na atualização da medicação</h1> <p>Detalhes: {e}</p>"
+    
 #--------------------------------------------------------------------------------------#
-# HISTÓRICO VETERINÁRIO    
+# HISTÓRICO VETERINÁRIO   
+ 
 @app.route('/cadastrar_historico/<int:id_animal>', methods=['GET', 'POST'])
 def cadastrar_historico(id_animal):
     conexao = conectar_banco()
