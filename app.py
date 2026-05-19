@@ -578,7 +578,7 @@ def editar_perfil_usuario():
 
         try:
             cursor.execute("UPDATE usuarios SET nome = %s, telefone = %s WHERE id = %s", 
-                           (novo_nome, ... if novo_telefone else None, id_usuario))
+            (novo_nome, novo_telefone if novo_telefone else None, id_usuario))
             conexao.commit()
             
             # Atualiza o nome na sessão para o painel atualizar o texto de boas-vindas
