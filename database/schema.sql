@@ -57,3 +57,15 @@ CREATE TABLE consultas (
     veterinario VARCHAR(100),
     motivo VARCHAR(255)
 );
+
+CREATE TABLE historico_veterinario (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome_pet VARCHAR(100) NOT NULL,
+    data_registro DATE NOT NULL,
+    peso VARCHAR(50),
+    temperatura VARCHAR(50),
+    tipo_atendimento VARCHAR(100),
+    sintomas TEXT,
+    diagnostico TEXT,
+    tratamento TEXT
+);
