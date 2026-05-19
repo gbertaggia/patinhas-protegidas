@@ -15,7 +15,8 @@
             <span class="navbar-brand mb-0 h1">🐾 Patinhas Protegidas</span>
             <span class="navbar-text text-white d-flex align-items-center">
                 <h5 class="mb-0 me-3">Olá, {{ session['nome_usuario'] or email }}! 👋</h5>
-                <a href="/logout" class="btn btn-outline-light btn-sm">Sair</a>
+                <a href="{{ url_for('editar_perfil_usuario') }}" class="btn btn-sm btn-outline-primary me-2">✏️ Editar Perfil</a>
+                <a href="/logout" class="btn btn-sm btn-outline-danger">Sair</a>
             </span>
         </div>
     </nav>

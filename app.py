@@ -562,6 +562,43 @@ def fazer_login():
 
     except Exception as e:
         return f"<h1>Erro de persistência de dados</h1> <p>Detalhes: {e}</p>"
+    
+@app.route('/editar_usuario', methods=['GET', 'POST'])
+def editar_perfil_usuario():
+    if 'usuario_logado' not in session:
+        return redirect('/')
+
+    id_usuario = session['id_usuario']
+    conexao = conectar_banco()
+    cursor = conexao.cursor(pymysql.cursors.DictCursor)
+
+    if request.method == 'POST':
+        novo_nome = request.form.get('nome')
+        novo_telefone = request.form.get('telefone')
+
+        try:
+            cursor.execute("UPDATE usuarios SET nome = %s, telefone = %s WHERE id = %s", 
+                           (novo_nome, ... if novo_telefone else None, id_usuario))
+            conexao.commit()
+            
+            # Atualiza o nome na sessão para o painel atualizar o texto de boas-vindas
+            session['nome_usuario'] = novo_nome 
+            
+            return redirect('/painel')
+        except Exception as e:
+            return f"<h1>Erro ao atualizar usuário.</h1> <p>Detalhes: {e}</p>"
+        finally:
+            cursor.close()
+            conexao.close()
+
+    # Método GET: Busca os dados atuais para preencher a tela
+    cursor.execute("SELECT * FROM usuarios WHERE id = %s", (id_usuario,))
+    usuario = cursor.fetchone()
+    
+    cursor.close()
+    conexao.close()
+
+    return render_template('editarUsuario.html', usuario=usuario)
 
 
 @app.route('/logout')
@@ -600,7 +637,7 @@ def cadastrar_animal():
 
     data_castracao = request.form.get('data') if request.form.get('data') else None
     chip_identificacao = request.form.get('chip') if request.form.get('chip') else None
-    # -----------------------------------------------------------------
+    
 
     try:
         conexao = conectar_banco()

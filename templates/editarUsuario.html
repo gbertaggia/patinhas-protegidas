@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patinhas Protegidas - Editar Usuário</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+        }
+        @media (max-width: 450px) {
+            .card { border: none; box-shadow: none !important; background-color: transparent !important; }
+            body { background-color: #fff !important; }
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <div class="container d-flex justify-content-center">
+        <div class="card shadow p-4 mt-4" style="width: 100%; max-width: 450px;">
+            <h3 class="text-center text-primary mb-4">👤 Dados da Pessoa Protetora</h3>
+
+            <form method="POST" action="{{ url_for('editar_perfil_usuario') }}">
+                
+                <div class="mb-3">
+                    <label for="nome" class="form-label">Nome Completo:</label>
+                    <input type="text" id="nome" name="nome" class="form-control" value="{{ usuario.nome }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="email" class="form-label">E-mail de Login:</label>
+                    <input type="email" id="email" class="form-control bg-log" value="{{ usuario.email }}" readonly>
+                    <div class="form-text text-muted">O e-mail de acesso não pode ser alterado.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="telefone" class="form-label">Telefone / WhatsApp:</label>
+                    <input type="text" id="telefone" name="telefone" class="form-control" value="{{ usuario.telefone if usuario.telefone else '' }}" placeholder="(00) 00000-0000">
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm">Salvar Alterações</button>
+                <a href="/painel" class="btn btn-outline-secondary w-100 mt-2">Cancelar</a>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>
