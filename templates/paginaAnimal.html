@@ -166,8 +166,11 @@
   <body>
     <nav class="navbar navbar-expand-lg bg-body-tertiary">
       <div class="container-fluid">
-        <a class="navbar-brand" href="#">🐾 Patinhas Protegidas</a>
+        <a class="navbar-brand" href="/painel">🐾 Patinhas Protegidas</a>
         <div class="collapse navbar-collapse" id="navbarNavDropdown">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item"><a class="nav-link text-primary fw-bold" href="/painel">⬅️ Voltar ao Painel</a></li>
+          </ul>
           <ul class="navbar-nav">
             <li class="nav-item"><a class="nav-link" href="#">Vacinas</a></li>
             <li class="nav-item"><a class="nav-link" href="#">Histórico</a></li>
@@ -181,14 +184,19 @@
     <div id="grid-principal">
       
       <div class="card">
-        <img src="{{ animal.foto_url}}" class="card-img-top" alt="{ animal.nome }}" />
+        <img src="{{ animal.foto_url if animal.foto_url else 'https://dummyimage.com/300x200/e9ecef/6c757d.png&text=Sem+foto' }}" class="card-img-top" alt="Foto de {{ animal.nome }}" style="height: 200px; object-fit: cover;" />
         <div class="card-body">
-          <h3>{{ animal.nome }}</h3>
-          <p>{{ animal.idade }} anos<br>Chip: {{ animal.chip }}<br>{{ animal.raca }}</p>
+          <h3 class="text-primary">{{ animal.nome }}</h3>
+          <p class="mb-3" style="font-size: 0.95rem; line-height: 1.6;">
+            <strong>Espécie:</strong> {{ animal.especie }}<br>
+            <strong>Raça:</strong> {{ animal.raca }}<br>
+            <strong>Idade:</strong> {{ animal.idade }}<br>
+            <strong>Chip:</strong> <span class="text-break">{{ animal.chip if animal.chip else 'Não possui' }}</span>
+          </p>
            <div class="acoes-btn">
-                <button class="btn btn-outline-secondary btn-mini">✏️</button>
-                <button class="btn btn-outline-danger btn-mini">🗑️</button>
-              </div>
+                <a href="{{ url_for('carregar_edicao_animal', id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
+                <a href="{{ url_for('deletar_animal', id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini">🗑️</a>
+           </div>
         </div>
       </div>
 
@@ -209,19 +217,12 @@
                   <strong class="d-block text-dark">{{ vacina.nome_vacina }}</strong>
                   <small class="text-muted">{{ vacina.data_vacina }}</small>
                   <small class="text-muted">  - {{ vacina.dose_vacina }}ª dose</small>
+                  
                   <div class="acoes-btn">
                     <button class="btn btn-outline-secondary btn-mini">✏️</button>
-                    <a href="{{ url_for(
-                      'deletar_vacina',
-                      id_vacina=vacina.id,
-                      id_animal=animal.id
-                  ) }}"
-                  class="btn btn-outline-danger btn-mini">
-                  
-                      🗑️
-                  
-                  </a>
+                    <a href="{{ url_for('deletar_vacina', id_vacina=vacina.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar esta vacina?')">🗑️</a>
                   </div>
+
                 </div>
                 <span class="
                       {% if vacina.status_vacina == 'aplicada' %}
@@ -234,83 +235,116 @@
               </div>
            {% endfor %}
           
-          
           </div>
         </div>
-
-      
 
       <div class="card">
         <div class="card-header h5" id="btn-cad-container" style="background-color: #f4faa8;">
           <h5>Medicação</h5>
-          <a href="cadastroMedicacao.html"><button class="btn-cadastro"><small>Cadastro</small></button></a>
+          <a href="{{ url_for('cadastro_medicamento', id_animal=animal.id) }}">
+            <button class="btn-cadastro"><small>Cadastro</small></button>
+          </a>
         </div>
 
         <div class="card-scroll-container">
+          
+          {% for remedio in medicamentos %}
           <div class="medicacao-item">
-            <strong class="d-block text-dark small">Amoxilina</strong>
-            <small class="text-muted">1 comp. • 8h em 8h</small>
-            <div class="d-flex gap-1 mt-1">
-              <span class="horario-pill">06:00</span>
-              <span class="horario-pill">14:00</span>
-              <span class="horario-pill">22:00</span>
+            <strong class="d-block text-dark small">{{ remedio.nome_medicamento }}</strong>
+            <small class="text-muted">Dose: {{ remedio.dose_medicamento }} • Duração: {{ remedio.duracao_medicamento }}</small>
+            
+            <div class="d-flex gap-1 mt-1 flex-wrap">
+              <span class="horario-pill">Horários: {{ remedio.horarios }}</span>
             </div>
+            
             <div class="acoes-btn">
-              <button class="btn btn-outline-secondary btn-mini">✏️</button>
-              <button class="btn btn-outline-danger btn-mini">🗑️</button>
+              <a href="{{ url_for('carregar_edicao_medicacao', id_medicamento=remedio.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
+              <a href="{{ url_for('deletar_medicacao', id_medicamento=remedio.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar este medicamento?')">🗑️</a>
             </div>
+
           </div>
+          {% else %}
+            <p class="text-muted small mt-2">Nenhuma medicação registrada.</p>
+          {% endfor %}
+          
         </div>
       </div>
 
       <div class="card">
-        <div class="card-header h5" id="btn-cad-container" style="background-color: #b5e9b5;"">
+        <div class="card-header h5" id="btn-cad-container" style="background-color: #b5e9b5;">
           <h5>Consultas</h5>
-          <a href="cadastroConsultas.html"><button class="btn-cadastro"><small>Cadastro</small></button></a>
+          <a href="{{ url_for('cadastrar_consulta', id_animal=animal.id) }}"><button class="btn-cadastro"><small>Cadastro</small></button></a>
         </div>
        
         <div class="card-scroll-container">
+          
+          {% for consulta in consultas %}
           <div class="consulta-item">
-            <div class="data-icon" >
-              <span style="font-size: 0.6rem;">JUN</span>
-              <span style="font-size: 1.1rem;">15</span>
+            <div class="data-icon text-center" style="padding: 5px; min-width: 75px;">
+              <span style="font-size: 0.8rem; font-weight: bold;">{{ consulta.data_formatada }}</span>
             </div>
             <div class="flex-grow-1">
-              <strong class="d-block small">Check-up</strong>
-              <small class="text-success fw-bold">⏰ 14:30</small>
+              <strong class="d-block small" style="text-transform: capitalize;">{{ consulta.motivo }}</strong>
+              <small class="text-success fw-bold">⏰ {{ consulta.hora_formatada }}</small>
               <br>
-              <small style="color: #666; display: block;">📍 LabVet</small>
+              <small style="color: #666; display: block;">📍 {{ consulta.clinica }} {% if consulta.veterinario %} (Dr(a). {{ consulta.veterinario }}){% endif %}</small>
               
               <div class="acoes-btn">
-                <button class="btn btn-outline-secondary btn-mini">✏️</button>
-                <button class="btn btn-outline-danger btn-mini">🗑️</button>
+                <a href="{{ url_for('editar_consulta', id_consulta=consulta.id, id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
+                <a href="{{ url_for('deletar_consulta', id_consulta=consulta.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar esta consulta?')">🗑️</a>
               </div>
             </div>
           </div>
-        </div>
+          {% else %}
+            <p class="text-muted small mt-2">Nenhuma consulta registrada.</p>
+          {% endfor %}
+
+        </div>        
       </div>
 
 
       <div class="card">
-        <div class="card-header h5" id="btn-cad-container" style="background-color: #fabba8;"">
+        <div class="card-header h5" id="btn-cad-container" style="background-color: #fabba8;">
           <h5>Histórico Veterinário</h5>
-          <a href="cadastroHistórico.html"><button class="btn-cadastro"><small>Cadastro</small></button></a>
+          <a href="{{ url_for('cadastrar_historico', id_animal=animal.id) }}"><button class="btn-cadastro"><small>Cadastro</small></button></a>
         </div>
         
         <div class="card-scroll-container">
+          
+          {% for item in historico_medico %}
           <div class="historico-item">
-            <small class="text-muted fw-bold">14/03/2025</small>
-            <p class="mb-1 small"><strong>Peso:</strong> 4 kl.</p>
-            <p class="mb-1 small"><strong>temperatura:</strong> 36.</p>
-            <p class="mb-1 small"><strong>Tipo:</strong> Emergência.</p>
-            <p class="mb-1 small"><strong>Sintoma:</strong> Prostração e vômito.</p>
-            <p class="mb-1 small"><strong>Diagnóstico:</strong> Suspeita de intoxicação.</p>
-            <p class="mb-1 small"><strong>Tratamento:</strong> Fluido na veia + Carvão ativado 1 dose.</p>
-            <div class="acoes-btn">
-              <button class="btn btn-outline-secondary btn-mini">✏️</button>
-              <button class="btn btn-outline-danger btn-mini">🗑️</button>
+            <small class="text-muted fw-bold">{{ item.data_formatada }}</small>
+            
+            {% if item.clinica %}<p class="mb-1 small"><strong>Local:</strong> {{ item.clinica }}</p>{% endif %}
+            
+            <div class="d-flex gap-3">
+              {% if item.peso %}<p class="mb-1 small"><strong>Peso:</strong> {{ item.peso }}</p>{% endif %}
+              {% if item.temperatura %}<p class="mb-1 small"><strong>Temp:</strong> {{ item.temperatura }}</p>{% endif %}
+            </div>
+            
+            <p class="mb-1 small"><strong>Tipo:</strong> <span style="text-transform: capitalize;">{{ item.tipo_atendimento }}</span></p>
+            
+            {% if item.sintomas %}<p class="mb-1 small"><strong>Sintomas:</strong> {{ item.sintomas }}</p>{% endif %}
+            {% if item.diagnostico %}<p class="mb-1 small"><strong>Diagnóstico:</strong> {{ item.diagnostico }}</p>{% endif %}
+            {% if item.tratamento %}<p class="mb-1 small"><strong>Tratamento:</strong> {{ item.tratamento }}</p>{% endif %}
+            
+            {% if item.anexo_url %}
+            <p class="mb-1 small">
+                <strong>Anexo:</strong> <a href="{{ item.anexo_url }}" target="_blank" class="text-decoration-none text-danger fw-bold">Ver Exame/Receita 📎</a>
+            </p>
+            {% endif %}
+
+            <div class="acoes-btn mt-2">
+              <div class="acoes-btn mt-2">
+              <a href="{{ url_for('editar_historico', id_historico=item.id, id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>              
+              <a href="{{ url_for('deletar_historico', id_historico=item.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar este registro do histórico?')">🗑️</a>
+            </div>
             </div>
           </div>
+          {% else %}
+            <p class="text-muted small mt-2">Nenhum histórico registrado.</p>
+          {% endfor %}
+
         </div>
       </div>
 

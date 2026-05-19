@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patinhas Protegidas - Editar Animal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px 0; }
+    </style>
+</head>
+<body class="bg-light">
+
+    <div class="container d-flex justify-content-center">
+        <div class="card shadow p-4 mt-4" style="width: 100%; max-width: 450px;">
+            <h3 class="text-center text-success mb-4">✏️ Editar Perfil do Pet</h3>
+
+            <form method="POST" action="/salvar_edicao/{{ animal.id }}">
+                
+                <div class="mb-3">
+                    <label for="nome" class="form-label fw-bold">Nome do Animal:</label>
+                    <input type="text" class="form-control" id="nome" name="nome" value="{{ animal.nome }}" required>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label for="especie" class="form-label fw-bold">Espécie:</label>
+                        <input type="text" class="form-control" id="especie" name="especie" list="lista-especies" value="{{ animal.especie }}" required>
+                        <datalist id="lista-especies">
+                            <option value="Cachorro">
+                            <option value="Gato">
+                            <option value="Porquinho-da-índia">
+                            <option value="Coelho">
+                            <option value="Ave">
+                        </datalist>
+                    </div>
+
+                    <div class="col-6 mb-3">
+                        <label for="raca" class="form-label fw-bold">Raça:</label>
+                        <input type="text" class="form-control" id="raca" name="raca" list="lista-racas" value="{{ animal.raca }}" required>
+                        <datalist id="lista-racas">
+                            <option value="Sem Raça Definida (Vira-lata)">
+                            <option value="Siamês">
+                            <option value="Persa">
+                            <option value="Poodle">
+                            <option value="Golden Retriever">
+                        </datalist>
+                    </div>
+                </div>
+
+                <div class="row">
+                    
+                    <div class="mb-3">
+                    <label for="idade" class="form-label">Idade</label>
+                    <input type="text" class="form-control" id="idade" name="idade" value="{{ animal.idade }}" required>
+                </div>
+
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold d-block">Animal Castrado?</label>
+                        <div class="form-check form-check-inline mt-1">
+                            <input class="form-check-input" type="checkbox" id="castrado" name="castrado" value="1" {% if animal.castrado | int == 1 %}checked{% endif %}>
+                            <label class="form-check-label" for="castrado">Sim</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="data" class="form-label fw-bold">Data da Castração (se houver):</label>
+                    <input type="date" class="form-control" id="data" name="data" value="{{ animal.data_castracao }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="chip" class="form-label fw-bold">Chip de identificação:</label>
+                    <input type="text" class="form-control" id="chip" name="chip" value="{{ animal.chip if animal.chip else '' }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="foto-pet" class="form-label fw-bold">Link da Foto (URL):</label>
+                    <input type="text" class="form-control" id="foto-pet" name="foto-pet" value="{{ animal.foto_url if animal.foto_url else '' }}" placeholder="Cole o link de uma imagem aqui">
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 btn-lg shadow-sm fw-bold">Salvar Alterações</button>
+                <a href="/pagina_animal/{{ animal.id }}" class="btn btn-outline-secondary w-100 mt-2 btn-sm fw-bold">Cancelar</a>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

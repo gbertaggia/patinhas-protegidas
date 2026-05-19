@@ -35,3 +35,25 @@ CREATE TABLE IF NOT EXISTS vacinas (
 
     FOREIGN KEY (animal_id) REFERENCES animais(id)
 );
+
+CREATE TABLE IF NOT EXISTS medicamentos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    animal_id INT NOT NULL,
+    nome_medicamento VARCHAR(100) NOT NULL,
+    dose_medicamento VARCHAR(100),
+    frequencia VARCHAR(50),      
+    horarios VARCHAR(255),       
+    data_inicio_medicamento DATE, 
+    duracao_medicamento VARCHAR(100), 
+    FOREIGN KEY (animal_id) REFERENCES animais(id) ON DELETE CASCADE
+);
+
+CREATE TABLE consultas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome_pet VARCHAR(100) NOT NULL,
+    data_consulta DATE NOT NULL,
+    hora_consulta TIME,
+    clinica VARCHAR(150),
+    veterinario VARCHAR(100),
+    motivo VARCHAR(255)
+);

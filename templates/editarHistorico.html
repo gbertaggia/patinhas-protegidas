@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patinhas Protegidas - Editar Histórico</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+        }
+        @media (max-width: 450px) {
+            .card { border: none; box-shadow: none !important; background-color: transparent !important; }
+            body { background-color: #fff !important; }
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <div class="container d-flex justify-content-center">
+       <div class="card shadow p-4 mt-4" style="width: 100%; max-width: 450px;">
+        <h3 class="text-center text-danger mb-4">✏️ Editar Histórico Médico</h3>
+
+        <form method="POST" action="{{ url_for('editar_historico', id_historico=historico.id, id_animal=animal.id) }}">
+            
+            <div class="mb-3">
+                <label class="form-label">Nome do Pet:</label>
+                <input type="text" class="form-control" value="{{ animal.nome }}" readonly>
+            </div>
+
+            <div class="mb-3">
+                <label for="data_consulta" class="form-label">Data do Atendimento:</label>
+                <input type="date" id="data_consulta" name="data_consulta" class="form-control" value="{{ historico.data_registro }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="local" class="form-label">Local:</label>
+                <input type="text" id="local" name="local" class="form-control" value="{{ historico.clinica }}">
+            </div>
+
+            <div class="row">
+                <div class="col-6 mb-3">
+                    <label for="peso" class="form-label">Peso (kg):</label>
+                    <input type="text" id="peso" name="peso" class="form-control" value="{{ historico.peso }}">
+                </div>
+                <div class="col-6 mb-3">
+                    <label for="temp" class="form-label">Temp. (°C):</label>
+                    <input type="text" id="temp" name="temp" class="form-control" value="{{ historico.temperatura }}">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="motivo" class="form-label">Motivo do Atendimento:</label>
+                <select name="motivo" id="motivo" class="form-select">
+                    <option value="rotina" {% if historico.tipo_atendimento == 'rotina' %}selected{% endif %}>Consulta de Rotina</option>
+                    <option value="urgência" {% if historico.tipo_atendimento == 'urgência' %}selected{% endif %}>Urgência/Emergência</option>
+                    <option value="retorno" {% if historico.tipo_atendimento == 'retorno' %}selected{% endif %}>Retorno</option>
+                    <option value="exame" {% if historico.tipo_atendimento == 'exame' %}selected{% endif %}>Realização de Exames</option>
+                    <option value="castração" {% if historico.tipo_atendimento == 'castração' %}selected{% endif %}>Castração</option>
+                    <option value="outro" {% if historico.tipo_atendimento == 'outro' %}selected{% endif %}>Outro</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="sintomas" class="form-label">Sintomas:</label>
+                <textarea class="form-control" id="sintomas" name="sintomas" rows="2">{{ historico.sintomas }}</textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="diagnostico" class="form-label">Diagnóstico:</label>
+                <textarea class="form-control" id="diagnostico" name="diagnostico" rows="2">{{ historico.diagnostico }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="prescricao" class="form-label">Prescrição / Tratamento:</label>
+                <textarea class="form-control" id="prescricao" name="prescricao" rows="2">{{ historico.tratamento }}</textarea>
+            </div>
+
+            <div class="mb-4">
+                <label for="arquivo" class="form-label">Anexar Exame/Receita (URL):</label>
+                <input type="text" class="form-control" id="arquivo" name="arquivo" value="{{ historico.anexo_url }}">
+            </div>
+
+            <button type="submit" class="btn btn-danger w-100 btn-lg shadow-sm">Atualizar Registro</button>
+            <a href="{{ url_for('pagina_animal', id_animal=animal.id) }}" class="btn btn-outline-secondary w-100 mt-2">Cancelar</a>
+        </form>
+    </div>
+</div>
+</body>
+</html>

@@ -46,11 +46,7 @@
             <h3 class="text-center text-success mb-4">🐾 Novo Animal</h3>
 
             <form method="POST" action="/cadastrar_animal">
-                <div class="mb-3">
-                    <label for="foto-pet" class="form-label">Foto do pet:</label>
-                    <input type="text" class="form-control" id="foto-pet" name="foto-pet" placeholder="URL da foto">
-                </div>
-
+                
                 <div class="mb-3">
                     <label for="nome" class="form-label">Nome</label>
                     <input type="text" class="form-control" id="nome" name="nome" required>
@@ -58,43 +54,32 @@
 
                 <div class="mb-3">
                     <label for="especie" class="form-label">Espécie do Animal:</label>
-                    <select name="especie" id="especie" class="form-select" required>
-                        <option value="" disabled selected>Selecione a espécie...</option>
-                        <optgroup label="Mais Comuns">
-                            <option value="cao">Cachorro</option>
-                            <option value="gato">Gato</option>
-                        </optgroup>
-                        <optgroup label="Outros">
-                            <option value="coelho">Coelho</option>
-                            <option value="ave">Ave</option>
-                            <option value="tartaruga">Tartaruga</option>
-                            <option value="porquinho-da-india">Porquinho-da-índia</option>
-                            <option value="equino">Cavalo/Burro </option>
-                            <option value="outro">Outra espécie</option>
-                        </optgroup>
-                    </select>
+                    <input type="text" class="form-control" id="especie" name="especie" list="lista-especies" placeholder="Selecione ou digite a espécie..." required>
+                    <datalist id="lista-especies">
+                        <option value="Cachorro">
+                        <option value="Gato">
+                        <option value="Coelho">
+                        <option value="Ave">
+                        <option value="Tartaruga">
+                        <option value="Porquinho-da-índia">
+                        <option value="Equino">
+                    </datalist>
                 </div>
 
                 <div class="mb-3">
                     <label for="idade" class="form-label">Idade</label>
-                    <input type="number" class="form-control" id="idade" name="idade" required>
+                    <input type="text" class="form-control" id="idade" name="idade" placeholder="Ex: 2 meses, 3 anos..." required>
                 </div>
 
                 <div class="mb-3">
                     <label for="raca" class="form-label">Raça do Animal:</label>
-                    <select name="raca" id="raca" class="form-select">
-                        <option value="" disabled selected>Selecione a raça...</option>
-                        <optgroup label="Cachorros">
-                            <option value="srd-cao">Sem Raça Definida (Vira-lata)</option>
-                            <option value="shih-tzu">Shih Tzu</option>
-                            <option value="poodle">Poodle</option>
-                        </optgroup>
-                        <optgroup label="Gatos">
-                            <option value="srd-gato">Sem Raça Definida (Vira-lata)</option>
-                            <option value="siames">Siamês</option>
-                        </optgroup>
-                        <option value="outra">Outra raça...</option>
-                    </select>
+                    <input type="text" class="form-control" id="raca" name="raca" list="lista-racas" placeholder="Selecione ou digite a raça...">
+                    <datalist id="lista-racas">
+                        <option value="Sem Raça Definida (Vira-lata)">
+                        <option value="Shih Tzu">
+                        <option value="Poodle">
+                        <option value="Siamês">
+                    </datalist>
                 </div>
 
                 <div class="mb-3">
@@ -118,7 +103,12 @@
 
                 <div class="mb-4">
                     <label for="chip" class="form-label">Chip de identificação</label>
-                    <input type="text" class="form-control" id="chip" name="chip" required>
+                    <input type="text" class="form-control" id="chip" name="chip">
+                </div>
+
+                <div class="mb-3">
+                    <label for="foto-pet" class="form-label">Foto do pet:</label>
+                    <input type="text" class="form-control" id="foto-pet" name="foto-pet" placeholder="URL da foto">
                 </div>
 
                 <button type="submit" class="btn btn-success w-100 btn-lg shadow-sm">Cadastrar animal</button>
