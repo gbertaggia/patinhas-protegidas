@@ -12,7 +12,10 @@
     
     <nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
         <div class="container">
-            <span class="navbar-brand mb-0 h1">🐾 Patinhas Protegidas</span>
+            <a class="navbar-brand d-flex align-items-center" href="/painel" style="text-decoration: none;">
+            <span style="color: transparent; text-shadow: 0 0 0 #9b59b6; font-size: 2rem; margin-right: 10px;">🐾</span>     
+            <span class="text-primary" style="font-weight: bold; font-size: 1.5rem;">Patinhas Protegidas</span>
+            </a>
             <span class="navbar-text text-white d-flex align-items-center">
                 <h5 class="mb-0 me-3">Olá, {{ session['nome_usuario'] or email }}! 👋</h5>
                 <a href="{{ url_for('editar_perfil_usuario') }}" class="btn btn-sm btn-outline-primary me-2">✏️ Editar Perfil</a>
