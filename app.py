@@ -192,33 +192,59 @@ def salvar_vacina(id_animal):
 
 @app.route('/deletar_vacina/<int:id_vacina>/<int:id_animal>')
 def deletar_vacina(id_vacina, id_animal):
-
     try:
-
         conexao = conectar_banco()
         cursor = conexao.cursor()
-
-        comando_sql = """
-            DELETE FROM vacinas
-            WHERE id = %s
-        """
-
-        cursor.execute(comando_sql, (id_vacina,))
-
+        cursor.execute("DELETE FROM vacinas WHERE id = %s", (id_vacina,))
         conexao.commit()
-
         cursor.close()
         conexao.close()
-
-        return redirect(
-            url_for(
-                'pagina_animal',
-                id_animal=id_animal
-            )
-        )
-
+        return redirect(url_for('pagina_animal', id_animal=id_animal))
     except Exception as e:
-        return f"Erro ao deletar vacina: {e}" 
+        return f"<h1>Erro ao deletar vacina.</h1> <p>Detalhes: {e}</p>"
+
+@app.route('/editar_vacina/<int:id_vacina>/<int:id_animal>', methods=['GET', 'POST'])
+def editar_vacina(id_vacina, id_animal):
+    conexao = conectar_banco()
+    cursor = conexao.cursor(pymysql.cursors.DictCursor)
+
+    if request.method == 'POST':
+        # Mantém a mesma inteligência do cadastro para o campo "Outros..."
+        nome_vacina = (
+            request.form.get('nome_vacina_outra')
+            if request.form.get('vacina') == 'outros'
+            else request.form.get('vacina')
+        )
+        data_vacina = request.form.get('data_vacina')
+        status_vacina = request.form.get('status_vacina')
+        dose_vacina = request.form.get('dose')
+
+        try:
+            sql = """
+                UPDATE vacinas 
+                SET nome_vacina=%s, data_vacina=%s, status_vacina=%s, dose_vacina=%s
+                WHERE id=%s
+            """
+            cursor.execute(sql, (nome_vacina, data_vacina, status_vacina, dose_vacina, id_vacina))
+            conexao.commit()
+            return redirect(url_for('pagina_animal', id_animal=id_animal))
+        except Exception as e:
+            return f"<h1>Erro ao atualizar vacina.</h1> <p>Detalhes: {e}</p>"
+        finally:
+            cursor.close()
+            conexao.close()
+
+    # Se for GET, busca os dados para preencher a tela
+    cursor.execute("SELECT * FROM vacinas WHERE id = %s", (id_vacina,))
+    vacina = cursor.fetchone()
+    
+    cursor.execute("SELECT * FROM animais WHERE id = %s", (id_animal,))
+    animal = cursor.fetchone()
+    
+    cursor.close()
+    conexao.close()
+    
+    return render_template('editarVacina.html', vacina=vacina, animal=animal)
     
 #--------------------------------------------------------------------------------#
 # MEDICAÇÃO

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patinhas Protegidas - Editar Vacina</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px 0; }
+        @media (max-width: 450px) {
+            .card { border: none; box-shadow: none !important; background-color: transparent !important; }
+            body { background-color: #fff !important; }
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <div class="container d-flex justify-content-center">
+        <div class="card shadow p-4 mt-4" style="width: 100%; max-width: 450px;">
+            <h3 class="text-center text-primary mb-4">✏️ Editar Vacina</h3>
+
+            <form action="{{ url_for('editar_vacina', id_vacina=vacina.id, id_animal=animal.id) }}" method="POST">
+                
+                <div class="mb-3">
+                    <label class="form-label">Nome do Pet:</label>
+                    <input type="text" class="form-control" value="{{ animal.nome }}" readonly>
+                </div>
+
+                <div class="mb-3">
+                    <label for="vacina" class="form-label">Vacina:</label>
+                    <select name="vacina" id="vacina" class="form-select" required onchange="checkOutraVacina(this)">
+                        <option value="v8_v10" {% if vacina.nome_vacina == 'v8_v10' %}selected{% endif %}>V8 / V10 (Polivalente)</option>
+                        <option value="antirrabica_cao" {% if vacina.nome_vacina == 'antirrabica_cao' %}selected{% endif %}>Antirrábica (Cão)</option>
+                        <option value="gripe" {% if vacina.nome_vacina == 'gripe' %}selected{% endif %}>Gripe Canina</option>
+                        <option value="giardia" {% if vacina.nome_vacina == 'giardia' %}selected{% endif %}>Giárdia</option>
+                        <option value="v4_v5" {% if vacina.nome_vacina == 'v4_v5' %}selected{% endif %}>Quádrupla (V4) / Quíntupla (V5)</option>
+                        <option value="antirrabica_gato" {% if vacina.nome_vacina == 'antirrabica_gato' %}selected{% endif %}>Antirrábica (Gato)</option>
+                        <option value="felv" {% if vacina.nome_vacina == 'felv' %}selected{% endif %}>FeLV</option>
+                        
+                        {% set lista_padrao = ['v8_v10', 'antirrabica_cao', 'gripe', 'giardia', 'v4_v5', 'antirrabica_gato', 'felv'] %}
+                        <option value="outros" id="opcao-outros" {% if vacina.nome_vacina not in lista_padrao %}selected{% endif %}>Outra...</option>
+                    </select>
+                </div>
+
+                <div class="mb-3" id="campo-outra-vacina" style="display: none;">
+                    <label for="nome_vacina_outra" class="form-label">Nome da Vacina:</label>
+                    <input type="text" class="form-control" id="nome_vacina_outra" name="nome_vacina_outra" value="{% if vacina.nome_vacina not in lista_padrao %}{{ vacina.nome_vacina }}{% endif %}">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label d-block">Status:</label>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="agendado" name="status_vacina" value="agendada" {% if vacina.status_vacina == 'agendada' %}checked{% endif %}>
+                        <label class="form-check-label" for="agendado">🗓️ Agendado</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="ok" name="status_vacina" value="aplicada" {% if vacina.status_vacina == 'aplicada' %}checked{% endif %}>
+                        <label class="form-check-label" for="ok">✅ Aplicada</label>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label for="data_vacina" class="form-label">Data:</label>
+                        <input type="date" id="data_vacina" name="data_vacina" class="form-control" value="{{ vacina.data_vacina }}" required>
+                    </div>
+
+                    <div class="col-6 mb-3">
+                        <label for="dose" class="form-label">Dose:</label>
+                        <select name="dose" id="dose" class="form-select">
+                            <option value="1" {% if vacina.dose_vacina == '1' %}selected{% endif %}>1ª Dose</option>
+                            <option value="2" {% if vacina.dose_vacina == '2' %}selected{% endif %}>2ª Dose</option>
+                            <option value="3" {% if vacina.dose_vacina == '3' %}selected{% endif %}>3ª Dose</option>
+                            <option value="reforco" {% if vacina.dose_vacina == 'reforco' %}selected{% endif %}>Reforço Anual</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm">Atualizar Vacina</button>
+                <a href="{{ url_for('pagina_animal', id_animal=animal.id) }}" class="btn btn-outline-secondary w-100 mt-2">Cancelar</a>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function checkOutraVacina() {
+            const select = document.getElementById('vacina');
+            const campoOutros = document.getElementById('campo-outra-vacina');
+            const inputOutra = document.getElementById('nome_vacina_outra');
+            
+            if (select.value === 'outros') {
+                campoOutros.style.display = 'block';
+                inputOutra.required = true;
+            } else {
+                campoOutros.style.display = 'none';
+                inputOutra.required = false;
+            }
+        }
+        
+        // Roda a função assim que a tela abre, para exibir a caixinha se for edição de vacina "Outra"
+        window.onload = checkOutraVacina;
+    </script>
+</body>
+</html>
