@@ -42,9 +42,14 @@
                     </div>
 
                     <div class="col-6 mb-3">
-                        <label for="frequencia" class="form-label fw-bold">Frequência (h):</label>
-                        <input type="text" class="form-control" id="frequencia" name="frequencia" value="{{ remedio.frequencia }}" readonly>
-                        <small class="text-muted" style="font-size: 0.65rem;">Para alterar horários, delete e crie uma nova.</small>
+                        <label for="frequencia" class="form-label fw-bold">Frequência:</label>
+                        <select id="frequencia" name="frequencia" class="form-select" required>
+                            <option value="24" {% if remedio.frequencia == '24' %}selected{% endif %}>Uma vez ao dia (24h)</option>
+                            <option value="12" {% if remedio.frequencia == '12' %}selected{% endif %}>12h em 12h</option>
+                            <option value="8" {% if remedio.frequencia == '8' %}selected{% endif %}>8h em 8h</option>
+                            <option value="6" {% if remedio.frequencia == '6' %}selected{% endif %}>6h em 6h</option>
+                            <option value="4" {% if remedio.frequencia == '4' %}selected{% endif %}>4h em 4h</option>
+                        </select>
                     </div>
                 </div>
 

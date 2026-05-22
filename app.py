@@ -149,12 +149,18 @@ def editar_consulta(id_consulta, id_animal):
 #VACINAS
 @app.route('/animal/<int:id_animal>/vacina')
 def cadastro_vacina(id_animal):
-
-    return render_template(
-        'cadastroVacinas.html',
-        id_animal=id_animal
-    )
-
+    conexao = conectar_banco()
+    cursor = conexao.cursor(pymysql.cursors.DictCursor)
+    
+    # 1. Busca o animal pelo ID que veio na URL
+    cursor.execute("SELECT * FROM animais WHERE id = %s", (id_animal,))
+    animal = cursor.fetchone()
+    
+    cursor.close()
+    conexao.close()
+    
+    # 2. Envia o objeto 'animal' para o template
+    return render_template('cadastroVacinas.html', animal=animal, id_animal=id_animal)
 
 @app.route('/salvar_vacina/<int:id_animal>', methods=['POST'])
 def salvar_vacina(id_animal):
@@ -250,7 +256,17 @@ def editar_vacina(id_vacina, id_animal):
 # MEDICAÇÃO
 @app.route('/animal/<int:id_animal>/medicamentos')
 def cadastro_medicamento(id_animal):
-    return render_template('cadastroMedicacao.html', id_animal=id_animal)
+    conexao = conectar_banco()
+    cursor = conexao.cursor(pymysql.cursors.DictCursor)
+    
+    # Busca o animal para ter acesso aos dados dele no template
+    cursor.execute("SELECT * FROM animais WHERE id = %s", (id_animal,))
+    animal = cursor.fetchone()
+    
+    cursor.close()
+    conexao.close()
+    
+    return render_template('cadastroMedicacao.html', animal=animal, id_animal=id_animal)
 
 @app.route('/salvar_medicacao/<int:id_animal>', methods=['POST'])
 def salvar_medicacao(id_animal):    
