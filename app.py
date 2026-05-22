@@ -800,7 +800,6 @@ def cadastrar_consulta(id_animal):
             # Aqui usamos id_animal (a variável do Python) para preencher a coluna animal_id no banco
             valores = (id_animal, data_consulta, hora_consulta, clinica, veterinario, motivo)
 
-
             cursor.execute(sql, valores)
             conexao.commit()
             
@@ -815,7 +814,8 @@ def cadastrar_consulta(id_animal):
 
     # Se for GET, envia a variável animal para preencher a tela
     return render_template('cadastroConsultas.html', animal=animal)
-    
+
+#------------------------------------------------------------------------------------------------#
 # ROTAS DE ACESSO RESTRITO
 @app.route('/painel')
 def painel():
