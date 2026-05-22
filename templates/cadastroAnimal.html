@@ -106,13 +106,17 @@
                     <input type="text" class="form-control" id="chip" name="chip">
                 </div>
 
-                <div class="mb-3">
-                    <label for="foto-pet" class="form-label">Foto do pet:</label>
-                    <input type="text" class="form-control" id="foto-pet" name="foto-pet" placeholder="URL da foto">
-                </div>
+            <div class="mb-3">
+                <label for="foto-pet" class="form-label">Foto do pet:</label>
+                <input type="text" class="form-control" id="foto-pet" name="foto-pet" placeholder="URL da foto">
+            </div>
 
-                <button type="submit" class="btn btn-success w-100 btn-lg shadow-sm">Cadastrar animal</button>
-            </form>
+            <button type="submit" class="btn btn-success w-100 btn-lg shadow-sm fw-bold">Cadastrar Animal</button>
+
+            <a href="{{ url_for('painel') }}" class="btn btn-outline-secondary w-100 mt-2">
+                Cancelar
+            </a>
+        </form>
         </div>
     </div>
 
