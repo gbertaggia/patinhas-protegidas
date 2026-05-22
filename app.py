@@ -688,7 +688,6 @@ def deletar_animal(id_animal):
             cursor.execute("DELETE FROM vacinas WHERE animal_id = %s", (id_animal,))
             cursor.execute("DELETE FROM consultas WHERE animal_id = %s", (id_animal,))
             
-            # (Se a sua tabela de histórico tiver outro nome, ajuste a linha abaixo)
             cursor.execute("DELETE FROM historico_veterinario WHERE animal_id = %s", (id_animal,))
 
             # 3. Com a "casa limpa", deletamos o registro "pai" (o animal)
