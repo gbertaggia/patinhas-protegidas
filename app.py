@@ -667,7 +667,8 @@ def cadastrar_animal():
 @app.route('/deletar_animal/<int:id_animal>')
 def deletar_animal(id_animal):
     """
-    Remove um registro de animal. A cláusula WHERE garante que apenas o dono do registro possa excluí-lo.
+    Remove um registro de animal limpando antes suas dependências (vacinas, consultas, etc.).
+    Garante que apenas o dono do registro possa excluí-lo.
     """
     if 'usuario_logado' not in session:
         return redirect('/')
@@ -678,11 +679,23 @@ def deletar_animal(id_animal):
         conexao = conectar_banco()
         cursor = conexao.cursor()
 
-        comando_sql = "DELETE FROM animais WHERE id = %s AND usuario_id = %s"
-        valores = (id_animal, id_protetor)
+        # 1. Validação de Segurança: Confirma se o animal pertence ao usuário logado
+        cursor.execute("SELECT id FROM animais WHERE id = %s AND usuario_id = %s", (id_animal, id_protetor))
+        animal_valido = cursor.fetchone()
 
-        cursor.execute(comando_sql, valores)
-        conexao.commit()
+        if animal_valido:
+            # 2. O animal é do usuário. Agora limpamos os registros "filhos" (Integridade Referencial)
+            cursor.execute("DELETE FROM vacinas WHERE animal_id = %s", (id_animal,))
+            cursor.execute("DELETE FROM consultas WHERE animal_id = %s", (id_animal,))
+            
+            # (Se a sua tabela de histórico tiver outro nome, ajuste a linha abaixo)
+            cursor.execute("DELETE FROM historico_veterinario WHERE animal_id = %s", (id_animal,))
+
+            # 3. Com a "casa limpa", deletamos o registro "pai" (o animal)
+            cursor.execute("DELETE FROM animais WHERE id = %s", (id_animal,))
+
+            # 4. Efetiva todas as exclusões no banco de dados de uma vez só
+            conexao.commit()
 
         cursor.close()
         conexao.close()
