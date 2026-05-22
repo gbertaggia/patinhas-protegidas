@@ -51,7 +51,7 @@ def pagina_animal(id_animal):
     medicamentos = cursor.fetchall()
    
     # Busca as consultas pelo nome do pet
-    cursor.execute("SELECT * FROM consultas WHERE nome_pet = %s", (animal['nome'],))
+    cursor.execute("SELECT * FROM consultas WHERE animal_id = %s", (id_animal,))
     consultas = cursor.fetchall()
 
     # Formata data e hora para o padrão DD/MM/AAAA
@@ -64,7 +64,7 @@ def pagina_animal(id_animal):
             c['hora_formatada'] = str(c['hora_consulta'])[:5]
 
     # Busca o histórico veterinário pelo nome do pet
-    cursor.execute("SELECT * FROM historico_veterinario WHERE nome_pet = %s", (animal['nome'],))
+    cursor.execute("SELECT * FROM historico_veterinario WHERE animal_id = %s", (id_animal,))
     historico_medico = cursor.fetchall()
 
     # Formata a data do histórico para o padrão brasileiro
@@ -383,7 +383,7 @@ def cadastrar_historico(id_animal):
     animal = cursor.fetchone()
 
     if request.method == 'POST':
-        nome_pet = animal['nome']
+        
         data_registro = request.form.get('data_consulta')
         clinica = request.form.get('local')
         peso = request.form.get('peso')
@@ -397,10 +397,10 @@ def cadastrar_historico(id_animal):
         try:
             sql = """
                 INSERT INTO historico_veterinario 
-                (nome_pet, data_registro, clinica, peso, temperatura, tipo_atendimento, sintomas, diagnostico, tratamento, anexo_url)
+                (animal_id, data_registro, clinica, peso, temperatura, tipo_atendimento, sintomas, diagnostico, tratamento, anexo_url)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
-            valores = (nome_pet, data_registro, clinica, peso, temperatura, tipo_atendimento, sintomas, diagnostico, tratamento, anexo_url)
+            valores = (id_animal, data_registro, clinica, peso, temperatura, tipo_atendimento, sintomas, diagnostico, tratamento, anexo_url)
 
             cursor.execute(sql, valores)
             conexao.commit()
@@ -679,21 +679,13 @@ def deletar_animal(id_animal):
         conexao = conectar_banco()
         cursor = conexao.cursor()
 
-        # 1. Validação de Segurança: Confirma se o animal pertence ao usuário logado
+        # Validação de Segurança: Confirma se o animal pertence ao usuário logado
         cursor.execute("SELECT id FROM animais WHERE id = %s AND usuario_id = %s", (id_animal, id_protetor))
         animal_valido = cursor.fetchone()
 
-        if animal_valido:
-            # 2. O animal é do usuário. Agora limpamos os registros "filhos" (Integridade Referencial)
-            cursor.execute("DELETE FROM vacinas WHERE animal_id = %s", (id_animal,))
-            cursor.execute("DELETE FROM consultas WHERE animal_id = %s", (id_animal,))
-            
-            cursor.execute("DELETE FROM historico_veterinario WHERE animal_id = %s", (id_animal,))
+        if animal_valido:         
 
-            # 3. Com a "casa limpa", deletamos o registro "pai" (o animal)
-            cursor.execute("DELETE FROM animais WHERE id = %s", (id_animal,))
-
-            # 4. Efetiva todas as exclusões no banco de dados de uma vez só
+            cursor.execute("DELETE FROM animais WHERE id = %s", (id_animal,))            
             conexao.commit()
 
         cursor.close()
@@ -793,8 +785,7 @@ def cadastrar_consulta(id_animal):
     animal = cursor.fetchone()
 
     if request.method == 'POST':
-        # O nome agora vem automático do banco, não precisa pegar do form!
-        nome_pet = animal['nome'] 
+        # O nome agora vem automático do banco, não precisa pegar do form
         data_consulta = request.form.get('data_consulta')
         hora_consulta = request.form.get('hora_consulta') if request.form.get('hora_consulta') else None
         clinica = request.form.get('clinica')
@@ -803,10 +794,12 @@ def cadastrar_consulta(id_animal):
 
         try:
             sql = """
-                INSERT INTO consultas (nome_pet, data_consulta, hora_consulta, clinica, veterinario, motivo)
+                INSERT INTO consultas (animal_id, data_consulta, hora_consulta, clinica, veterinario, motivo)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """
-            valores = (nome_pet, data_consulta, hora_consulta, clinica, veterinario, motivo)
+            # Aqui usamos id_animal (a variável do Python) para preencher a coluna animal_id no banco
+            valores = (id_animal, data_consulta, hora_consulta, clinica, veterinario, motivo)
+
 
             cursor.execute(sql, valores)
             conexao.commit()

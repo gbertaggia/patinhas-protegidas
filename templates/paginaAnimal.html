@@ -194,7 +194,11 @@
             <strong>Espécie:</strong> {{ animal.especie }}<br>
             <strong>Raça:</strong> {{ animal.raca }}<br>
             <strong>Idade:</strong> {{ animal.idade }}<br>
-            <strong>Chip:</strong> <span class="text-break">{{ animal.chip if animal.chip else 'Não possui' }}</span>
+            <strong>Chip:</strong> <span class="text-break">{{ animal.chip if animal.chip else 'Não possui' }}</span><br>
+            <strong>Castrado:</strong> {% if animal.castrado %}Sim{% else %}Não{% endif %}<br>
+            {% if animal.castrado and animal.data_castracao %}
+              <strong>Data Castração:</strong> {{ animal.data_castracao }}<br>
+            {% endif %}
           </p>
            <div class="acoes-btn">
                 <a href="{{ url_for('carregar_edicao_animal', id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>

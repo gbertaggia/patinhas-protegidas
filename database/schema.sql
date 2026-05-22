@@ -24,7 +24,6 @@ CREATE TABLE IF NOT EXISTS animais (
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
-
 CREATE TABLE IF NOT EXISTS vacinas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     animal_id INT NOT NULL,
@@ -32,8 +31,7 @@ CREATE TABLE IF NOT EXISTS vacinas (
     data_vacina DATE,
     status_vacina VARCHAR(100) DEFAULT 'Agendado',
     dose_vacina VARCHAR(100),
-
-    FOREIGN KEY (animal_id) REFERENCES animais(id)
+    FOREIGN KEY (animal_id) REFERENCES animais(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS medicamentos (
@@ -41,31 +39,33 @@ CREATE TABLE IF NOT EXISTS medicamentos (
     animal_id INT NOT NULL,
     nome_medicamento VARCHAR(100) NOT NULL,
     dose_medicamento VARCHAR(100),
-    frequencia VARCHAR(50),      
+    frequencia VARCHAR(50),       
     horarios VARCHAR(255),       
     data_inicio_medicamento DATE, 
     duracao_medicamento VARCHAR(100), 
     FOREIGN KEY (animal_id) REFERENCES animais(id) ON DELETE CASCADE
 );
 
-CREATE TABLE consultas (
+CREATE TABLE IF NOT EXISTS consultas (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    nome_pet VARCHAR(100) NOT NULL,
+    animal_id INT NOT NULL,
     data_consulta DATE NOT NULL,
     hora_consulta TIME,
     clinica VARCHAR(150),
     veterinario VARCHAR(100),
-    motivo VARCHAR(255)
+    motivo VARCHAR(255),
+    FOREIGN KEY (animal_id) REFERENCES animais(id) ON DELETE CASCADE
 );
 
-CREATE TABLE historico_veterinario (
+CREATE TABLE IF NOT EXISTS historico_veterinario (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    nome_pet VARCHAR(100) NOT NULL,
+    animal_id INT NOT NULL,
     data_registro DATE NOT NULL,
     peso VARCHAR(50),
     temperatura VARCHAR(50),
     tipo_atendimento VARCHAR(100),
     sintomas TEXT,
     diagnostico TEXT,
-    tratamento TEXT
+    tratamento TEXT,
+    FOREIGN KEY (animal_id) REFERENCES animais(id) ON DELETE CASCADE
 );

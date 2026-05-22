@@ -47,6 +47,8 @@
 
             <form method="POST" action="{{ url_for('cadastrar_consulta', id_animal=animal.id) }}">
                 
+                <input type="hidden" name="animal_id" value="{{ animal.id }}">
+                
                 <div class="mb-3">
                     <label for="nome_pet" class="form-label">Nome do Pet:</label>
                     <input type="text" id="nome_pet" class="form-control" value="{{ animal.nome }}" readonly>

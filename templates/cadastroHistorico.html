@@ -27,6 +27,8 @@
 
         <form method="POST" action="{{ url_for('cadastrar_historico', id_animal=animal.id) }}">
             
+            <input type="hidden" name="animal_id" value="{{ animal.id }}">
+            
             <div class="mb-3">
                 <label class="form-label">Nome do Pet:</label>
                 <input type="text" class="form-control" value="{{ animal.nome }}" readonly>
