@@ -208,42 +208,49 @@
       </div>
 
         <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #bfc9e7;">
-            <h5 class="mb-0">Vacinas</h5> 
+    <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #bfc9e7;">
+        <h5 class="mb-0">Vacinas</h5> 
         
-            <a href="{{ url_for('cadastro_vacina', id_animal=animal.id) }}" class="btn btn-sm btn-outline-primary fw-bold">
+        <a href="{{ url_for('cadastro_vacina', id_animal=animal.id) }}" class="btn btn-sm btn-outline-primary fw-bold">
             + Adicionar
-            </a>
-          </div>
-    
+        </a>
+    </div>
+
     <div class="card-scroll-container">
 
+        {% if vacinas %}
             {% for vacina in vacinas %}
-              <div class="vacina-item">
-                <div>
-                  <strong class="d-block text-dark">{{ vacina.nome_vacina }}</strong>
-                  <small class="text-muted">{{ vacina.data_vacina }}</small>
-                  <small class="text-muted">  - {{ vacina.dose_vacina }}ª dose</small>
-                  
-                  <div class="acoes-btn">
-                    <a href="{{ url_for('editar_vacina', id_vacina=vacina.id, id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
-                    <a href="{{ url_for('deletar_vacina', id_vacina=vacina.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar esta vacina?')">🗑️</a>
-                  </div>
-
+                <div class="vacina-item">
+                    <div>
+                        <strong class="d-block text-dark">{{ vacina.nome_vacina }}</strong>
+                        <small class="text-muted">{{ vacina.data_vacina }}</small>
+                        <small class="text-muted">  - {{ vacina.dose_vacina }}ª dose</small>
+                        
+                        <div class="acoes-btn">
+                            <a href="{{ url_for('editar_vacina', id_vacina=vacina.id, id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
+                            <a href="{{ url_for('deletar_vacina', id_vacina=vacina.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar esta vacina?')">🗑️</a>
+                        </div>
+                    </div>
+                    
+                    <span class="
+                        {% if vacina.status_vacina == 'aplicada' %}
+                            badge-ok
+                        {% else %}
+                            badge-agendada
+                        {% endif %}">
+                        {{ vacina.status_vacina }}
+                    </span>
                 </div>
-                <span class="
-                      {% if vacina.status_vacina == 'aplicada' %}
-                          badge-ok
-                      {% else %}
-                          badge-agendada
-                      {% endif %}">
-                      {{ vacina.status_vacina }}
-                  </span>
-              </div>
-           {% endfor %}
-          
-          </div>
-        </div>
+            {% endfor %}
+        
+        {% else %}
+            <div class="p-3 text-muted" style="font-size: 0.9rem;">
+                Nenhuma vacina registrada.
+            </div>
+        {% endif %}
+    
+    </div>
+</div>
 
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #f4faa8;">
