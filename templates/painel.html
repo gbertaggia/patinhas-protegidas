@@ -37,22 +37,22 @@
                 </div>
 
                 {% if animais %}
-                    <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+                    <div class="row row-cols-1 row-cols-md-3 justify-content-center g-4 mb-5">
                         
                         {% for bichinho in animais %}
                             <div class="col">
-                                <div class="card shadow-sm h-100" style="width: 18rem;">
+                                <div class="card shadow-sm h-100 mx-auto" style="width: 100%; max-width: 18rem;">
                                     
                                     <img src="{{ bichinho.foto_url if bichinho.foto_url else 'https://dummyimage.com/300x200/e9ecef/6c757d.png&text=Sem+foto' }}" class="card-img-top" alt="Foto do animal" style="height: 200px; object-fit: cover;">
                                     
                                     <div class="card-body">
-                                        <h5 class="card-title text-primary fw-bold">{{ bichinho.nome}}</h5>
+                                        <h5 class="card-title text-primary fw-bold">{{ bichinho.nome }}</h5>
                                         <div class="card-text text-muted mb-3">
-                                            <p class="mb-1"><strong>Idade:</strong> {{ bichinho.idade}}</p>
-                                            <p class="mb-1"><strong>Raça:</strong> {{ bichinho.raca}}</p>
-                                            <p class="mb-1"><strong>Espécie:</strong> {{ bichinho.especie}}</p>
+                                            <p class="mb-1"><strong>Idade:</strong> {{ bichinho.idade }}</p>
+                                            <p class="mb-1"><strong>Raça:</strong> {{ bichinho.raca }}</p>
+                                            <p class="mb-1"><strong>Espécie:</strong> {{ bichinho.especie }}</p>
                                         </div>
-                                        <a href="{{ url_for('pagina_animal', id_animal=bichinho.id) }}"  class="btn btn-primary w-100">Página Pet</a>
+                                        <a href="{{ url_for('pagina_animal', id_animal=bichinho.id) }}" class="btn btn-primary w-100 fw-bold">Página Pet</a>
                                     </div>
                                 </div>
                             </div>
