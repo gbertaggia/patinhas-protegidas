@@ -574,7 +574,7 @@ def fazer_login():
             
             return redirect('/painel')
         else:
-            return "<h1>Autenticação Falhou</h1> <p>E-mail ou senha incorretos.</p> <a href='/'>Retornar</a>"
+            return "<script>alert('⚠️ Autenticação Falhou: E-mail ou senha incorretos.'); window.location.href='/';</script>"
 
     except Exception as e:
         return f"<h1>Erro de persistência de dados</h1> <p>Detalhes: {e}</p>"
