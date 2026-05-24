@@ -677,7 +677,13 @@ def cadastrar_animal():
         return redirect('/painel')
 
     except Exception as e:
-        return f"<h1>Erro na inserção do registro do animal</h1> <p>Detalhes: {e}</p>"
+        erro_str = str(e)
+        # Verifica se o erro é o código 1062 de duplicidade referente ao chip
+        if "1062" in erro_str and "chip" in erro_str:
+            return "<script>alert('⚠️ Ops! Já existe um animal cadastrado com este número de chip. Verifique o número e tente novamente.'); window.history.back();</script>"
+        
+        # Se for qualquer outro erro, mostra uma mensagem genérica
+        return f"<script>alert('Erro ao salvar o animal: {erro_str}'); window.history.back();</script>"
 
 
 @app.route('/deletar_animal/<int:id_animal>')
@@ -784,11 +790,15 @@ def salvar_edicao_animal(id_animal):
 
         cursor.close()
         conexao.close()
-
+        
         return redirect(f'/pagina_animal/{id_animal}')
 
     except Exception as e:
-        return f"<h1>Erro na atualização do registro</h1> <p>Detalhes: {e}</p>"
+        erro_str = str(e)
+        if "1062" in erro_str and "chip" in erro_str:
+            return "<script>alert('⚠️ Ops! Este número de chip já está vinculado a outro animal no sistema. Verifique o código e tente novamente.'); window.history.back();</script>"
+        
+        return f"<script>alert('Erro na atualização do registro: {erro_str}'); window.history.back();</script>"
     
 @app.route('/cadastrar_consulta/<int:id_animal>', methods=['GET', 'POST'])
 def cadastrar_consulta(id_animal):
