@@ -52,7 +52,8 @@ def tela_cadastro():
 
 
 @app.route('/cadastro_animal')
-def tela_cadastro_pet():
+@login_required
+def tela_cadastro_pet():    
     # Renderiza a interface de registro de animais
     return render_template('cadastroAnimal.html')
 
@@ -724,7 +725,8 @@ def cadastrar_animal():
             return "<script>alert('⚠️ Ops! Já existe um animal cadastrado com este número de chip. Verifique o número e tente novamente.'); window.history.back();</script>"
         
         # Se for qualquer outro erro, mostra uma mensagem genérica
-        return f"<script>alert('Erro ao salvar o animal: {erro_str}'); window.history.back();</script>"
+        app.logger.exception("Erro ao salvar animal")
+        return "<script>alert('Erro ao salvar o animal. Tente novamente.'); window.history.back();</script>"
 
 
 @app.route('/deletar_animal/<int:id_animal>')
@@ -808,8 +810,11 @@ def salvar_edicao_animal(id_animal):
     
     # Novos campos adicionados
     novo_chip = request.form.get('chip') if request.form.get('chip') else None
-    castrado = 1 if request.form.get('castrado') else 0
-    data_castracao = request.form.get('data') if request.form.get('data') else None
+    # O formulário envia '1' (Sim) ou '0' (Não): só '1', 'sim', 'true' ou 'on' contam como castrado
+    valor_castrado = str(request.form.get('castrado')).lower()
+    castrado = 1 if valor_castrado in ['1', 'sim', 'true', 'on'] else 0
+    # Sem castração, não guarda data
+    data_castracao = request.form.get('data') if (castrado and request.form.get('data')) else None
 
     try:
         conexao = conectar_banco()
@@ -839,7 +844,8 @@ def salvar_edicao_animal(id_animal):
         if "1062" in erro_str and "chip" in erro_str:
             return "<script>alert('⚠️ Ops! Este número de chip já está vinculado a outro animal no sistema. Verifique o código e tente novamente.'); window.history.back();</script>"
         
-        return f"<script>alert('Erro na atualização do registro: {erro_str}'); window.history.back();</script>"
+        app.logger.exception("Erro na atualização do animal")
+        return "<script>alert('Erro ao atualizar o animal. Tente novamente.'); window.history.back();</script>"
     
 @app.route('/cadastrar_consulta/<int:id_animal>', methods=['GET', 'POST'])
 def cadastrar_consulta(id_animal):
