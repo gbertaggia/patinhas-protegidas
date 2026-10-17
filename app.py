@@ -1,5 +1,5 @@
-from ast import Try
 from flask import Flask, render_template, request, session, redirect, url_for
+from werkzeug.security import generate_password_hash, check_password_hash
 from database.connection import conectar_banco
 import os
 import pymysql
@@ -524,7 +524,7 @@ def criar_conta():
 
         # Se não existir, segue o fluxo normal de Inserção
         comando_sql = "INSERT INTO usuarios (nome, email, senha, telefone) VALUES (%s, %s, %s, %s)"
-        valores = (nome, email, senha, telefone)
+        valores = (nome, email, generate_password_hash(senha), telefone)
 
         cursor.execute(comando_sql, valores)
         conexao.commit() 
@@ -557,28 +557,39 @@ def fazer_login():
         # Utiliza DictCursor para retornar os registros mapeados por chave-valor (coluna: dado)
         cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
-        comando_sql = "SELECT id, nome, email, senha FROM usuarios WHERE email = %s AND senha = %s"
-        valores = (email_digitado, senha_digitada)
-        
-        cursor.execute(comando_sql, valores)
+        # Busca só pelo e-mail: a senha é conferida no Python, não no SQL
+        cursor.execute("SELECT id, nome, email, senha FROM usuarios WHERE email = %s", (email_digitado,))
         usuario = cursor.fetchone()
+
+        senha_correta = False
+        if usuario:
+            senha_salva = usuario['senha']
+            if senha_salva.startswith(('scrypt:', 'pbkdf2:')):
+                # Conta nova: a senha guardada é um hash
+                senha_correta = check_password_hash(senha_salva, senha_digitada)
+            elif senha_salva == senha_digitada:
+                # Conta antiga (senha em texto puro): entra e já converte para hash
+                senha_correta = True
+                cursor.execute("UPDATE usuarios SET senha = %s WHERE id = %s",
+                               (generate_password_hash(senha_digitada), usuario['id']))
+                conexao.commit()
 
         cursor.close()
         conexao.close()
 
-        if usuario:
+        if senha_correta:
             # Credenciais validadas: armazena os dados no payload da sessão
             session['usuario_logado'] = usuario['email']
-            session['nome_usuario'] = usuario['nome'] 
+            session['nome_usuario'] = usuario['nome']
             session['id_usuario'] = usuario['id']
-            
+
             return redirect('/painel')
         else:
             return "<script>alert('⚠️ Autenticação Falhou: E-mail ou senha incorretos.'); window.location.href='/';</script>"
 
     except Exception as e:
         return f"<h1>Erro de persistência de dados</h1> <p>Detalhes: {e}</p>"
-    
+
 @app.route('/editar_usuario', methods=['GET', 'POST'])
 def editar_perfil_usuario():
     if 'usuario_logado' not in session:
