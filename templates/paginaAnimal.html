@@ -197,7 +197,7 @@
             <strong>Chip:</strong> <span class="text-break">{{ animal.chip if animal.chip else 'Não possui' }}</span><br>
             <strong>Castrado:</strong> {% if animal.castrado %}Sim{% else %}Não{% endif %}<br>
             {% if animal.castrado and animal.data_castracao %}
-              <strong>Data Castração:</strong> {{ animal.data_castracao }}<br>
+              <strong>Data Castração:</strong> {{ animal.data_castracao.strftime('%d/%m/%Y') }}<br>
             {% endif %}
           </p>
            <div class="acoes-btn">
@@ -223,7 +223,7 @@
                 <div class="vacina-item">
                     <div>
                         <strong class="d-block text-dark">{{ vacina.nome_vacina }}</strong>
-                        <small class="text-muted">{{ vacina.data_vacina }}</small>
+                        <small class="text-muted">{{ vacina.data_formatada }}</small>
                         <small class="text-muted">  - {{ vacina.dose_vacina }}ª dose</small>
                         
                         <div class="acoes-btn">

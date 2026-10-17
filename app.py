@@ -36,7 +36,27 @@ def animal_do_usuario(id_animal):
         return cursor.fetchone() is not None
     finally:
         conexao.close()
+TABELAS_SAUDE = ('vacinas', 'medicamentos', 'consultas', 'historico_veterinario')
 
+
+def registro_do_usuario(tabela, id_registro, id_animal=None):
+    """True somente se o registro de saúde pertence a um animal do usuário logado
+    (e, quando informado, ao animal indicado na URL)."""
+    if tabela not in TABELAS_SAUDE:  # a tabela vem do código, nunca do usuário
+        raise ValueError("tabela inválida")
+    sql = (f"SELECT t.id FROM {tabela} t JOIN animais a ON a.id = t.animal_id "
+           "WHERE t.id = %s AND a.usuario_id = %s")
+    valores = [id_registro, session['id_usuario']]
+    if id_animal is not None:
+        sql += " AND t.animal_id = %s"
+        valores.append(id_animal)
+    conexao = conectar_banco()
+    try:
+        cursor = conexao.cursor()
+        cursor.execute(sql, tuple(valores))
+        return cursor.fetchone() is not None
+    finally:
+        conexao.close()
 #--------------------------------------------------------------------------------#
 # ROTAS DE RENDERIZAÇÃO 
 @app.route('/')
@@ -75,7 +95,11 @@ def pagina_animal(id_animal):
 
     # Busca vacinas
     cursor.execute("SELECT * FROM vacinas WHERE animal_id = %s", (id_animal,))
-    vacinas = cursor.fetchall() 
+    vacinas = cursor.fetchall()
+    # Formata a data das vacinas para DD/MM/AAAA
+    for v in vacinas:
+        if v['data_vacina']:
+            v['data_formatada'] = v['data_vacina'].strftime('%d/%m/%Y')
 
     # Busca medicamentos
     cursor.execute("SELECT * FROM medicamentos WHERE animal_id = %s", (id_animal,))
@@ -179,7 +203,10 @@ def editar_consulta(id_consulta, id_animal):
 #--------------------------------------------------------------------------------#
 #VACINAS
 @app.route('/animal/<int:id_animal>/vacina')
+@login_required
 def cadastro_vacina(id_animal):
+    if not animal_do_usuario(id_animal):
+        abort(404)
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
     
@@ -194,8 +221,11 @@ def cadastro_vacina(id_animal):
     return render_template('cadastroVacinas.html', animal=animal, id_animal=id_animal)
 
 @app.route('/salvar_vacina/<int:id_animal>', methods=['POST'])
+@app.route('/salvar_vacina/<int:id_animal>', methods=['POST'])
+@login_required
 def salvar_vacina(id_animal):
-
+    if not animal_do_usuario(id_animal):
+        abort(404)
     try:
         nome_vacina = (
         request.form.get('nome_vacina_outra')
@@ -223,12 +253,16 @@ def salvar_vacina(id_animal):
         conexao.close()
 
         return redirect(f'/pagina_animal/{id_animal}')
-    except Exception as e:
-        return f"Erro: {e}"    
+    except Exception:
+        app.logger.exception("Erro ao salvar vacina")
+        return "<h1>Erro ao salvar vacina.</h1>"   
 
 
 @app.route('/deletar_vacina/<int:id_vacina>/<int:id_animal>')
+@login_required
 def deletar_vacina(id_vacina, id_animal):
+    if not registro_do_usuario('vacinas', id_vacina, id_animal):
+        abort(404)
     try:
         conexao = conectar_banco()
         cursor = conexao.cursor()
@@ -238,10 +272,14 @@ def deletar_vacina(id_vacina, id_animal):
         conexao.close()
         return redirect(url_for('pagina_animal', id_animal=id_animal))
     except Exception as e:
-        return f"<h1>Erro ao deletar vacina.</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao deletar vacina")
+        return "<h1>Erro ao deletar vacina.</h1>"
 
 @app.route('/editar_vacina/<int:id_vacina>/<int:id_animal>', methods=['GET', 'POST'])
+@login_required
 def editar_vacina(id_vacina, id_animal):
+    if not registro_do_usuario('vacinas', id_vacina, id_animal):
+        abort(404)
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
@@ -266,7 +304,8 @@ def editar_vacina(id_vacina, id_animal):
             conexao.commit()
             return redirect(url_for('pagina_animal', id_animal=id_animal))
         except Exception as e:
-            return f"<h1>Erro ao atualizar vacina.</h1> <p>Detalhes: {e}</p>"
+            app.logger.exception("Erro ao atualizar vacina")
+            return "<h1>Erro ao atualizar vacina.</h1>"
         finally:
             cursor.close()
             conexao.close()
@@ -277,6 +316,9 @@ def editar_vacina(id_vacina, id_animal):
     
     cursor.execute("SELECT * FROM animais WHERE id = %s", (id_animal,))
     animal = cursor.fetchone()
+    # Formata a data de castração para DD/MM/AAAA
+    if animal and animal['data_castracao']:
+        animal['data_castracao_formatada'] = animal['data_castracao'].strftime('%d/%m/%Y')
     
     cursor.close()
     conexao.close()
