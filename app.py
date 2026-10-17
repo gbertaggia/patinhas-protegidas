@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, abort
+from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.connection import conectar_banco
 import os
@@ -10,6 +11,31 @@ app = Flask(__name__)  # Instancia a aplicação web Flask
 
 # Chave criptográfica necessária para o gerenciamento de estado (sessões HTTP)
 app.secret_key = os.getenv("SECRET_KEY")
+
+# --------------------------------------------------------------------------------#
+# CONTROLE DE ACESSO
+def login_required(f):
+    """Barra quem não está logado e manda para a tela de login."""
+    @wraps(f)
+    def decorada(*args, **kwargs):
+        if 'id_usuario' not in session:
+            return redirect('/')
+        return f(*args, **kwargs)
+    return decorada
+
+
+def animal_do_usuario(id_animal):
+    """Retorna True somente se o animal pertence ao usuário logado."""
+    conexao = conectar_banco()
+    try:
+        cursor = conexao.cursor()
+        cursor.execute(
+            "SELECT id FROM animais WHERE id = %s AND usuario_id = %s",
+            (id_animal, session['id_usuario'])
+        )
+        return cursor.fetchone() is not None
+    finally:
+        conexao.close()
 
 #--------------------------------------------------------------------------------#
 # ROTAS DE RENDERIZAÇÃO 
@@ -34,7 +60,11 @@ def tela_cadastro_pet():
 
 #PÁGINA ANIMAL
 @app.route('/pagina_animal/<int:id_animal>')
+@login_required
 def pagina_animal(id_animal):
+    if not animal_do_usuario(id_animal):
+        abort(404)
+
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
