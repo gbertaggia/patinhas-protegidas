@@ -11,6 +11,8 @@ app = Flask(__name__)  # Instancia a aplicação web Flask
 
 # Chave criptográfica necessária para o gerenciamento de estado (sessões HTTP)
 app.secret_key = os.getenv("SECRET_KEY")
+if not app.secret_key:
+    raise RuntimeError("SECRET_KEY não definida: configure no .env ou nas variáveis do servidor")
 
 # --------------------------------------------------------------------------------#
 # CONTROLE DE ACESSO
@@ -659,7 +661,8 @@ def criar_conta():
         return redirect('/painel')
 
     except Exception as e:
-        return f"<h1>Erro interno na criação de conta</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao criar conta")
+        return "<h1>Erro ao criar a conta. Tente novamente.</h1>"
 
 
 @app.route('/login', methods=['POST'])
@@ -706,8 +709,9 @@ def fazer_login():
             return "<script>alert('⚠️ Autenticação Falhou: E-mail ou senha incorretos.'); window.location.href='/';</script>"
 
     except Exception as e:
-        return f"<h1>Erro de persistência de dados</h1> <p>Detalhes: {e}</p>"
-
+        app.logger.exception("Erro no login")
+        return "<h1>Erro ao entrar. Tente novamente.</h1>"
+    
 @app.route('/editar_usuario', methods=['GET', 'POST'])
 def editar_perfil_usuario():
     if 'usuario_logado' not in session:
@@ -731,7 +735,8 @@ def editar_perfil_usuario():
             
             return redirect('/painel')
         except Exception as e:
-            return f"<h1>Erro ao atualizar usuário.</h1> <p>Detalhes: {e}</p>"
+            app.logger.exception("Erro ao atualizar usuário")
+            return "<h1>Erro ao atualizar o perfil. Tente novamente.</h1>"
         finally:
             cursor.close()
             conexao.close()
@@ -846,7 +851,8 @@ def deletar_animal(id_animal):
         return redirect('/painel')
 
     except Exception as e:
-        return f"<h1>Erro na exclusão do registro</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao excluir animal")
+        return "<h1>Erro ao excluir o animal. Tente novamente.</h1>"
 
 
 @app.route('/editar_animal/<int:id_animal>')
@@ -878,7 +884,8 @@ def carregar_edicao_animal(id_animal):
         return render_template('editar_animal.html', animal=animal_para_editar)
 
     except Exception as e:
-        return f"<h1>Erro na leitura dos dados</h1> <p>{e}</p>"
+        app.logger.exception("Erro ao carregar animal para edição")
+        return "<h1>Erro ao carregar o animal.</h1>"
 
 
 @app.route('/salvar_edicao/<int:id_animal>', methods=['POST'])
@@ -1010,12 +1017,13 @@ def painel():
         return render_template('painel.html', email=email_do_usuario, animais=lista_animais)
 
     except Exception as e:
-        return f"<h1>Erro de renderização do painel</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao carregar o painel")
+        return "<h1>Erro ao carregar o painel. Tente novamente.</h1>"
 
 
 # INICIALIZAÇÃO DA APLICAÇÃO
 if __name__ == '__main__':
-    # Inicializa o servidor WSGI de desenvolvimento na porta 5001
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    # Servidor de desenvolvimento: debug só se FLASK_DEBUG=1 no .env local
+    app.run(host='127.0.0.1', port=5001, debug=os.getenv("FLASK_DEBUG") == "1")
 
 
