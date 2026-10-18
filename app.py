@@ -328,7 +328,10 @@ def editar_vacina(id_vacina, id_animal):
 #--------------------------------------------------------------------------------#
 # MEDICAÇÃO
 @app.route('/animal/<int:id_animal>/medicamentos')
+@login_required
 def cadastro_medicamento(id_animal):
+    if not animal_do_usuario(id_animal):
+        abort(404)
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
     
@@ -342,7 +345,10 @@ def cadastro_medicamento(id_animal):
     return render_template('cadastroMedicacao.html', animal=animal, id_animal=id_animal)
 
 @app.route('/salvar_medicacao/<int:id_animal>', methods=['POST'])
-def salvar_medicacao(id_animal):    
+@login_required
+def salvar_medicacao(id_animal):
+    if not animal_do_usuario(id_animal):
+        abort(404)  
     
     nome_med = request.form.get('medicacao')
     dose_med = request.form.get('dose_med')
@@ -375,11 +381,15 @@ def salvar_medicacao(id_animal):
         return redirect(f'/pagina_animal/{id_animal}')
 
     except Exception as e:
-        return f"<h1>Erro ao salvar medicamento</h1> <p>{e}</p>" 
+        app.logger.exception("Erro ao salvar medicamento")
+        return "<h1>Erro ao salvar medicamento.</h1>" 
 
 
 @app.route('/deletar_medicacao/<int:id_medicamento>/<int:id_animal>')
+@login_required
 def deletar_medicacao(id_medicamento, id_animal):
+    if not registro_do_usuario('medicamentos', id_medicamento, id_animal):
+        abort(404)
 
     try:
         conexao = conectar_banco()
@@ -401,10 +411,14 @@ def deletar_medicacao(id_medicamento, id_animal):
         return redirect(url_for('pagina_animal', id_animal=id_animal))
 
     except Exception as e:
-        return f"<h1>Erro ao deletar medicamento</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao deletar medicamento")
+        return "<h1>Erro ao deletar medicamento.</h1>"
     
 @app.route('/editar_medicacao/<int:id_medicamento>')
+@login_required
 def carregar_edicao_medicacao(id_medicamento):
+    if not registro_do_usuario('medicamentos', id_medicamento):
+        abort(404)
     try:
         conexao = conectar_banco()
         # Usamos DictCursor para os dados virem mapeados com os nomes das colunas
@@ -424,10 +438,14 @@ def carregar_edicao_medicacao(id_medicamento):
         return render_template('editar_medicacao.html', remedio=remedio)
 
     except Exception as e:
-        return f"<h1>Erro na leitura dos dados do medicamento</h1> <p>{e}</p>"
+        app.logger.exception("Erro ao ler medicamento")
+        return "<h1>Erro ao carregar o medicamento.</h1>"
     
 @app.route('/salvar_edicao_medicacao/<int:id_medicamento>/<int:id_animal>', methods=['POST'])
+@login_required
 def salvar_edicao_medicacao(id_medicamento, id_animal):
+    if not registro_do_usuario('medicamentos', id_medicamento, id_animal):
+        abort(404)
     
     # Pega os dados novos que o usuário digitou no formulário
     novo_nome = request.form.get('medicacao')
@@ -457,7 +475,8 @@ def salvar_edicao_medicacao(id_medicamento, id_animal):
         return redirect(f'/pagina_animal/{id_animal}')
 
     except Exception as e:
-        return f"<h1>Erro na atualização da medicação</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao atualizar medicamento")
+        return "<h1>Erro ao atualizar a medicação.</h1>"
     
 #--------------------------------------------------------------------------------------#
 # HISTÓRICO VETERINÁRIO   
