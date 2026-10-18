@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, abort
+from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.connection import conectar_banco
 import os
@@ -10,7 +11,54 @@ app = Flask(__name__)  # Instancia a aplicação web Flask
 
 # Chave criptográfica necessária para o gerenciamento de estado (sessões HTTP)
 app.secret_key = os.getenv("SECRET_KEY")
+if not app.secret_key:
+    raise RuntimeError("SECRET_KEY não definida: configure no .env ou nas variáveis do servidor")
 
+# --------------------------------------------------------------------------------#
+# CONTROLE DE ACESSO
+def login_required(f):
+    """Barra quem não está logado e manda para a tela de login."""
+    @wraps(f)
+    def decorada(*args, **kwargs):
+        if 'id_usuario' not in session:
+            return redirect('/')
+        return f(*args, **kwargs)
+    return decorada
+
+
+def animal_do_usuario(id_animal):
+    """Retorna True somente se o animal pertence ao usuário logado."""
+    conexao = conectar_banco()
+    try:
+        cursor = conexao.cursor()
+        cursor.execute(
+            "SELECT id FROM animais WHERE id = %s AND usuario_id = %s",
+            (id_animal, session['id_usuario'])
+        )
+        return cursor.fetchone() is not None
+    finally:
+        conexao.close()
+TABELAS_SAUDE = ('vacinas', 'medicamentos', 'consultas', 'historico_veterinario')
+
+
+def registro_do_usuario(tabela, id_registro, id_animal=None):
+    """True somente se o registro de saúde pertence a um animal do usuário logado
+    (e, quando informado, ao animal indicado na URL)."""
+    if tabela not in TABELAS_SAUDE:  # a tabela vem do código, nunca do usuário
+        raise ValueError("tabela inválida")
+    sql = (f"SELECT t.id FROM {tabela} t JOIN animais a ON a.id = t.animal_id "
+           "WHERE t.id = %s AND a.usuario_id = %s")
+    valores = [id_registro, session['id_usuario']]
+    if id_animal is not None:
+        sql += " AND t.animal_id = %s"
+        valores.append(id_animal)
+    conexao = conectar_banco()
+    try:
+        cursor = conexao.cursor()
+        cursor.execute(sql, tuple(valores))
+        return cursor.fetchone() is not None
+    finally:
+        conexao.close()
 #--------------------------------------------------------------------------------#
 # ROTAS DE RENDERIZAÇÃO 
 @app.route('/')
@@ -26,7 +74,8 @@ def tela_cadastro():
 
 
 @app.route('/cadastro_animal')
-def tela_cadastro_pet():
+@login_required
+def tela_cadastro_pet():    
     # Renderiza a interface de registro de animais
     return render_template('cadastroAnimal.html')
 
@@ -34,7 +83,11 @@ def tela_cadastro_pet():
 
 #PÁGINA ANIMAL
 @app.route('/pagina_animal/<int:id_animal>')
+@login_required
 def pagina_animal(id_animal):
+    if not animal_do_usuario(id_animal):
+        abort(404)
+
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
@@ -44,7 +97,11 @@ def pagina_animal(id_animal):
 
     # Busca vacinas
     cursor.execute("SELECT * FROM vacinas WHERE animal_id = %s", (id_animal,))
-    vacinas = cursor.fetchall() 
+    vacinas = cursor.fetchall()
+    # Formata a data das vacinas para DD/MM/AAAA
+    for v in vacinas:
+        if v['data_vacina']:
+            v['data_formatada'] = v['data_vacina'].strftime('%d/%m/%Y')
 
     # Busca medicamentos
     cursor.execute("SELECT * FROM medicamentos WHERE animal_id = %s", (id_animal,))
@@ -86,7 +143,10 @@ def pagina_animal(id_animal):
 #--------------------------------------------------------------------------------#
 #CONSULTAS
 @app.route('/deletar_consulta/<int:id_consulta>/<int:id_animal>')
+@login_required
 def deletar_consulta(id_consulta, id_animal):
+    if not registro_do_usuario('consultas', id_consulta, id_animal):
+        abort(404)
     try:
         conexao = conectar_banco()
         cursor = conexao.cursor()
@@ -102,10 +162,15 @@ def deletar_consulta(id_consulta, id_animal):
         return redirect(url_for('pagina_animal', id_animal=id_animal))
 
     except Exception as e:
-        return f"<h1>Erro ao deletar consulta</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao deletar consulta")
+        return "<h1>Erro ao deletar consulta.</h1>"
     
 @app.route('/editar_consulta/<int:id_consulta>/<int:id_animal>', methods=['GET', 'POST'])
+@login_required
 def editar_consulta(id_consulta, id_animal):
+    if not registro_do_usuario('consultas', id_consulta, id_animal):
+        abort(404)
+
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
@@ -129,7 +194,8 @@ def editar_consulta(id_consulta, id_animal):
             # Salva e volta para a página do animal
             return redirect(url_for('pagina_animal', id_animal=id_animal))
         except Exception as e:
-            return f"<h1>Erro ao atualizar consulta.</h1> <p>Detalhes: {e}</p>"
+            app.logger.exception("Erro ao atualizar consulta")
+            return "<h1>Erro ao atualizar consulta.</h1>"
         finally:
             cursor.close()
             conexao.close()
@@ -148,7 +214,10 @@ def editar_consulta(id_consulta, id_animal):
 #--------------------------------------------------------------------------------#
 #VACINAS
 @app.route('/animal/<int:id_animal>/vacina')
+@login_required
 def cadastro_vacina(id_animal):
+    if not animal_do_usuario(id_animal):
+        abort(404)
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
     
@@ -163,8 +232,11 @@ def cadastro_vacina(id_animal):
     return render_template('cadastroVacinas.html', animal=animal, id_animal=id_animal)
 
 @app.route('/salvar_vacina/<int:id_animal>', methods=['POST'])
+@app.route('/salvar_vacina/<int:id_animal>', methods=['POST'])
+@login_required
 def salvar_vacina(id_animal):
-
+    if not animal_do_usuario(id_animal):
+        abort(404)
     try:
         nome_vacina = (
         request.form.get('nome_vacina_outra')
@@ -192,12 +264,16 @@ def salvar_vacina(id_animal):
         conexao.close()
 
         return redirect(f'/pagina_animal/{id_animal}')
-    except Exception as e:
-        return f"Erro: {e}"    
+    except Exception:
+        app.logger.exception("Erro ao salvar vacina")
+        return "<h1>Erro ao salvar vacina.</h1>"   
 
 
 @app.route('/deletar_vacina/<int:id_vacina>/<int:id_animal>')
+@login_required
 def deletar_vacina(id_vacina, id_animal):
+    if not registro_do_usuario('vacinas', id_vacina, id_animal):
+        abort(404)
     try:
         conexao = conectar_banco()
         cursor = conexao.cursor()
@@ -207,10 +283,14 @@ def deletar_vacina(id_vacina, id_animal):
         conexao.close()
         return redirect(url_for('pagina_animal', id_animal=id_animal))
     except Exception as e:
-        return f"<h1>Erro ao deletar vacina.</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao deletar vacina")
+        return "<h1>Erro ao deletar vacina.</h1>"
 
 @app.route('/editar_vacina/<int:id_vacina>/<int:id_animal>', methods=['GET', 'POST'])
+@login_required
 def editar_vacina(id_vacina, id_animal):
+    if not registro_do_usuario('vacinas', id_vacina, id_animal):
+        abort(404)
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
@@ -235,7 +315,8 @@ def editar_vacina(id_vacina, id_animal):
             conexao.commit()
             return redirect(url_for('pagina_animal', id_animal=id_animal))
         except Exception as e:
-            return f"<h1>Erro ao atualizar vacina.</h1> <p>Detalhes: {e}</p>"
+            app.logger.exception("Erro ao atualizar vacina")
+            return "<h1>Erro ao atualizar vacina.</h1>"
         finally:
             cursor.close()
             conexao.close()
@@ -246,6 +327,9 @@ def editar_vacina(id_vacina, id_animal):
     
     cursor.execute("SELECT * FROM animais WHERE id = %s", (id_animal,))
     animal = cursor.fetchone()
+    # Formata a data de castração para DD/MM/AAAA
+    if animal and animal['data_castracao']:
+        animal['data_castracao_formatada'] = animal['data_castracao'].strftime('%d/%m/%Y')
     
     cursor.close()
     conexao.close()
@@ -255,7 +339,10 @@ def editar_vacina(id_vacina, id_animal):
 #--------------------------------------------------------------------------------#
 # MEDICAÇÃO
 @app.route('/animal/<int:id_animal>/medicamentos')
+@login_required
 def cadastro_medicamento(id_animal):
+    if not animal_do_usuario(id_animal):
+        abort(404)
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
     
@@ -269,7 +356,10 @@ def cadastro_medicamento(id_animal):
     return render_template('cadastroMedicacao.html', animal=animal, id_animal=id_animal)
 
 @app.route('/salvar_medicacao/<int:id_animal>', methods=['POST'])
-def salvar_medicacao(id_animal):    
+@login_required
+def salvar_medicacao(id_animal):
+    if not animal_do_usuario(id_animal):
+        abort(404)  
     
     nome_med = request.form.get('medicacao')
     dose_med = request.form.get('dose_med')
@@ -302,11 +392,15 @@ def salvar_medicacao(id_animal):
         return redirect(f'/pagina_animal/{id_animal}')
 
     except Exception as e:
-        return f"<h1>Erro ao salvar medicamento</h1> <p>{e}</p>" 
+        app.logger.exception("Erro ao salvar medicamento")
+        return "<h1>Erro ao salvar medicamento.</h1>" 
 
 
 @app.route('/deletar_medicacao/<int:id_medicamento>/<int:id_animal>')
+@login_required
 def deletar_medicacao(id_medicamento, id_animal):
+    if not registro_do_usuario('medicamentos', id_medicamento, id_animal):
+        abort(404)
 
     try:
         conexao = conectar_banco()
@@ -328,10 +422,14 @@ def deletar_medicacao(id_medicamento, id_animal):
         return redirect(url_for('pagina_animal', id_animal=id_animal))
 
     except Exception as e:
-        return f"<h1>Erro ao deletar medicamento</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao deletar medicamento")
+        return "<h1>Erro ao deletar medicamento.</h1>"
     
 @app.route('/editar_medicacao/<int:id_medicamento>')
+@login_required
 def carregar_edicao_medicacao(id_medicamento):
+    if not registro_do_usuario('medicamentos', id_medicamento):
+        abort(404)
     try:
         conexao = conectar_banco()
         # Usamos DictCursor para os dados virem mapeados com os nomes das colunas
@@ -351,17 +449,22 @@ def carregar_edicao_medicacao(id_medicamento):
         return render_template('editar_medicacao.html', remedio=remedio)
 
     except Exception as e:
-        return f"<h1>Erro na leitura dos dados do medicamento</h1> <p>{e}</p>"
+        app.logger.exception("Erro ao ler medicamento")
+        return "<h1>Erro ao carregar o medicamento.</h1>"
     
 @app.route('/salvar_edicao_medicacao/<int:id_medicamento>/<int:id_animal>', methods=['POST'])
+@login_required
 def salvar_edicao_medicacao(id_medicamento, id_animal):
+    if not registro_do_usuario('medicamentos', id_medicamento, id_animal):
+        abort(404)
     
     # Pega os dados novos que o usuário digitou no formulário
     novo_nome = request.form.get('medicacao')
     nova_data = request.form.get('data_inicio')
     nova_duracao = request.form.get('duracao')
     nova_dose = request.form.get('dose_med')
-    novos_horarios = request.form.get('horarios_texto') 
+    nova_frequencia = request.form.get('frequencia')
+    novos_horarios = request.form.get('horarios_texto')
 
     try:
         conexao = conectar_banco()
@@ -369,11 +472,13 @@ def salvar_edicao_medicacao(id_medicamento, id_animal):
 
         comando_sql = """
             UPDATE medicamentos 
-            SET nome_medicamento = %s, data_inicio_medicamento = %s, 
-                duracao_medicamento = %s, dose_medicamento = %s, horarios = %s
+            SET nome_medicamento = %s, data_inicio_medicamento = %s,
+                duracao_medicamento = %s, dose_medicamento = %s,
+                frequencia = %s, horarios = %s
             WHERE id = %s
         """
-        valores = (novo_nome, nova_data, nova_duracao, nova_dose, novos_horarios, id_medicamento)
+        valores = (novo_nome, nova_data, nova_duracao, nova_dose,
+                   nova_frequencia, novos_horarios, id_medicamento)
 
         cursor.execute(comando_sql, valores)
         conexao.commit()
@@ -384,13 +489,18 @@ def salvar_edicao_medicacao(id_medicamento, id_animal):
         return redirect(f'/pagina_animal/{id_animal}')
 
     except Exception as e:
-        return f"<h1>Erro na atualização da medicação</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao atualizar medicamento")
+        return "<h1>Erro ao atualizar a medicação.</h1>"
     
 #--------------------------------------------------------------------------------------#
 # HISTÓRICO VETERINÁRIO   
  
 @app.route('/cadastrar_historico/<int:id_animal>', methods=['GET', 'POST'])
+@login_required
 def cadastrar_historico(id_animal):
+    if not animal_do_usuario(id_animal):
+        abort(404)
+
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
@@ -423,7 +533,8 @@ def cadastrar_historico(id_animal):
             
             return redirect(url_for('pagina_animal', id_animal=id_animal))
         except Exception as e:
-            return f"<h1>Erro ao salvar histórico.</h1> <p>Detalhes: {e}</p>"
+            app.logger.exception("Erro ao salvar histórico")
+            return "<h1>Erro ao salvar o histórico.</h1>"
         finally:
             cursor.close()
             conexao.close()
@@ -431,7 +542,10 @@ def cadastrar_historico(id_animal):
     return render_template('cadastroHistorico.html', animal=animal)
 
 @app.route('/deletar_historico/<int:id_historico>/<int:id_animal>')
+@login_required
 def deletar_historico(id_historico, id_animal):
+    if not registro_do_usuario('historico_veterinario', id_historico, id_animal):
+        abort(404)
     try:
         conexao = conectar_banco()
         cursor = conexao.cursor()
@@ -443,10 +557,15 @@ def deletar_historico(id_historico, id_animal):
         conexao.close()
         return redirect(url_for('pagina_animal', id_animal=id_animal))
     except Exception as e:
-        return f"<h1>Erro ao deletar histórico.</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao deletar histórico")
+        return "<h1>Erro ao deletar o histórico.</h1>"
 
 @app.route('/editar_historico/<int:id_historico>/<int:id_animal>', methods=['GET', 'POST'])
+@login_required
 def editar_historico(id_historico, id_animal):
+    if not registro_do_usuario('historico_veterinario', id_historico, id_animal):
+        abort(404)
+
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
@@ -473,7 +592,8 @@ def editar_historico(id_historico, id_animal):
             conexao.commit()
             return redirect(url_for('pagina_animal', id_animal=id_animal))
         except Exception as e:
-            return f"<h1>Erro ao atualizar histórico.</h1> <p>Detalhes: {e}</p>"
+            app.logger.exception("Erro ao atualizar histórico")
+            return "<h1>Erro ao atualizar o histórico.</h1>"
         finally:
             cursor.close()
             conexao.close()
@@ -541,7 +661,8 @@ def criar_conta():
         return redirect('/painel')
 
     except Exception as e:
-        return f"<h1>Erro interno na criação de conta</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao criar conta")
+        return "<h1>Erro ao criar a conta. Tente novamente.</h1>"
 
 
 @app.route('/login', methods=['POST'])
@@ -588,8 +709,9 @@ def fazer_login():
             return "<script>alert('⚠️ Autenticação Falhou: E-mail ou senha incorretos.'); window.location.href='/';</script>"
 
     except Exception as e:
-        return f"<h1>Erro de persistência de dados</h1> <p>Detalhes: {e}</p>"
-
+        app.logger.exception("Erro no login")
+        return "<h1>Erro ao entrar. Tente novamente.</h1>"
+    
 @app.route('/editar_usuario', methods=['GET', 'POST'])
 def editar_perfil_usuario():
     if 'usuario_logado' not in session:
@@ -613,7 +735,8 @@ def editar_perfil_usuario():
             
             return redirect('/painel')
         except Exception as e:
-            return f"<h1>Erro ao atualizar usuário.</h1> <p>Detalhes: {e}</p>"
+            app.logger.exception("Erro ao atualizar usuário")
+            return "<h1>Erro ao atualizar o perfil. Tente novamente.</h1>"
         finally:
             cursor.close()
             conexao.close()
@@ -694,7 +817,8 @@ def cadastrar_animal():
             return "<script>alert('⚠️ Ops! Já existe um animal cadastrado com este número de chip. Verifique o número e tente novamente.'); window.history.back();</script>"
         
         # Se for qualquer outro erro, mostra uma mensagem genérica
-        return f"<script>alert('Erro ao salvar o animal: {erro_str}'); window.history.back();</script>"
+        app.logger.exception("Erro ao salvar animal")
+        return "<script>alert('Erro ao salvar o animal. Tente novamente.'); window.history.back();</script>"
 
 
 @app.route('/deletar_animal/<int:id_animal>')
@@ -727,7 +851,8 @@ def deletar_animal(id_animal):
         return redirect('/painel')
 
     except Exception as e:
-        return f"<h1>Erro na exclusão do registro</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao excluir animal")
+        return "<h1>Erro ao excluir o animal. Tente novamente.</h1>"
 
 
 @app.route('/editar_animal/<int:id_animal>')
@@ -759,7 +884,8 @@ def carregar_edicao_animal(id_animal):
         return render_template('editar_animal.html', animal=animal_para_editar)
 
     except Exception as e:
-        return f"<h1>Erro na leitura dos dados</h1> <p>{e}</p>"
+        app.logger.exception("Erro ao carregar animal para edição")
+        return "<h1>Erro ao carregar o animal.</h1>"
 
 
 @app.route('/salvar_edicao/<int:id_animal>', methods=['POST'])
@@ -778,8 +904,11 @@ def salvar_edicao_animal(id_animal):
     
     # Novos campos adicionados
     novo_chip = request.form.get('chip') if request.form.get('chip') else None
-    castrado = 1 if request.form.get('castrado') else 0
-    data_castracao = request.form.get('data') if request.form.get('data') else None
+    # O formulário envia '1' (Sim) ou '0' (Não): só '1', 'sim', 'true' ou 'on' contam como castrado
+    valor_castrado = str(request.form.get('castrado')).lower()
+    castrado = 1 if valor_castrado in ['1', 'sim', 'true', 'on'] else 0
+    # Sem castração, não guarda data
+    data_castracao = request.form.get('data') if (castrado and request.form.get('data')) else None
 
     try:
         conexao = conectar_banco()
@@ -809,10 +938,15 @@ def salvar_edicao_animal(id_animal):
         if "1062" in erro_str and "chip" in erro_str:
             return "<script>alert('⚠️ Ops! Este número de chip já está vinculado a outro animal no sistema. Verifique o código e tente novamente.'); window.history.back();</script>"
         
-        return f"<script>alert('Erro na atualização do registro: {erro_str}'); window.history.back();</script>"
+        app.logger.exception("Erro na atualização do animal")
+        return "<script>alert('Erro ao atualizar o animal. Tente novamente.'); window.history.back();</script>"
     
 @app.route('/cadastrar_consulta/<int:id_animal>', methods=['GET', 'POST'])
+@login_required
 def cadastrar_consulta(id_animal):
+    if not animal_do_usuario(id_animal):
+        abort(404)
+
     conexao = conectar_banco()
     # Usando o DictCursor para ficar igual ao resto do seu código
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
@@ -844,7 +978,8 @@ def cadastrar_consulta(id_animal):
             return redirect(url_for('pagina_animal', id_animal=id_animal))
             
         except Exception as e:
-            return f"<h1>Erro na inserção da consulta.</h1> <p>Detalhes: {e}</p>"
+            app.logger.exception("Erro ao inserir consulta")
+            return "<h1>Erroao salvar a consulta.</h1>"
         finally:
             cursor.close()
             conexao.close()
@@ -882,12 +1017,13 @@ def painel():
         return render_template('painel.html', email=email_do_usuario, animais=lista_animais)
 
     except Exception as e:
-        return f"<h1>Erro de renderização do painel</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao carregar o painel")
+        return "<h1>Erro ao carregar o painel. Tente novamente.</h1>"
 
 
 # INICIALIZAÇÃO DA APLICAÇÃO
 if __name__ == '__main__':
-    # Inicializa o servidor WSGI de desenvolvimento na porta 5001
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    # Servidor de desenvolvimento: debug só se FLASK_DEBUG=1 no .env local
+    app.run(host='127.0.0.1', port=5001, debug=os.getenv("FLASK_DEBUG") == "1")
 
 
