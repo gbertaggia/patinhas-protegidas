@@ -266,7 +266,7 @@
           {% for remedio in medicamentos %}
           <div class="medicacao-item">
             <strong class="d-block text-dark small">{{ remedio.nome_medicamento }}</strong>
-            <small class="text-muted">Dose: {{ remedio.dose_medicamento }} • Duração: {{ remedio.duracao_medicamento }}</small>
+            <small class="text-muted">Dose: {{ remedio.dose_medicamento }} • Duração: {{ remedio.duracao_medicamento }}{% if remedio.frequencia %} • A cada {{ remedio.frequencia }}h{% endif %}</small>
             
             <div class="d-flex gap-1 mt-1 flex-wrap">
               <span class="horario-pill">Horários: {{ remedio.horarios }}</span>

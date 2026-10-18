@@ -461,7 +461,8 @@ def salvar_edicao_medicacao(id_medicamento, id_animal):
     nova_data = request.form.get('data_inicio')
     nova_duracao = request.form.get('duracao')
     nova_dose = request.form.get('dose_med')
-    novos_horarios = request.form.get('horarios_texto') 
+    nova_frequencia = request.form.get('frequencia')
+    novos_horarios = request.form.get('horarios_texto')
 
     try:
         conexao = conectar_banco()
@@ -469,11 +470,13 @@ def salvar_edicao_medicacao(id_medicamento, id_animal):
 
         comando_sql = """
             UPDATE medicamentos 
-            SET nome_medicamento = %s, data_inicio_medicamento = %s, 
-                duracao_medicamento = %s, dose_medicamento = %s, horarios = %s
+            SET nome_medicamento = %s, data_inicio_medicamento = %s,
+                duracao_medicamento = %s, dose_medicamento = %s,
+                frequencia = %s, horarios = %s
             WHERE id = %s
         """
-        valores = (novo_nome, nova_data, nova_duracao, nova_dose, novos_horarios, id_medicamento)
+        valores = (novo_nome, nova_data, nova_duracao, nova_dose,
+                   nova_frequencia, novos_horarios, id_medicamento)
 
         cursor.execute(comando_sql, valores)
         conexao.commit()
