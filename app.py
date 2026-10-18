@@ -141,7 +141,10 @@ def pagina_animal(id_animal):
 #--------------------------------------------------------------------------------#
 #CONSULTAS
 @app.route('/deletar_consulta/<int:id_consulta>/<int:id_animal>')
+@login_required
 def deletar_consulta(id_consulta, id_animal):
+    if not registro_do_usuario('consultas', id_consulta, id_animal):
+        abort(404)
     try:
         conexao = conectar_banco()
         cursor = conexao.cursor()
@@ -157,10 +160,15 @@ def deletar_consulta(id_consulta, id_animal):
         return redirect(url_for('pagina_animal', id_animal=id_animal))
 
     except Exception as e:
-        return f"<h1>Erro ao deletar consulta</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao deletar consulta")
+        return "<h1>Erro ao deletar consulta.</h1>"
     
 @app.route('/editar_consulta/<int:id_consulta>/<int:id_animal>', methods=['GET', 'POST'])
+@login_required
 def editar_consulta(id_consulta, id_animal):
+    if not registro_do_usuario('consultas', id_consulta, id_animal):
+        abort(404)
+
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
@@ -184,7 +192,8 @@ def editar_consulta(id_consulta, id_animal):
             # Salva e volta para a página do animal
             return redirect(url_for('pagina_animal', id_animal=id_animal))
         except Exception as e:
-            return f"<h1>Erro ao atualizar consulta.</h1> <p>Detalhes: {e}</p>"
+            app.logger.exception("Erro ao atualizar consulta")
+            return "<h1>Erro ao atualizar consulta.</h1>"
         finally:
             cursor.close()
             conexao.close()
@@ -482,7 +491,11 @@ def salvar_edicao_medicacao(id_medicamento, id_animal):
 # HISTÓRICO VETERINÁRIO   
  
 @app.route('/cadastrar_historico/<int:id_animal>', methods=['GET', 'POST'])
+@login_required
 def cadastrar_historico(id_animal):
+    if not animal_do_usuario(id_animal):
+        abort(404)
+
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
@@ -515,7 +528,8 @@ def cadastrar_historico(id_animal):
             
             return redirect(url_for('pagina_animal', id_animal=id_animal))
         except Exception as e:
-            return f"<h1>Erro ao salvar histórico.</h1> <p>Detalhes: {e}</p>"
+            app.logger.exception("Erro ao salvar histórico")
+            return "<h1>Erro ao salvar o histórico.</h1>"
         finally:
             cursor.close()
             conexao.close()
@@ -523,7 +537,10 @@ def cadastrar_historico(id_animal):
     return render_template('cadastroHistorico.html', animal=animal)
 
 @app.route('/deletar_historico/<int:id_historico>/<int:id_animal>')
+@login_required
 def deletar_historico(id_historico, id_animal):
+    if not registro_do_usuario('historico_veterinario', id_historico, id_animal):
+        abort(404)
     try:
         conexao = conectar_banco()
         cursor = conexao.cursor()
@@ -535,10 +552,15 @@ def deletar_historico(id_historico, id_animal):
         conexao.close()
         return redirect(url_for('pagina_animal', id_animal=id_animal))
     except Exception as e:
-        return f"<h1>Erro ao deletar histórico.</h1> <p>Detalhes: {e}</p>"
+        app.logger.exception("Erro ao deletar histórico")
+        return "<h1>Erro ao deletar o histórico.</h1>"
 
 @app.route('/editar_historico/<int:id_historico>/<int:id_animal>', methods=['GET', 'POST'])
+@login_required
 def editar_historico(id_historico, id_animal):
+    if not registro_do_usuario('historico_veterinario', id_historico, id_animal):
+        abort(404)
+
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
@@ -565,7 +587,8 @@ def editar_historico(id_historico, id_animal):
             conexao.commit()
             return redirect(url_for('pagina_animal', id_animal=id_animal))
         except Exception as e:
-            return f"<h1>Erro ao atualizar histórico.</h1> <p>Detalhes: {e}</p>"
+            app.logger.exception("Erro ao atualizar histórico")
+            return "<h1>Erro ao atualizar o histórico.</h1>"
         finally:
             cursor.close()
             conexao.close()
@@ -909,7 +932,11 @@ def salvar_edicao_animal(id_animal):
         return "<script>alert('Erro ao atualizar o animal. Tente novamente.'); window.history.back();</script>"
     
 @app.route('/cadastrar_consulta/<int:id_animal>', methods=['GET', 'POST'])
+@login_required
 def cadastrar_consulta(id_animal):
+    if not animal_do_usuario(id_animal):
+        abort(404)
+
     conexao = conectar_banco()
     # Usando o DictCursor para ficar igual ao resto do seu código
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
@@ -941,7 +968,8 @@ def cadastrar_consulta(id_animal):
             return redirect(url_for('pagina_animal', id_animal=id_animal))
             
         except Exception as e:
-            return f"<h1>Erro na inserção da consulta.</h1> <p>Detalhes: {e}</p>"
+            app.logger.exception("Erro ao inserir consulta")
+            return "<h1>Erroao salvar a consulta.</h1>"
         finally:
             cursor.close()
             conexao.close()
