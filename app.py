@@ -12,8 +12,13 @@ app = Flask(__name__)  # Instancia a aplicação web Flask
 app.secret_key = os.getenv("SECRET_KEY")
 
 #--------------------------------------------------------------------------------#
+#PÁGINA PÚBLICA
+@app.route("/")
+def pagina_publica():
+    return render_template("publico.html")
+
 # ROTAS DE RENDERIZAÇÃO 
-@app.route('/')
+@app.route('/login')
 def home():
     # Renderiza a interface de autenticação (Login)
     return render_template('login.html')
@@ -872,6 +877,7 @@ def painel():
 
     except Exception as e:
         return f"<h1>Erro de renderização do painel</h1> <p>Detalhes: {e}</p>"
+
 
 
 # INICIALIZAÇÃO DA APLICAÇÃO
