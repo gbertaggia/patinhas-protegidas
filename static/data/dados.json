@@ -1,0 +1,180 @@
+{
+  "valoresDoacao": [
+    5,
+    10,
+    20,
+    50
+  ],
+  "ongs": [
+    {
+      "id": 1,
+      "nome": "Instituto Patas Felizes",
+      "icone": "🐕",
+      "regiao": "São Paulo, SP",
+      "cidade": "São Paulo",
+      "estado": "SP",
+      "resumo": "Resgate, acolhimento e adoção responsável.",
+      "descricao": "Trabalhamos para oferecer cuidados veterinários, acolhimento temporário e uma nova chance para cães e gatos resgatados.",
+      "linkFormulario": "https://docs.google.com/forms/d/e/1FAIpQLSe5xhUYgMcGLOS_Fx-n2urv-4qtMcew3ykvceASDmMdlRqSqA/viewform?usp=publish-editor",
+      "animais": [
+        {
+          "id": 101,
+          "nome": "Milo",
+          "especie": "Gata",
+          "idade": "2 anos",
+          "porte": "Pequeno",
+          "descricao": "Carinhosa e curiosa. Está procurando uma família que lhe dê muito amor.",
+          "foto": "https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          "id": 102,
+          "nome": "Pastel",
+          "especie": "Cão",
+          "idade": "1 ano",
+          "porte": "Médio",
+          "descricao": "Brincalhão e sociável. Está se recuperando e logo poderá conhecer sua nova família.",
+          "foto": "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          "id": 103,
+          "nome": "Amora",
+          "especie": "Gata",
+          "idade": "8 meses",
+          "porte": "Pequeno",
+          "descricao": "Uma gatinha doce que adora brincar e descansar perto das pessoas.",
+          "foto": "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          "id": 104,
+          "nome": "Tobias",
+          "especie": "Cão",
+          "idade": "4 anos",
+          "porte": "Grande",
+          "descricao": "Calmo, companheiro e pronto para encontrar um lar responsável.",
+          "foto": "https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          "id": 105,
+          "nome": "Nina",
+          "especie": "Gata",
+          "idade": "3 anos",
+          "porte": "Pequeno",
+          "descricao": "Independente e afetuosa depois que ganha confiança.",
+          "foto": "https://images.unsplash.com/photo-1495360010541-f48722b34f7d?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          "id": 106,
+          "nome": "Bento",
+          "especie": "Cão",
+          "idade": "6 meses",
+          "porte": "Médio",
+          "descricao": "Filhote cheio de energia, ideal para uma casa com espaço para brincar.",
+          "foto": "https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          "id": 107,
+          "nome": "Pipoca",
+          "especie": "Gata",
+          "idade": "1 ano",
+          "porte": "Pequeno",
+          "descricao": "Muito curiosa e sociável com pessoas que respeitam seu tempo.",
+          "foto": "https://images.unsplash.com/photo-1495360010541-f48722b34f7d?auto=format&fit=crop&w=600&q=80"
+        }
+      ],
+      "campanhas": [
+        {
+          "id": 201,
+          "animalId": 101,
+          "titulo": "Castração da Milo",
+          "descricao": "Ajude a custear a castração e os exames pré-operatórios da Milo.",
+          "meta": 450,
+          "arrecadado": 280,
+          "foto": "https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+          "id": 202,
+          "animalId": 102,
+          "titulo": "Cirurgia da patinha do Pastel",
+          "descricao": "O Pastel precisa de uma cirurgia e acompanhamento veterinário para voltar a correr.",
+          "meta": 1800,
+          "arrecadado": 725,
+          "foto": "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+          "id": 203,
+          "animalId": null,
+          "titulo": "Ração para o abrigo",
+          "descricao": "Contribua com a compra de ração para todos os animais acolhidos.",
+          "meta": 1200,
+          "arrecadado": 810,
+          "foto": "https://www.petz.com.br/blog/wp-content/uploads/2019/06/racao-canina.webp"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "nome": "Santuário Luz dos Bichos",
+      "icone": "🐈",
+      "regiao": "São Carlos, SP",
+      "cidade": "São Carlos",
+      "estado": "SP",
+      "resumo": "Proteção animal e cuidado comunitário.",
+      "descricao": "Uma rede de pessoas voluntárias que acolhe animais, promove adoções responsáveis e organiza campanhas para despesas veterinárias.",
+      "linkFormulario": "https://docs.google.com/forms/d/e/1FAIpQLSe5xhUYgMcGLOS_Fx-n2urv-4qtMcew3ykvceASDmMdlRqSqA/viewform?usp=publish-editor",
+      "animais": [
+        {
+          "id": 201,
+          "nome": "Luna",
+          "especie": "Gata",
+          "idade": "2 anos",
+          "porte": "Pequeno",
+          "descricao": "Tranquila e carinhosa, gosta de ambientes acolhedores.",
+          "foto": "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+          "id": 202,
+          "nome": "Thor",
+          "especie": "Cão",
+          "idade": "3 anos",
+          "porte": "Grande",
+          "descricao": "Companheiro e ativo, precisa de uma família com tempo para passeios.",
+          "foto": "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=600&q=80"
+        }
+      ],
+      "campanhas": [
+        {
+          "id": 204,
+          "animalId": 201,
+          "titulo": "Exames da Luna",
+          "descricao": "Ajude a pagar os exames e o acompanhamento veterinário da Luna.",
+          "meta": 600,
+          "arrecadado": 190,
+          "foto": "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "nome": "Refúgio Patinhas da Cris",
+      "icone": "🐾",
+      "regiao": "Jequié, BA",
+      "cidade": "Jequié",
+      "estado": "BA",
+      "resumo": "Resgate e acolhimento de animais em situação de risco.",
+      "descricao": "Atuação comunitária voltada ao resgate, à recuperação e à busca por lares seguros para animais abandonados.",
+      "linkFormulario": "https://docs.google.com/forms/d/e/1FAIpQLSe5xhUYgMcGLOS_Fx-n2urv-4qtMcew3ykvceASDmMdlRqSqA/viewform?usp=publish-editor",
+      "animais": [],
+      "campanhas": [
+        {
+          "id": 205,
+          "animalId": null,
+          "titulo": "Ajuda com medicamentos",
+          "descricao": "Contribua para manter os medicamentos e os cuidados básicos dos animais resgatados.",
+          "meta": 900,
+          "arrecadado": 340,
+          "foto": "https://www.gboex.com.br/wp-content/uploads/2020/08/shutterstock_474705142-scaled-1-1536x1025.jpg"
+        }
+      ]
+    }
+  ]
+}

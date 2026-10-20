@@ -60,8 +60,13 @@ def registro_do_usuario(tabela, id_registro, id_animal=None):
     finally:
         conexao.close()
 #--------------------------------------------------------------------------------#
+#PÁGINA PÚBLICA
+@app.route("/")
+def pagina_publica():
+    return render_template("publico.html")
+
 # ROTAS DE RENDERIZAÇÃO 
-@app.route('/')
+@app.route('/login')
 def home():
     # Renderiza a interface de autenticação (Login)
     return render_template('login.html')
@@ -1019,6 +1024,7 @@ def painel():
     except Exception as e:
         app.logger.exception("Erro ao carregar o painel")
         return "<h1>Erro ao carregar o painel. Tente novamente.</h1>"
+
 
 
 # INICIALIZAÇÃO DA APLICAÇÃO

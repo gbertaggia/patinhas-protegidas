@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patinhas Protegidas | Campanhas e adoção</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/publico.css') }}">
+  <style>
+    /* 1. CONFIGURAÇÕES GERAIS */
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Nunito:wght@600;700;800&display=swap');
+
+:root {
+  --green: #28765b;
+  --green-dark: #18543f;
+  --green-light: #eaf5ee;
+  --ink: #20332b;
+  --muted: #6b7b73;
+  --line: #e2eae5;
+  --paper: #f7faf7;
+  --white: #fff;
+  --coral: #e98569;
+  --shadow: 0 10px 30px rgba(35, 70, 52, .08);
+}
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: 'DM Sans', sans-serif; padding-bottom: 0; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+.topbar { height: 74px; display: flex; align-items: center; justify-content: space-between; padding: 0 5vw; background: var(--white); border-bottom: 1px solid var(--line); }
+.brand { display: inline-flex; gap: 10px; align-items: center; text-decoration: none; color: var(--ink); font-family: Nunito, sans-serif; font-size: 1.18rem; }
+.brand-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 14px; background: var(--green-light); font-size: 1.35rem; }
+.brand strong { color: var(--green); }
+.public-label { color: var(--muted); font-size: .9rem; }
+main { width: min(1240px, 92%); margin: 0 auto; }
+.screen { padding: 42px 0 60px; }
+.intro { max-width: 690px; margin: 0 auto 26px; text-align: center; }
+.eyebrow { color: var(--green); text-transform: uppercase; letter-spacing: .12em; font-size: .72rem; font-weight: 800; }
+h1, h2, h3, p { margin-top: 0; }
+h1, h2, h3 { font-family: Nunito, sans-serif; }
+h1 { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.12; margin: 10px 0 12px; }
+h2 { font-size: 1.55rem; margin: 5px 0 0; }
+.intro p { color: var(--muted); line-height: 1.7; font-size: 1.02rem; }
+.search-box { display: flex; align-items: center; gap: 12px; width: min(650px, 100%); margin: 0 auto 24px; padding: 0 18px; height: 56px; background: white; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); color: var(--green); font-size: 1.8rem; }
+.search-box input { flex: 1; min-width: 0; border: 0; outline: 0; color: var(--ink); font-size: .98rem; }
+.results-caption { color: var(--muted); font-size: .86rem; margin: 0 0 14px; }
+.ong-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.ong-card { display: flex; align-items: flex-start; gap: 15px; padding: 20px; text-align: left; background: white; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 4px 16px rgba(35,70,52,.035); transition: transform .18s, border-color .18s, box-shadow .18s; }
+.ong-card:hover, .ong-card:focus-visible { transform: translateY(-3px); border-color: #9ac9af; box-shadow: var(--shadow); outline: none; }
+.ong-icon, .organization-avatar { display: grid; place-items: center; flex: 0 0 auto; width: 58px; height: 58px; border-radius: 18px; background: var(--green-light); font-size: 1.8rem; }
+.ong-card h3 { margin: 1px 0 5px; font-size: 1.05rem; }
+.ong-card p { margin: 0; color: var(--muted); font-size: .87rem; line-height: 1.5; }
+.ong-card .card-arrow { display: block; margin-top: 11px; color: var(--green); font-size: .85rem; font-weight: 700; }
+.hidden { display: none !important; }
+.empty-state { padding: 25px; text-align: center; color: var(--muted); background: white; border: 1px dashed var(--line); border-radius: 16px; }
+.back-button { border: 0; background: transparent; color: var(--green); font-weight: 700; padding: 8px 0; margin-bottom: 20px; }
+.organization-hero { display: flex; align-items: center; gap: 22px; padding: 26px; background: white; border: 1px solid var(--line); border-radius: 24px; margin-bottom: 30px; }
+.organization-avatar { width: 82px; height: 82px; font-size: 2.3rem; border-radius: 24px; }
+.organization-hero h1 { font-size: clamp(1.7rem, 3vw, 2.4rem); margin: 6px 0; }
+.organization-hero p { margin: 5px 0 0; color: var(--muted); line-height: 1.6; }
+.organization-hero #ong-local { color: var(--green); font-weight: 700; }
+.content-columns { display: grid; grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr); gap: 28px; align-items: start; }
+.animals-column, .campaigns-column { min-width: 0; }
+.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-bottom: 18px; }
+.count-pill { padding: 6px 10px; background: var(--green-light); color: var(--green); border-radius: 100px; white-space: nowrap; font-size: .8rem; font-weight: 700; }
+.animal-list { display: grid; gap: 15px; }
+.animal-card { display: grid; grid-template-columns: 145px minmax(0, 1fr); gap: 17px; padding: 14px; background: white; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 4px 15px rgba(35,70,52,.035); }
+.animal-photo { width: 100%; height: 145px; object-fit: cover; border-radius: 14px; background: var(--green-light); }
+.animal-info { display: flex; flex-direction: column; align-items: flex-start; }
+.animal-info h3 { margin: 2px 0 5px; font-size: 1.18rem; }
+.animal-meta { color: var(--muted); font-size: .84rem; margin-bottom: 9px; }
+.animal-description { color: #53655c; font-size: .9rem; line-height: 1.55; margin-bottom: 12px; }
+.tag { display: inline-block; padding: 5px 9px; border-radius: 100px; background: #fff0e8; color: #9c573b; font-size: .72rem; font-weight: 700; margin-bottom: 9px; }
+.outline-button { margin-top: auto; border: 1px solid #b7d7c4; border-radius: 10px; padding: 8px 12px; color: var(--green); background: white; font-size: .84rem; font-weight: 700; }
+.outline-button:hover { background: var(--green-light); }
+.campaign-list { display: grid; gap: 15px; }
+.campaign-card { overflow: hidden; background: white; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 4px 15px rgba(35,70,52,.035); }
+.campaign-card img { display: block; width: 100%; height: 155px; object-fit: cover; background: var(--green-light); }
+.campaign-body { padding: 16px; }
+.campaign-body h3 { margin: 0 0 7px; font-size: 1.08rem; }
+.campaign-body p { color: var(--muted); font-size: .87rem; line-height: 1.55; margin-bottom: 13px; }
+.progress-track { height: 8px; border-radius: 100px; background: #e9efeb; overflow: hidden; margin-bottom: 8px; }
+.progress-fill { height: 100%; background: var(--green); border-radius: inherit; }
+.campaign-totals { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: .76rem; margin-bottom: 13px; }
+.campaign-totals strong { color: var(--ink); }
+.donate-button { border: 0; border-radius: 11px; background: var(--green); color: white; padding: 10px 15px; font-weight: 800; }
+.donate-button:hover { background: var(--green-dark); }
+.campaign-body .donate-button { width: 100%; }
+.loading-note { padding: 18px; text-align: center; color: var(--muted); font-size: .85rem; }
+.donation-bar { position: sticky; bottom: 0; z-index: 10; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 13px; padding: 14px 4vw; background: rgba(255,255,255,.97); border-top: 1px solid var(--line); box-shadow: 0 -8px 25px rgba(35,70,52,.08); backdrop-filter: blur(12px); }
+.donation-copy { display: flex; flex-direction: column; gap: 3px; margin-right: 8px; }
+.donation-copy strong { font-family: Nunito, sans-serif; }
+.donation-copy span { color: var(--muted); font-size: .78rem; }
+.donation-amounts { display: flex; gap: 8px; flex-wrap: wrap; }
+.amount-button { padding: 10px 14px; border: 1px solid #b7d7c4; border-radius: 11px; color: var(--green); background: white; font-weight: 800; }
+.amount-button:hover, .amount-button:focus-visible { background: var(--green-light); border-color: var(--green); }
+.donate-custom { padding: 11px 16px; }
+.toast { position: fixed; z-index: 30; bottom: 100px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 30px); padding: 13px 18px; background: var(--ink); color: white; border-radius: 12px; box-shadow: var(--shadow); font-size: .9rem; }
+@media (max-width: 900px) {
+  .ong-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .content-columns { grid-template-columns: minmax(0, 1fr); }
+  .campaigns-column { margin-top: 10px; }
+  .campaign-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .donation-bar { position: fixed; left: 0; right: 0; }
+  body { padding-bottom: 145px; }
+}
+@media (max-width: 600px) {
+  .topbar { height: 64px; padding: 0 4%; }
+  .public-label { font-size: .75rem; }
+  main { width: 92%; }
+  .screen { padding-top: 28px; }
+  .ong-grid, .campaign-list { grid-template-columns: minmax(0, 1fr); }
+  .organization-hero { align-items: flex-start; padding: 18px; gap: 14px; }
+  .organization-avatar { width: 60px; height: 60px; font-size: 1.7rem; border-radius: 18px; }
+  .animal-card { grid-template-columns: 105px minmax(0, 1fr); gap: 12px; padding: 10px; }
+  .animal-photo { height: 125px; }
+  .animal-description { font-size: .84rem; }
+  .donation-bar { justify-content: flex-start; gap: 8px; padding: 10px 4%; }
+  .donation-copy { width: 100%; margin: 0; }
+  .donation-amounts { flex: 1; }
+  .amount-button { padding: 9px 10px; font-size: .85rem; }
+  .donate-custom { padding: 9px 10px; font-size: .85rem; }
+  body { padding-bottom: 160px; }
+}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Patinhas Protegidas - início">
+      <span class="brand-icon">🐾</span>
+      <span>Patinhas <strong>Protegidas</strong></span>
+    </a>
+    <span class="public-label">Adoção e doações</span>
+  </header>
+
+  <main>
+    <section id="tela-ongs" class="screen ong-screen">
+      <div class="intro">
+        <span class="eyebrow">Juntos por eles</span>
+        <h1>Encontre uma ONG para apoiar</h1>
+        <p>Conheça organizações, encontre animais que precisam de um lar e ajude em campanhas de cuidado e recuperação.</p>
+      </div>
+      <label class="search-box" for="busca-ong">
+        <span aria-hidden="true">⌕</span>
+        <input id="busca-ong" type="search" placeholder="Buscar por nome ou região..." autocomplete="off">
+      </label>
+      <p id="contador-ongs" class="results-caption"></p>
+      <div id="lista-ongs" class="ong-grid" aria-live="polite"></div>
+      <p id="estado-ongs" class="empty-state hidden">Nenhuma ONG encontrada. Tente outro nome ou região.</p>
+    </section>
+
+    <section id="tela-ong" class="screen organization-screen hidden">
+      <button id="voltar-ongs" class="back-button" type="button">← Todas as ONGs</button>
+      <section class="organization-hero">
+        <div id="ong-avatar" class="organization-avatar" aria-hidden="true">🐾</div>
+        <div>
+          <span class="eyebrow">Conheça e apoie</span>
+          <h1 id="ong-nome">Nome da ONG</h1>
+          <p id="ong-local"></p>
+          <p id="ong-descricao"></p>
+          
+          <!-- Novo link para o Formulário do Google -->
+          <a id="ong-link-formulario" class="outline-button hidden" href="#" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin-top: 12px; text-decoration: none;">
+            📋 Preencher Formulário de Adoção
+          </a>
+        </div>
+      </section>
+
+      <div class="content-columns">
+        <section class="animals-column" aria-labelledby="titulo-animais">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Um novo começo</span>
+              <h2 id="titulo-animais">Animais para adoção</h2>
+            </div>
+            <span id="contador-animais" class="count-pill"></span>
+          </div>
+          <div id="lista-animais" class="animal-list" aria-live="polite"></div>
+          <div id="sentinela-animais" class="loading-note">Carregando mais animais...</div>
+          <p id="fim-animais" class="loading-note hidden">Você viu todos os animais disponíveis. 💚</p>
+        </section>
+
+        <aside class="campaigns-column" aria-labelledby="titulo-campanhas">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Ajude a transformar histórias</span>
+              <h2 id="titulo-campanhas">Campanhas ativas</h2>
+            </div>
+          </div>
+          <div id="lista-campanhas" class="campaign-list"></div>
+          <p id="sem-campanhas" class="empty-state hidden">Esta organização ainda não tem campanhas cadastradas.</p>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <aside id="barra-doacao" class="donation-bar hidden" aria-label="Doação geral para a organização">
+    <div class="donation-copy">
+      <strong>Ajude a ONG</strong>
+      <span>Doação livre para despesas gerais</span>
+    </div>
+    <div id="valores-doacao" class="donation-amounts"></div>
+    <button id="doar-valor-livre" class="donate-button donate-custom" type="button">Outro valor</button>
+  </aside>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script src="{{ url_for('static', filename='js/publico.js') }}" defer></script>
+</body>
+</html>
