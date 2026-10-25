@@ -201,8 +201,8 @@
             {% endif %}
           </p>
            <div class="acoes-btn">
-                <a href="{{ url_for('carregar_edicao_animal', id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
-                <a href="{{ url_for('deletar_animal', id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini">🗑️</a>
+                <a href="{{ url_for('animais.carregar_edicao_animal', id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
+                <a href="{{ url_for('animais.deletar_animal', id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini">🗑️</a>
            </div>
         </div>
       </div>
