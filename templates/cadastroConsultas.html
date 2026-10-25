@@ -45,7 +45,7 @@
         <div class="card shadow p-4 mt-4" style="width: 100%; max-width: 450px;">
             <h3 class="text-center text-success mb-4">🏥 Nova Consulta</h3>
 
-            <form method="POST" action="{{ url_for('cadastrar_consulta', id_animal=animal.id) }}">
+            <form method="POST" action="{{ url_for('saude.cadastrar_consulta', id_animal=animal.id) }}">
                 
                 <input type="hidden" name="animal_id" value="{{ animal.id }}">
                 
