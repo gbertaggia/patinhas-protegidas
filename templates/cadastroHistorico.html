@@ -25,7 +25,7 @@
        <div class="card shadow p-4 mt-4" style="width: 100%; max-width: 450px;">
         <h3 class="text-center text-danger mb-4">🏥 Histórico Médico</h3>
 
-        <form method="POST" action="{{ url_for('cadastrar_historico', id_animal=animal.id) }}">
+        <form method="POST" action="{{ url_for('saude.cadastrar_historico', id_animal=animal.id) }}">
             
             <input type="hidden" name="animal_id" value="{{ animal.id }}">
             

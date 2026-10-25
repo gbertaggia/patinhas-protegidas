@@ -25,7 +25,7 @@
        <div class="card shadow p-4 mt-4" style="width: 100%; max-width: 450px;">
         <h3 class="text-center text-danger mb-4">✏️ Editar Histórico Médico</h3>
 
-        <form method="POST" action="{{ url_for('editar_historico', id_historico=historico.id, id_animal=animal.id) }}">
+        <form method="POST" action="{{ url_for('saude.editar_historico', id_historico=historico.id, id_animal=animal.id) }}">
             
             <div class="mb-3">
                 <label class="form-label">Nome do Pet:</label>

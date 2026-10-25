@@ -211,7 +211,7 @@
     <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #bfc9e7;">
         <h5 class="mb-0">Vacinas</h5> 
         
-        <a href="{{ url_for('cadastro_vacina', id_animal=animal.id) }}" class="btn btn-sm btn-outline-primary fw-bold">
+        <a href="{{ url_for('saude.cadastro_vacina', id_animal=animal.id) }}" class="btn btn-sm btn-outline-primary fw-bold">
             + Adicionar
         </a>
     </div>
@@ -227,8 +227,8 @@
                         <small class="text-muted">  - {{ vacina.dose_vacina }}ª dose</small>
                         
                         <div class="acoes-btn">
-                            <a href="{{ url_for('editar_vacina', id_vacina=vacina.id, id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
-                            <a href="{{ url_for('deletar_vacina', id_vacina=vacina.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar esta vacina?')">🗑️</a>
+                            <a href="{{ url_for('saude.editar_vacina', id_vacina=vacina.id, id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
+                            <a href="{{ url_for('saude.deletar_vacina', id_vacina=vacina.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar esta vacina?')">🗑️</a>
                         </div>
                     </div>
                     
@@ -256,7 +256,7 @@
         <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #f4faa8;">
         <h5 class="mb-0">Medicação</h5>
         
-        <a href="{{ url_for('cadastro_medicamento', id_animal=animal.id) }}" class="btn btn-sm btn-outline-warning fw-bold">
+        <a href="{{ url_for('saude.cadastro_medicamento', id_animal=animal.id) }}" class="btn btn-sm btn-outline-warning fw-bold">
         + Adicionar
         </a>
       </div>
@@ -273,8 +273,8 @@
             </div>
             
             <div class="acoes-btn">
-              <a href="{{ url_for('carregar_edicao_medicacao', id_medicamento=remedio.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
-              <a href="{{ url_for('deletar_medicacao', id_medicamento=remedio.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar este medicamento?')">🗑️</a>
+              <a href="{{ url_for('saude.carregar_edicao_medicacao', id_medicamento=remedio.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
+              <a href="{{ url_for('saude.deletar_medicacao', id_medicamento=remedio.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar este medicamento?')">🗑️</a>
             </div>
 
           </div>
@@ -289,7 +289,7 @@
         <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #b5e9b5;">
             <h5 class="mb-0">Consultas</h5> 
             
-            <a href="{{ url_for('cadastrar_consulta', id_animal=animal.id) }}" class="btn btn-sm btn-outline-success fw-bold">
+            <a href="{{ url_for('saude.cadastrar_consulta', id_animal=animal.id) }}" class="btn btn-sm btn-outline-success fw-bold">
                 + Adicionar
             </a>
       </div>
@@ -308,8 +308,8 @@
               <small style="color: #666; display: block;">📍 {{ consulta.clinica }} {% if consulta.veterinario %} (Dr(a). {{ consulta.veterinario }}){% endif %}</small>
               
               <div class="acoes-btn">
-                <a href="{{ url_for('editar_consulta', id_consulta=consulta.id, id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
-                <a href="{{ url_for('deletar_consulta', id_consulta=consulta.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar esta consulta?')">🗑️</a>
+                <a href="{{ url_for('saude.editar_consulta', id_consulta=consulta.id, id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>
+                <a href="{{ url_for('saude.deletar_consulta', id_consulta=consulta.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar esta consulta?')">🗑️</a>
               </div>
             </div>
           </div>
@@ -325,7 +325,7 @@
         <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #fabba8; padding: 0.75rem 0.5rem;">
           <h5 class="mb-0 fs-6 fw-bold text-dark">Histórico Veterinário</h5>
           
-          <a href="{{ url_for('cadastrar_historico', id_animal=animal.id) }}" class="btn btn-sm btn-outline-danger fw-bold flex-shrink-0 ms-2">
+          <a href="{{ url_for('saude.cadastrar_historico', id_animal=animal.id) }}" class="btn btn-sm btn-outline-danger fw-bold flex-shrink-0 ms-2">
               + Adicionar
           </a>
         </div>
@@ -357,8 +357,8 @@
 
             <div class="acoes-btn mt-2">
               <div class="acoes-btn mt-2">
-              <a href="{{ url_for('editar_historico', id_historico=item.id, id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>              
-              <a href="{{ url_for('deletar_historico', id_historico=item.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar este registro do histórico?')">🗑️</a>
+              <a href="{{ url_for('saude.editar_historico', id_historico=item.id, id_animal=animal.id) }}" class="btn btn-outline-secondary btn-mini">✏️</a>              
+              <a href="{{ url_for('saude.deletar_historico', id_historico=item.id, id_animal=animal.id) }}" class="btn btn-outline-danger btn-mini" onclick="return confirm('Tem certeza que deseja apagar este registro do histórico?')">🗑️</a>
             </div>
             </div>
           </div>

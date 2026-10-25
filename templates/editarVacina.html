@@ -19,7 +19,7 @@
         <div class="card shadow p-4 mt-4" style="width: 100%; max-width: 450px;">
             <h3 class="text-center text-primary mb-4">✏️ Editar Vacina</h3>
 
-            <form action="{{ url_for('editar_vacina', id_vacina=vacina.id, id_animal=animal.id) }}" method="POST">
+            <form action="{{ url_for('saude.editar_vacina', id_vacina=vacina.id, id_animal=animal.id) }}" method="POST">
                 
                 <div class="mb-3">
                     <label class="form-label">Nome do Pet:</label>
