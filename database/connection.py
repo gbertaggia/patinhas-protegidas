@@ -1,16 +1,14 @@
 import pymysql
-import os
-from dotenv import load_dotenv
+import config
 
-load_dotenv()
 
 def conectar_banco():
     return pymysql.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME"),
-        port=int(os.getenv("DB_PORT")),
+        host=config.DB_HOST,
+        user=config.DB_USER,
+        password=config.DB_PASSWORD,
+        database=config.DB_NAME,
+        port=config.DB_PORT,
         ssl={"ssl": {}},
         cursorclass=pymysql.cursors.DictCursor
     )

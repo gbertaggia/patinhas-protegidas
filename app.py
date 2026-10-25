@@ -1,19 +1,15 @@
 from flask import Flask, render_template, request, session, redirect, url_for, abort
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.connection import conectar_banco
-import os
 import pymysql
-from dotenv import load_dotenv
 from utils.auth import login_required, animal_do_usuario, registro_do_usuario
+import config
 
-load_dotenv()
+
 app = Flask(__name__)  # Instancia a aplicação web Flask
 
 # Chave criptográfica necessária para o gerenciamento de estado (sessões HTTP)
-app.secret_key = os.getenv("SECRET_KEY")
-if not app.secret_key:
-    raise RuntimeError("SECRET_KEY não definida: configure no .env ou nas variáveis do servidor")
-
+app.secret_key = config.SECRET_KEY
 # --------------------------------------------------------------------------------#
 
 #PÁGINA PÚBLICA
@@ -986,6 +982,6 @@ def painel():
 # INICIALIZAÇÃO DA APLICAÇÃO
 if __name__ == '__main__':
     # Servidor de desenvolvimento: debug só se FLASK_DEBUG=1 no .env local
-    app.run(host='127.0.0.1', port=5001, debug=os.getenv("FLASK_DEBUG") == "1")
+    app.run(host='127.0.0.1', port=5001, debug=config.DEBUG)
 
 
