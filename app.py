@@ -1,10 +1,10 @@
 from flask import Flask, render_template, request, session, redirect, url_for, abort
-from werkzeug.security import generate_password_hash, check_password_hash
 from database.connection import conectar_banco
 import pymysql
 from utils.auth import login_required, animal_do_usuario, registro_do_usuario
 import config
 from routes.auth import bp as auth_bp
+from routes.animais import bp as animais_bp
 
 
 app = Flask(__name__)  # Instancia a aplicação web Flask
@@ -12,6 +12,7 @@ app = Flask(__name__)  # Instancia a aplicação web Flask
 # Chave criptográfica necessária para o gerenciamento de estado (sessões HTTP)
 app.secret_key = config.SECRET_KEY
 app.register_blueprint(auth_bp)
+app.register_blueprint(animais_bp)
 # --------------------------------------------------------------------------------#
 
 #PÁGINA PÚBLICA
@@ -19,76 +20,8 @@ app.register_blueprint(auth_bp)
 def pagina_publica():
     return render_template("publico.html")
 
-# ROTAS DE RENDERIZAÇÃO 
-
-@app.route('/cadastro_animal')
-@login_required
-def tela_cadastro_pet():    
-    # Renderiza a interface de registro de animais
-    return render_template('cadastroAnimal.html')
-
 #--------------------------------------------------------------------------------#
 
-#PÁGINA ANIMAL
-@app.route('/pagina_animal/<int:id_animal>')
-@login_required
-def pagina_animal(id_animal):
-    if not animal_do_usuario(id_animal):
-        abort(404)
-
-    conexao = conectar_banco()
-    cursor = conexao.cursor(pymysql.cursors.DictCursor)
-
-    # Busca animal
-    cursor.execute("SELECT * FROM animais WHERE id = %s", (id_animal,))
-    animal = cursor.fetchone() 
-
-    # Busca vacinas
-    cursor.execute("SELECT * FROM vacinas WHERE animal_id = %s", (id_animal,))
-    vacinas = cursor.fetchall()
-    # Formata a data das vacinas para DD/MM/AAAA
-    for v in vacinas:
-        if v['data_vacina']:
-            v['data_formatada'] = v['data_vacina'].strftime('%d/%m/%Y')
-
-    # Busca medicamentos
-    cursor.execute("SELECT * FROM medicamentos WHERE animal_id = %s", (id_animal,))
-    medicamentos = cursor.fetchall()
-   
-    # Busca as consultas pelo nome do pet
-    cursor.execute("SELECT * FROM consultas WHERE animal_id = %s", (id_animal,))
-    consultas = cursor.fetchall()
-
-    # Formata data e hora para o padrão DD/MM/AAAA
-    for c in consultas:
-        if c['data_consulta']:
-            # Transforma AAAA-MM-DD em DD/MM/AAAA
-            c['data_formatada'] = c['data_consulta'].strftime('%d/%m/%Y')
-        if c['hora_consulta']:
-            # Pega apenas os 5 primeiros caracteres (ex: de "14:00:00" para "14:00")
-            c['hora_formatada'] = str(c['hora_consulta'])[:5]
-
-    # Busca o histórico veterinário pelo nome do pet
-    cursor.execute("SELECT * FROM historico_veterinario WHERE animal_id = %s", (id_animal,))
-    historico_medico = cursor.fetchall()
-
-    # Formata a data do histórico para o padrão brasileiro
-    for h in historico_medico:
-        if h['data_registro']:
-            h['data_formatada'] = h['data_registro'].strftime('%d/%m/%Y')
-
-    cursor.close()
-    conexao.close()    
-    
-    return render_template(
-        'paginaAnimal.html',
-        animal=animal,
-        vacinas=vacinas,
-        medicamentos=medicamentos,
-        consultas=consultas,
-        historico_medico=historico_medico
-    )
-#--------------------------------------------------------------------------------#
 #CONSULTAS
 @app.route('/deletar_consulta/<int:id_consulta>/<int:id_animal>')
 @login_required
@@ -107,7 +40,7 @@ def deletar_consulta(id_consulta, id_animal):
         conexao.close()
 
         # Depois de deletar, atualiza a página do próprio animal
-        return redirect(url_for('pagina_animal', id_animal=id_animal))
+        return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
 
     except Exception as e:
         app.logger.exception("Erro ao deletar consulta")
@@ -140,7 +73,7 @@ def editar_consulta(id_consulta, id_animal):
             conexao.commit()
             
             # Salva e volta para a página do animal
-            return redirect(url_for('pagina_animal', id_animal=id_animal))
+            return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
         except Exception as e:
             app.logger.exception("Erro ao atualizar consulta")
             return "<h1>Erro ao atualizar consulta.</h1>"
@@ -179,7 +112,6 @@ def cadastro_vacina(id_animal):
     # 2. Envia o objeto 'animal' para o template
     return render_template('cadastroVacinas.html', animal=animal, id_animal=id_animal)
 
-@app.route('/salvar_vacina/<int:id_animal>', methods=['POST'])
 @app.route('/salvar_vacina/<int:id_animal>', methods=['POST'])
 @login_required
 def salvar_vacina(id_animal):
@@ -229,7 +161,7 @@ def deletar_vacina(id_vacina, id_animal):
         conexao.commit()
         cursor.close()
         conexao.close()
-        return redirect(url_for('pagina_animal', id_animal=id_animal))
+        return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
     except Exception as e:
         app.logger.exception("Erro ao deletar vacina")
         return "<h1>Erro ao deletar vacina.</h1>"
@@ -261,7 +193,7 @@ def editar_vacina(id_vacina, id_animal):
             """
             cursor.execute(sql, (nome_vacina, data_vacina, status_vacina, dose_vacina, id_vacina))
             conexao.commit()
-            return redirect(url_for('pagina_animal', id_animal=id_animal))
+            return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
         except Exception as e:
             app.logger.exception("Erro ao atualizar vacina")
             return "<h1>Erro ao atualizar vacina.</h1>"
@@ -275,10 +207,7 @@ def editar_vacina(id_vacina, id_animal):
     
     cursor.execute("SELECT * FROM animais WHERE id = %s", (id_animal,))
     animal = cursor.fetchone()
-    # Formata a data de castração para DD/MM/AAAA
-    if animal and animal['data_castracao']:
-        animal['data_castracao_formatada'] = animal['data_castracao'].strftime('%d/%m/%Y')
-    
+      
     cursor.close()
     conexao.close()
     
@@ -367,7 +296,7 @@ def deletar_medicacao(id_medicamento, id_animal):
         conexao.close()
 
         # Depois de deletar, atualiza a página do próprio animal
-        return redirect(url_for('pagina_animal', id_animal=id_animal))
+        return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
 
     except Exception as e:
         app.logger.exception("Erro ao deletar medicamento")
@@ -479,7 +408,7 @@ def cadastrar_historico(id_animal):
             cursor.execute(sql, valores)
             conexao.commit()
             
-            return redirect(url_for('pagina_animal', id_animal=id_animal))
+            return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
         except Exception as e:
             app.logger.exception("Erro ao salvar histórico")
             return "<h1>Erro ao salvar o histórico.</h1>"
@@ -503,7 +432,7 @@ def deletar_historico(id_historico, id_animal):
 
         cursor.close()
         conexao.close()
-        return redirect(url_for('pagina_animal', id_animal=id_animal))
+        return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
     except Exception as e:
         app.logger.exception("Erro ao deletar histórico")
         return "<h1>Erro ao deletar o histórico.</h1>"
@@ -538,7 +467,7 @@ def editar_historico(id_historico, id_animal):
             cursor.execute(sql, (data_registro, clinica, peso, temperatura, tipo_atendimento, 
                                  sintomas, diagnostico, tratamento, anexo_url, id_historico))
             conexao.commit()
-            return redirect(url_for('pagina_animal', id_animal=id_animal))
+            return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
         except Exception as e:
             app.logger.exception("Erro ao atualizar histórico")
             return "<h1>Erro ao atualizar o histórico.</h1>"
@@ -559,184 +488,6 @@ def editar_historico(id_historico, id_animal):
     return render_template('editarHistorico.html', historico=historico, animal=animal)
 
 #----------------------------------------------------------------------------------------------#
-# ROTAS DE PROCESSAMENTO E REGRA DE NEGÓCIO (CRUD DE ANIMAIS)
-@app.route('/cadastrar_animal', methods=['POST'])
-def cadastrar_animal():
-    """
-    Persiste um novo registro de animal vinculado ao ID do usuário autenticado.
-    """
-    if 'usuario_logado' not in session:
-        return redirect('/login')
-
-    id_protetor = session['id_usuario']
-
-    # --- TRATAMENTO DE CAMPOS VAZIOS (Converte '' para None/NULL) ---
-    foto_animal = request.form.get('foto-pet') if request.form.get('foto-pet') else None
-    nome_animal = request.form.get('nome')
-    especie_animal = request.form.get('especie')
-    idade_animal = request.form.get('idade') if request.form.get('idade') else None
-    raca_animal = request.form.get('raca') if request.form.get('raca') else 'SRD'
-
-    # Captura o valor exato que veio do formulário de cadastro
-    valor_castrado = str(request.form.get('castrado')).lower()
-    # Só salva como 1 se o valor for explicitamente '1', 'sim' ou 'on'
-    castrado = 1 if valor_castrado in ['1', 'sim', 'true', 'on'] else 0
-
-    data_castracao = request.form.get('data') if request.form.get('data') else None
-    chip_identificacao = request.form.get('chip') if request.form.get('chip') else None
-    
-
-    try:
-        conexao = conectar_banco()
-        cursor = conexao.cursor()
-
-        comando_sql = """
-            INSERT INTO animais 
-            (usuario_id, nome, especie, raca, idade, foto_url, castrado, data_castracao, chip) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """
-
-        valores = (id_protetor, nome_animal, especie_animal, raca_animal,
-                   idade_animal, foto_animal, castrado, data_castracao, chip_identificacao)
-
-        cursor.execute(comando_sql, valores)
-        conexao.commit()
-
-        cursor.close()
-        conexao.close()
-
-        return redirect('/painel')
-
-    except Exception as e:
-        erro_str = str(e)
-        # Verifica se o erro é o código 1062 de duplicidade referente ao chip
-        if "1062" in erro_str and "chip" in erro_str:
-            return "<script>alert('⚠️ Ops! Já existe um animal cadastrado com este número de chip. Verifique o número e tente novamente.'); window.history.back();</script>"
-        
-        # Se for qualquer outro erro, mostra uma mensagem genérica
-        app.logger.exception("Erro ao salvar animal")
-        return "<script>alert('Erro ao salvar o animal. Tente novamente.'); window.history.back();</script>"
-
-
-@app.route('/deletar_animal/<int:id_animal>')
-def deletar_animal(id_animal):
-    """
-    Remove um registro de animal limpando antes suas dependências (vacinas, consultas, etc.).
-    Garante que apenas o dono do registro possa excluí-lo.
-    """
-    if 'usuario_logado' not in session:
-        return redirect('/login')
-
-    id_protetor = session['id_usuario']
-
-    try:
-        conexao = conectar_banco()
-        cursor = conexao.cursor()
-
-        # Validação de Segurança: Confirma se o animal pertence ao usuário logado
-        cursor.execute("SELECT id FROM animais WHERE id = %s AND usuario_id = %s", (id_animal, id_protetor))
-        animal_valido = cursor.fetchone()
-
-        if animal_valido:         
-
-            cursor.execute("DELETE FROM animais WHERE id = %s", (id_animal,))            
-            conexao.commit()
-
-        cursor.close()
-        conexao.close()
-
-        return redirect('/painel')
-
-    except Exception as e:
-        app.logger.exception("Erro ao excluir animal")
-        return "<h1>Erro ao excluir o animal. Tente novamente.</h1>"
-
-
-@app.route('/editar_animal/<int:id_animal>')
-def carregar_edicao_animal(id_animal):
-    """
-    Consulta o registro específico de um animal e renderiza o formulário de atualização pré-preenchido.
-    """
-    if 'usuario_logado' not in session:
-        return redirect('/login')
-
-    id_protetor = session['id_usuario']
-
-    try:
-        conexao = conectar_banco()
-        cursor = conexao.cursor()
-
-        comando_sql = "SELECT * FROM animais WHERE id = %s AND usuario_id = %s"
-        valores = (id_animal, id_protetor)
-
-        cursor.execute(comando_sql, valores)
-        animal_para_editar = cursor.fetchone()
-
-        cursor.close()
-        conexao.close()
-
-        if not animal_para_editar:
-            return "<h1>Registro não localizado ou acesso negado.</h1>"
-
-        return render_template('editar_animal.html', animal=animal_para_editar)
-
-    except Exception as e:
-        app.logger.exception("Erro ao carregar animal para edição")
-        return "<h1>Erro ao carregar o animal.</h1>"
-
-
-@app.route('/salvar_edicao/<int:id_animal>', methods=['POST'])
-def salvar_edicao_animal(id_animal):
-    if 'usuario_logado' not in session:
-        return redirect('/login')
-
-    id_protetor = session['id_usuario']
-
-    # Pegando todos os campos do HTML
-    novo_nome = request.form.get('nome')
-    nova_especie = request.form.get('especie')
-    nova_idade = request.form.get('idade') if request.form.get('idade') else None
-    nova_raca = request.form.get('raca')
-    nova_foto = request.form.get('foto-pet') if request.form.get('foto-pet') else None
-    
-    # Novos campos adicionados
-    novo_chip = request.form.get('chip') if request.form.get('chip') else None
-    # O formulário envia '1' (Sim) ou '0' (Não): só '1', 'sim', 'true' ou 'on' contam como castrado
-    valor_castrado = str(request.form.get('castrado')).lower()
-    castrado = 1 if valor_castrado in ['1', 'sim', 'true', 'on'] else 0
-    # Sem castração, não guarda data
-    data_castracao = request.form.get('data') if (castrado and request.form.get('data')) else None
-
-    try:
-        conexao = conectar_banco()
-        cursor = conexao.cursor()
-
-        # Adicionamos chip, castrado e data_castracao no UPDATE
-        comando_sql = """
-            UPDATE animais 
-            SET nome = %s, especie = %s, idade = %s, raca = %s, foto_url = %s,
-                chip = %s, castrado = %s, data_castracao = %s
-            WHERE id = %s AND usuario_id = %s
-        """
-
-        valores = (novo_nome, nova_especie, nova_idade, nova_raca, nova_foto, 
-                   novo_chip, castrado, data_castracao, id_animal, id_protetor)
-
-        cursor.execute(comando_sql, valores)
-        conexao.commit()
-
-        cursor.close()
-        conexao.close()
-        
-        return redirect(f'/pagina_animal/{id_animal}')
-
-    except Exception as e:
-        erro_str = str(e)
-        if "1062" in erro_str and "chip" in erro_str:
-            return "<script>alert('⚠️ Ops! Este número de chip já está vinculado a outro animal no sistema. Verifique o código e tente novamente.'); window.history.back();</script>"
-        
-        app.logger.exception("Erro na atualização do animal")
-        return "<script>alert('Erro ao atualizar o animal. Tente novamente.'); window.history.back();</script>"
     
 @app.route('/cadastrar_consulta/<int:id_animal>', methods=['GET', 'POST'])
 @login_required
@@ -772,11 +523,11 @@ def cadastrar_consulta(id_animal):
             conexao.commit()
             
             # Sucesso! Volta para a página do animal específico
-            return redirect(url_for('pagina_animal', id_animal=id_animal))
+            return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
             
         except Exception as e:
             app.logger.exception("Erro ao inserir consulta")
-            return "<h1>Erroao salvar a consulta.</h1>"
+            return "<h1>Erro ao salvar a consulta.</h1>"
         finally:
             cursor.close()
             conexao.close()
@@ -785,39 +536,6 @@ def cadastrar_consulta(id_animal):
     return render_template('cadastroConsultas.html', animal=animal)
 
 #------------------------------------------------------------------------------------------------#
-# ROTAS DE ACESSO RESTRITO
-@app.route('/painel')
-def painel():
-    """
-    Interface principal do usuário. Consulta a base de dados para retornar 
-    exclusivamente os animais vinculados à sessão ativa.
-    """
-    if 'usuario_logado' not in session:
-        return redirect('/login')
-
-    email_do_usuario = session['usuario_logado']
-    id_protetor = session['id_usuario']
-
-    try:
-        conexao = conectar_banco()
-        cursor = conexao.cursor()
-
-        comando_sql = "SELECT * FROM animais WHERE usuario_id = %s"
-        valores = (id_protetor,)
-
-        cursor.execute(comando_sql, valores)
-        lista_animais = cursor.fetchall()
-
-        cursor.close()
-        conexao.close()
-
-        return render_template('painel.html', email=email_do_usuario, animais=lista_animais)
-
-    except Exception as e:
-        app.logger.exception("Erro ao carregar o painel")
-        return "<h1>Erro ao carregar o painel. Tente novamente.</h1>"
-
-
 
 # INICIALIZAÇÃO DA APLICAÇÃO
 if __name__ == '__main__':
