@@ -1,82 +1,25 @@
 from flask import Flask, render_template, request, session, redirect, url_for, abort
-from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.connection import conectar_banco
-import os
 import pymysql
-from dotenv import load_dotenv
+from utils.auth import login_required, animal_do_usuario, registro_do_usuario
+import config
+from routes.auth import bp as auth_bp
 
-load_dotenv()
+
 app = Flask(__name__)  # Instancia a aplicação web Flask
 
 # Chave criptográfica necessária para o gerenciamento de estado (sessões HTTP)
-app.secret_key = os.getenv("SECRET_KEY")
-if not app.secret_key:
-    raise RuntimeError("SECRET_KEY não definida: configure no .env ou nas variáveis do servidor")
-
+app.secret_key = config.SECRET_KEY
+app.register_blueprint(auth_bp)
 # --------------------------------------------------------------------------------#
-# CONTROLE DE ACESSO
-def login_required(f):
-    """Barra quem não está logado e manda para a tela de login."""
-    @wraps(f)
-    def decorada(*args, **kwargs):
-        if 'id_usuario' not in session:
-            return redirect('/login')
-        return f(*args, **kwargs)
-    return decorada
 
-
-def animal_do_usuario(id_animal):
-    """Retorna True somente se o animal pertence ao usuário logado."""
-    conexao = conectar_banco()
-    try:
-        cursor = conexao.cursor()
-        cursor.execute(
-            "SELECT id FROM animais WHERE id = %s AND usuario_id = %s",
-            (id_animal, session['id_usuario'])
-        )
-        return cursor.fetchone() is not None
-    finally:
-        conexao.close()
-TABELAS_SAUDE = ('vacinas', 'medicamentos', 'consultas', 'historico_veterinario')
-
-
-def registro_do_usuario(tabela, id_registro, id_animal=None):
-    """True somente se o registro de saúde pertence a um animal do usuário logado
-    (e, quando informado, ao animal indicado na URL)."""
-    if tabela not in TABELAS_SAUDE:  # a tabela vem do código, nunca do usuário
-        raise ValueError("tabela inválida")
-    sql = (f"SELECT t.id FROM {tabela} t JOIN animais a ON a.id = t.animal_id "
-           "WHERE t.id = %s AND a.usuario_id = %s")
-    valores = [id_registro, session['id_usuario']]
-    if id_animal is not None:
-        sql += " AND t.animal_id = %s"
-        valores.append(id_animal)
-    conexao = conectar_banco()
-    try:
-        cursor = conexao.cursor()
-        cursor.execute(sql, tuple(valores))
-        return cursor.fetchone() is not None
-    finally:
-        conexao.close()
-#--------------------------------------------------------------------------------#
 #PÁGINA PÚBLICA
 @app.route("/")
 def pagina_publica():
     return render_template("publico.html")
 
 # ROTAS DE RENDERIZAÇÃO 
-@app.route('/login')
-def home():
-    # Renderiza a interface de autenticação (Login)
-    return render_template('login.html')
-
-
-@app.route('/cadastro')
-def tela_cadastro():
-    # Renderiza a interface de registro de novos usuários
-    return render_template('cadastro.html')
-
 
 @app.route('/cadastro_animal')
 @login_required
@@ -615,157 +558,6 @@ def editar_historico(id_historico, id_animal):
     
     return render_template('editarHistorico.html', historico=historico, animal=animal)
 
-
-#-----------------------------------------------------------------------------------------#    
-# ROTAS DE PROCESSAMENTO E REGRA DE NEGÓCIO (CRUD DE USUÁRIOS E AUTENTICAÇÃO)
-@app.route('/cadastrar', methods=['POST'])
-def criar_conta():
-    nome = request.form.get('nome')
-    email = request.form.get('email')
-    senha = request.form.get('senha')
-    telefone = request.form.get('telefone')
-
-    try:
-        conexao = conectar_banco()
-        cursor = conexao.cursor() 
-
-        # --- TRAVA DE SEGURANÇA ---
-        # Pergunta ao banco se já existe alguém com esse e-mail
-        cursor.execute("SELECT id FROM usuarios WHERE email = %s", (email,))
-        usuario_existente = cursor.fetchone()
-
-        # Se retornou algo, o e-mail já existe. Barra o cadastro
-        if usuario_existente:
-            cursor.close()
-            conexao.close()
-            return """
-                <h1 style="color: red; text-align: center; margin-top: 50px;">E-mail já cadastrado ⚠️</h1>
-                <p style="text-align: center;">Este endereço de e-mail já possui uma conta no Patinhas Protegidas.</p>
-                <div style="text-align: center;">
-                    <a href="/cadastro" style="font-size: 18px;">Tentar outro e-mail</a> ou 
-                    <a href="/login" style="font-size: 18px;">Fazer Login</a>
-                </div>
-            """
-
-        # Se não existir, segue o fluxo normal de Inserção
-        comando_sql = "INSERT INTO usuarios (nome, email, senha, telefone) VALUES (%s, %s, %s, %s)"
-        valores = (nome, email, generate_password_hash(senha), telefone)
-
-        cursor.execute(comando_sql, valores)
-        conexao.commit() 
-
-        id_novo_usuario = cursor.lastrowid
-
-        session['usuario_logado'] = email
-        session['nome_usuario'] = nome
-        session['id_usuario'] = id_novo_usuario
-
-        cursor.close()
-        conexao.close()
-
-        return redirect('/painel')
-
-    except Exception as e:
-        app.logger.exception("Erro ao criar conta")
-        return "<h1>Erro ao criar a conta. Tente novamente.</h1>"
-
-
-@app.route('/login', methods=['POST'])
-def fazer_login():
-    """
-    Valida as credenciais do usuário contra o banco de dados e gerencia a sessão.
-    """
-    email_digitado = request.form.get('email')
-    senha_digitada = request.form.get('senha')
-
-    try:
-        conexao = conectar_banco()
-        # Utiliza DictCursor para retornar os registros mapeados por chave-valor (coluna: dado)
-        cursor = conexao.cursor(pymysql.cursors.DictCursor)
-
-        # Busca só pelo e-mail: a senha é conferida no Python, não no SQL
-        cursor.execute("SELECT id, nome, email, senha FROM usuarios WHERE email = %s", (email_digitado,))
-        usuario = cursor.fetchone()
-
-        senha_correta = False
-        if usuario:
-            senha_salva = usuario['senha']
-            if senha_salva.startswith(('scrypt:', 'pbkdf2:')):
-                # Conta nova: a senha guardada é um hash
-                senha_correta = check_password_hash(senha_salva, senha_digitada)
-            elif senha_salva == senha_digitada:
-                # Conta antiga (senha em texto puro): entra e já converte para hash
-                senha_correta = True
-                cursor.execute("UPDATE usuarios SET senha = %s WHERE id = %s",
-                               (generate_password_hash(senha_digitada), usuario['id']))
-                conexao.commit()
-
-        cursor.close()
-        conexao.close()
-
-        if senha_correta:
-            # Credenciais validadas: armazena os dados no payload da sessão
-            session['usuario_logado'] = usuario['email']
-            session['nome_usuario'] = usuario['nome']
-            session['id_usuario'] = usuario['id']
-
-            return redirect('/painel')
-        else:
-            return "<script>alert('⚠️ Autenticação Falhou: E-mail ou senha incorretos.'); window.location.href='/login';</script>"
-
-    except Exception as e:
-        app.logger.exception("Erro no login")
-        return "<h1>Erro ao entrar. Tente novamente.</h1>"
-    
-@app.route('/editar_usuario', methods=['GET', 'POST'])
-def editar_perfil_usuario():
-    if 'usuario_logado' not in session:
-        return redirect('/login')
-
-    id_usuario = session['id_usuario']
-    conexao = conectar_banco()
-    cursor = conexao.cursor(pymysql.cursors.DictCursor)
-
-    if request.method == 'POST':
-        novo_nome = request.form.get('nome')
-        novo_telefone = request.form.get('telefone')
-
-        try:
-            cursor.execute("UPDATE usuarios SET nome = %s, telefone = %s WHERE id = %s", 
-            (novo_nome, novo_telefone if novo_telefone else None, id_usuario))
-            conexao.commit()
-            
-            # Atualiza o nome na sessão para o painel atualizar o texto de boas-vindas
-            session['nome_usuario'] = novo_nome 
-            
-            return redirect('/painel')
-        except Exception as e:
-            app.logger.exception("Erro ao atualizar usuário")
-            return "<h1>Erro ao atualizar o perfil. Tente novamente.</h1>"
-        finally:
-            cursor.close()
-            conexao.close()
-
-    # Método GET: Busca os dados atuais para preencher a tela
-    cursor.execute("SELECT * FROM usuarios WHERE id = %s", (id_usuario,))
-    usuario = cursor.fetchone()
-    
-    cursor.close()
-    conexao.close()
-
-    return render_template('editarUsuario.html', usuario=usuario)
-
-
-@app.route('/logout')
-def sair():
-    """
-    Destrói as variáveis de sessão e encerra o acesso autenticado.
-    """
-    session.pop('usuario_logado', None)
-    session.pop('nome_usuario', None)
-    session.pop('id_usuario', None)
-    return redirect('/login')
-
 #----------------------------------------------------------------------------------------------#
 # ROTAS DE PROCESSAMENTO E REGRA DE NEGÓCIO (CRUD DE ANIMAIS)
 @app.route('/cadastrar_animal', methods=['POST'])
@@ -1030,6 +822,6 @@ def painel():
 # INICIALIZAÇÃO DA APLICAÇÃO
 if __name__ == '__main__':
     # Servidor de desenvolvimento: debug só se FLASK_DEBUG=1 no .env local
-    app.run(host='127.0.0.1', port=5001, debug=os.getenv("FLASK_DEBUG") == "1")
+    app.run(host='127.0.0.1', port=5001, debug=config.DEBUG)
 
 
