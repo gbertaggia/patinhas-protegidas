@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, session, redirect, url_for, abort
-from werkzeug.security import generate_password_hash, check_password_hash
 from database.connection import conectar_banco
 import pymysql
 from utils.auth import login_required, animal_do_usuario, registro_do_usuario
@@ -180,7 +179,6 @@ def cadastro_vacina(id_animal):
     return render_template('cadastroVacinas.html', animal=animal, id_animal=id_animal)
 
 @app.route('/salvar_vacina/<int:id_animal>', methods=['POST'])
-@app.route('/salvar_vacina/<int:id_animal>', methods=['POST'])
 @login_required
 def salvar_vacina(id_animal):
     if not animal_do_usuario(id_animal):
@@ -275,10 +273,7 @@ def editar_vacina(id_vacina, id_animal):
     
     cursor.execute("SELECT * FROM animais WHERE id = %s", (id_animal,))
     animal = cursor.fetchone()
-    # Formata a data de castração para DD/MM/AAAA
-    if animal and animal['data_castracao']:
-        animal['data_castracao_formatada'] = animal['data_castracao'].strftime('%d/%m/%Y')
-    
+      
     cursor.close()
     conexao.close()
     
@@ -776,7 +771,7 @@ def cadastrar_consulta(id_animal):
             
         except Exception as e:
             app.logger.exception("Erro ao inserir consulta")
-            return "<h1>Erroao salvar a consulta.</h1>"
+            return "<h1>Erro ao salvar a consulta.</h1>"
         finally:
             cursor.close()
             conexao.close()
