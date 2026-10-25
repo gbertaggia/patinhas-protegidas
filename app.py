@@ -21,7 +21,7 @@ def login_required(f):
     @wraps(f)
     def decorada(*args, **kwargs):
         if 'id_usuario' not in session:
-            return redirect('/')
+            return redirect('/login')
         return f(*args, **kwargs)
     return decorada
 
@@ -643,7 +643,7 @@ def criar_conta():
                 <p style="text-align: center;">Este endereço de e-mail já possui uma conta no Patinhas Protegidas.</p>
                 <div style="text-align: center;">
                     <a href="/cadastro" style="font-size: 18px;">Tentar outro e-mail</a> ou 
-                    <a href="/" style="font-size: 18px;">Fazer Login</a>
+                    <a href="/login" style="font-size: 18px;">Fazer Login</a>
                 </div>
             """
 
@@ -711,7 +711,7 @@ def fazer_login():
 
             return redirect('/painel')
         else:
-            return "<script>alert('⚠️ Autenticação Falhou: E-mail ou senha incorretos.'); window.location.href='/';</script>"
+            return "<script>alert('⚠️ Autenticação Falhou: E-mail ou senha incorretos.'); window.location.href='/login';</script>"
 
     except Exception as e:
         app.logger.exception("Erro no login")
@@ -720,7 +720,7 @@ def fazer_login():
 @app.route('/editar_usuario', methods=['GET', 'POST'])
 def editar_perfil_usuario():
     if 'usuario_logado' not in session:
-        return redirect('/')
+        return redirect('/login')
 
     id_usuario = session['id_usuario']
     conexao = conectar_banco()
@@ -764,7 +764,7 @@ def sair():
     session.pop('usuario_logado', None)
     session.pop('nome_usuario', None)
     session.pop('id_usuario', None)
-    return redirect('/')
+    return redirect('/login')
 
 #----------------------------------------------------------------------------------------------#
 # ROTAS DE PROCESSAMENTO E REGRA DE NEGÓCIO (CRUD DE ANIMAIS)
@@ -774,7 +774,7 @@ def cadastrar_animal():
     Persiste um novo registro de animal vinculado ao ID do usuário autenticado.
     """
     if 'usuario_logado' not in session:
-        return redirect('/')
+        return redirect('/login')
 
     id_protetor = session['id_usuario']
 
@@ -833,7 +833,7 @@ def deletar_animal(id_animal):
     Garante que apenas o dono do registro possa excluí-lo.
     """
     if 'usuario_logado' not in session:
-        return redirect('/')
+        return redirect('/login')
 
     id_protetor = session['id_usuario']
 
@@ -866,7 +866,7 @@ def carregar_edicao_animal(id_animal):
     Consulta o registro específico de um animal e renderiza o formulário de atualização pré-preenchido.
     """
     if 'usuario_logado' not in session:
-        return redirect('/')
+        return redirect('/login')
 
     id_protetor = session['id_usuario']
 
@@ -896,7 +896,7 @@ def carregar_edicao_animal(id_animal):
 @app.route('/salvar_edicao/<int:id_animal>', methods=['POST'])
 def salvar_edicao_animal(id_animal):
     if 'usuario_logado' not in session:
-        return redirect('/')
+        return redirect('/login')
 
     id_protetor = session['id_usuario']
 
@@ -1001,7 +1001,7 @@ def painel():
     exclusivamente os animais vinculados à sessão ativa.
     """
     if 'usuario_logado' not in session:
-        return redirect('/')
+        return redirect('/login')
 
     email_do_usuario = session['usuario_logado']
     id_protetor = session['id_usuario']
