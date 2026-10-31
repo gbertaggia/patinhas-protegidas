@@ -144,3 +144,51 @@ def test_resumo_nao_mistura_dados_de_outra_conta(client_logado, outro_client):
     _lancar(client_logado, categoria_id=categoria, valor=100)
 
     assert outro_client.get('/api/financas/resumo').get_json()['receitas'] == '0.00'
+
+# ---------- Animais ----------
+
+def test_lancar_em_animal_proprio(client_logado, animal):
+    categoria = _id_categoria(client_logado, 'DESPESA', 'Vacina')
+    resposta = _lancar(client_logado, categoria_id=categoria, valor=80, animal_id=animal)
+    assert resposta.status_code == 201
+
+
+def test_lancar_em_animal_de_outra_conta_e_recusado(client_logado, animal_de_outro):
+    categoria = _id_categoria(client_logado, 'DESPESA', 'Vacina')
+    resposta = _lancar(client_logado, categoria_id=categoria, valor=80, animal_id=animal_de_outro)
+    assert resposta.status_code == 404
+    # e nada foi gravado
+    assert client_logado.get('/api/financas/transacoes').get_json() == []
+
+
+def test_lancar_em_animal_inexistente_e_recusado(client_logado):
+    categoria = _id_categoria(client_logado, 'DESPESA', 'Vacina')
+    resposta = _lancar(client_logado, categoria_id=categoria, valor=80, animal_id=999999)
+    assert resposta.status_code == 404
+
+
+def test_listagem_filtra_por_animal_e_por_geral(client_logado, animal):
+    categoria = _id_categoria(client_logado, 'DESPESA', 'Alimentação')
+    _lancar(client_logado, categoria_id=categoria, valor=80, animal_id=animal)
+    _lancar(client_logado, categoria_id=categoria, valor=10)
+
+    do_animal = client_logado.get(f'/api/financas/transacoes?animal_id={animal}').get_json()
+    gerais = client_logado.get('/api/financas/transacoes?animal_id=geral').get_json()
+
+    assert len(do_animal) == 1
+    assert do_animal[0]['animal_id'] == animal
+    assert do_animal[0]['animal'] == 'Animal de teste'
+    assert len(gerais) == 1
+    assert gerais[0]['animal_id'] is None
+
+
+def test_resumo_filtra_por_animal_e_por_geral(client_logado, animal):
+    categoria = _id_categoria(client_logado, 'DESPESA', 'Alimentação')
+    _lancar(client_logado, categoria_id=categoria, valor=80, animal_id=animal)
+    _lancar(client_logado, categoria_id=categoria, valor=10)
+
+    do_animal = client_logado.get(f'/api/financas/resumo?animal_id={animal}').get_json()
+    gerais = client_logado.get('/api/financas/resumo?animal_id=geral').get_json()
+
+    assert do_animal['despesas'] == '80.00'
+    assert gerais['despesas'] == '10.00'

@@ -35,6 +35,20 @@ def _remover_usuario(id_usuario):
     finally:
         conexao.close()
 
+def _criar_animal(id_usuario):
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO animais (usuario_id, nome, especie) VALUES (%s, %s, %s)",
+                (id_usuario, "Animal de teste", "gato"),
+            )
+            id_animal = cursor.lastrowid
+        conexao.commit()
+    finally:
+        conexao.close()
+    return id_animal
+
 
 def _client_logado(id_usuario):
     cliente = flask_app.test_client()
@@ -75,3 +89,14 @@ def client_logado(usuario):
 def outro_client(outro_usuario):
     """Navegador falso logado como uma segunda pessoa."""
     return _client_logado(outro_usuario)
+
+@pytest.fixture
+def animal(usuario):
+    """Um animal que pertence ao usuário de teste."""
+    return _criar_animal(usuario)
+
+
+@pytest.fixture
+def animal_de_outro(outro_usuario):
+    """Um animal que pertence à segunda pessoa."""
+    return _criar_animal(outro_usuario)
