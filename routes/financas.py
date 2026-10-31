@@ -23,6 +23,7 @@ def _como_inteiro(valor):
         return int(valor)
     return None
 
+
 def _ler_data(nome):
     """Lê uma data AAAA-MM-DD da URL. Devolve (data, erro)."""
     texto = request.args.get(nome, '').strip()
@@ -32,6 +33,60 @@ def _ler_data(nome):
         return date.fromisoformat(texto), None
     except ValueError:
         return None, f"Data inválida em '{nome}'. Use o formato AAAA-MM-DD."
+
+
+def _montar_filtros():
+    """Lê os filtros da URL e monta as condições do WHERE.
+
+    Devolve (condicoes, parametros, erro). Sempre filtra pela pessoa logada:
+    ninguém vê lançamento de outra conta.
+    """
+    condicoes = ["t.usuario_id = %s"]
+    parametros = [session['id_usuario']]
+
+    inicio, erro = _ler_data('inicio')
+    if erro:
+        return None, None, erro
+    fim, erro = _ler_data('fim')
+    if erro:
+        return None, None, erro
+    if inicio and fim and inicio > fim:
+        return None, None, "A data inicial não pode ser maior que a final."
+    if inicio:
+        condicoes.append("t.data_transacao >= %s")
+        parametros.append(inicio)
+    if fim:
+        condicoes.append("t.data_transacao <= %s")
+        parametros.append(fim)
+
+    tipo = request.args.get('tipo', '').strip().upper()
+    if tipo:
+        if tipo not in ('RECEITA', 'DESPESA'):
+            return None, None, "Tipo inválido. Use RECEITA ou DESPESA."
+        condicoes.append("t.tipo = %s")
+        parametros.append(tipo)
+
+    categoria = request.args.get('categoria_id', '').strip()
+    if categoria:
+        categoria_id = _como_inteiro(categoria)
+        if categoria_id is None:
+            return None, None, "Categoria inválida."
+        condicoes.append("t.categoria_id = %s")
+        parametros.append(categoria_id)
+
+    # animal_id=7 filtra um animal; animal_id=geral traz só os lançamentos gerais
+    animal = request.args.get('animal_id', '').strip()
+    if animal:
+        if animal.lower() == 'geral':
+            condicoes.append("t.animal_id IS NULL")
+        else:
+            animal_id = _como_inteiro(animal)
+            if animal_id is None:
+                return None, None, "Animal inválido."
+            condicoes.append("t.animal_id = %s")
+            parametros.append(animal_id)
+
+    return condicoes, parametros, None
 
 
 @financas_bp.route('/api/categorias')
@@ -122,61 +177,20 @@ def criar_transacao():
     finally:
         conexao.close()
 
+
 @financas_bp.route('/api/financas/transacoes')
 @api_login_required
 def listar_transacoes():
-    # Sempre filtra pela pessoa logada: ninguém vê lançamento de outra conta.
-    condicoes = ["t.usuario_id = %s"]
-    parametros = [session['id_usuario']]
-
-    inicio, erro = _ler_data('inicio')
+    condicoes, parametros, erro = _montar_filtros()
     if erro:
         return _erro(erro)
-    fim, erro = _ler_data('fim')
-    if erro:
-        return _erro(erro)
-    if inicio and fim and inicio > fim:
-        return _erro("A data inicial não pode ser maior que a final.")
-    if inicio:
-        condicoes.append("t.data_transacao >= %s")
-        parametros.append(inicio)
-    if fim:
-        condicoes.append("t.data_transacao <= %s")
-        parametros.append(fim)
-
-    tipo = request.args.get('tipo', '').strip().upper()
-    if tipo:
-        if tipo not in ('RECEITA', 'DESPESA'):
-            return _erro("Tipo inválido. Use RECEITA ou DESPESA.")
-        condicoes.append("t.tipo = %s")
-        parametros.append(tipo)
-
-    categoria = request.args.get('categoria_id', '').strip()
-    if categoria:
-        categoria_id = _como_inteiro(categoria)
-        if categoria_id is None:
-            return _erro("Categoria inválida.")
-        condicoes.append("t.categoria_id = %s")
-        parametros.append(categoria_id)
-
-    # animal_id=7 filtra um animal; animal_id=geral traz só os lançamentos gerais
-    animal = request.args.get('animal_id', '').strip()
-    if animal:
-        if animal.lower() == 'geral':
-            condicoes.append("t.animal_id IS NULL")
-        else:
-            animal_id = _como_inteiro(animal)
-            if animal_id is None:
-                return _erro("Animal inválido.")
-            condicoes.append("t.animal_id = %s")
-            parametros.append(animal_id)
 
     limite = _como_inteiro(request.args.get('limite', '100'))
     if limite is None or not 1 <= limite <= 500:
         return _erro("O limite deve estar entre 1 e 500.")
     parametros.append(limite)
 
-    # As condições acima são textos fixos do código; os valores vão em parâmetros (%s).
+    # As condições são textos fixos do código; os valores vão em parâmetros (%s).
     consulta = f"""
         SELECT t.id, t.tipo, t.valor, t.descricao, t.data_transacao,
                t.categoria_id, c.nome AS categoria,
@@ -212,3 +226,45 @@ def listar_transacoes():
         "origem_id": l['origem_id'],
     } for l in linhas])
 
+
+@financas_bp.route('/api/financas/resumo')
+@api_login_required
+def resumo_financeiro():
+    condicoes, parametros, erro = _montar_filtros()
+    if erro:
+        return _erro(erro)
+
+    consulta = f"""
+        SELECT c.id AS categoria_id, c.nome AS categoria, t.tipo,
+               SUM(t.valor) AS total, COUNT(*) AS quantidade
+        FROM transacoes t
+        JOIN categorias c ON c.id = t.categoria_id
+        WHERE {' AND '.join(condicoes)}
+        GROUP BY c.id, c.nome, t.tipo
+        ORDER BY total DESC
+    """
+
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute(consulta, parametros)
+            linhas = cursor.fetchall()
+    finally:
+        conexao.close()
+
+    zero = Decimal('0.00')
+    receitas = sum((l['total'] for l in linhas if l['tipo'] == 'RECEITA'), zero)
+    despesas = sum((l['total'] for l in linhas if l['tipo'] == 'DESPESA'), zero)
+
+    return jsonify({
+        "receitas": format(receitas, '.2f'),
+        "despesas": format(despesas, '.2f'),
+        "saldo": format(receitas - despesas, '.2f'),
+        "por_categoria": [{
+            "categoria_id": l['categoria_id'],
+            "categoria": l['categoria'],
+            "tipo": l['tipo'],
+            "total": format(l['total'], '.2f'),
+            "quantidade": l['quantidade'],
+        } for l in linhas],
+    })
