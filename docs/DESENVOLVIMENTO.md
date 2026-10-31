@@ -37,6 +37,10 @@ utils/
   auth.py               controle de acesso (login e dono do registro)
 templates/              páginas HTML
 static/                 JavaScript e dados da página pública
+tests/                  testes automatizados (pytest)
+docs/                   documentação do projeto
+pytest.ini              configuração do pytest
+requirements-dev.txt    dependências de desenvolvimento (inclui o pytest)
 ```
 
 Um **blueprint** é um grupo de rotas de um mesmo assunto. Em vez de manter todas as rotas num único arquivo, cada assunto tem o seu arquivo, e o `app.py` apenas os registra.
@@ -96,8 +100,10 @@ Estrutura da tabela `transacoes`:
 
 | Endpoint | O que faz | Situação |
 |---|---|---|
-| `GET /api/categorias` | lista as categorias | feito, commitado |
+| `GET /api/categorias` | lista as categorias | feito e testado |
 | `POST /api/financas/transacoes` | registra um lançamento manual | feito e testado |
+| `GET /api/financas/transacoes` | lista os lançamentos da pessoa logada, com filtros | feito e testado |
+| `GET /api/financas/resumo` | totais de receitas, despesas e saldo, e total por categoria | feito e testado |
 
 Os endpoints dessa API exigem login e respondem JSON. Sem login, respondem 401 (em vez de redirecionar para a tela de login, o que atrapalharia o JavaScript).
 
@@ -106,6 +112,18 @@ O lançamento manual valida tudo no servidor:
 - a categoria precisa existir; o `tipo` do lançamento é definido pela categoria, nunca pelo que o navegador enviar;
 - o animal, se informado, precisa ser da pessoa logada (senão, 404);
 - a data é opcional (padrão: hoje) e a descrição, opcional.
+
+A listagem e o resumo aceitam os mesmos filtros na URL, lidos por uma única função (`_montar_filtros`):
+
+| Filtro | Exemplo | Efeito |
+|---|---|---|
+| `inicio`, `fim` | `inicio=2026-10-01&fim=2026-10-31` | período (formato AAAA-MM-DD) |
+| `tipo` | `tipo=DESPESA` | só receitas ou só despesas |
+| `categoria_id` | `categoria_id=7` | uma categoria |
+| `animal_id` | `animal_id=7` ou `animal_id=geral` | um animal, ou só os lançamentos gerais |
+| `limite` | `limite=50` | só na listagem; de 1 a 500 (padrão 100) |
+
+Todas as consultas filtram pela pessoa logada, então ninguém vê os lançamentos de outra conta. O resumo devolve `receitas`, `despesas`, `saldo` e `por_categoria` (categoria, tipo, total e quantidade).
 
 ## 5. Decisões de projeto e motivos
 
@@ -123,27 +141,26 @@ Pontos que diferem do relatório parcial e devem ser corrigidos no relatório fi
 
 ## 6. Como testar
 
-Os testes manuais feitos até agora para o Pet Finanças usaram o console do navegador (F12), com a pessoa logada, chamando a API com `fetch`:
+Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 31 testes automatizados com `pytest`, que cobrem a API do Pet Finanças.
 
-| Teste | Resultado esperado |
-|---|---|
-| Despesa geral, de animal e receita | 201 |
-| Valor zero ou texto | 400 |
-| Categoria inexistente | 400 |
-| Animal de outra conta | 404 |
-| Sem login | 401 |
+Para rodar os automatizados, com a venv ativa e o `.env` configurado:
 
-Os testes automatizados (`pytest`) serão criados junto com a API. Como só existe um banco, eles devem criar os próprios registros e apagar apenas o que criaram.
+```
+pip install -r requirements-dev.txt
+pytest -v
+```
+
+Como só existe um banco, cada teste cria os próprios registros (com e-mail iniciado em `pytest_`) e apaga apenas o que criou.
 
 ## 7. Próximos passos
 
-1. Listagem e resumo: `GET /api/financas/transacoes` (com filtros por período, categoria, tipo e animal) e `GET /api/financas/resumo`.
-2. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
-3. Telas e JavaScript: painel do animal e painel geral, com formulário, resumo e gráfico atualizados por `fetch`.
-4. Testes automatizados com `pytest`.
-5. Migração 002: campanhas, tipo de perfil (protetor ou ONG) e chave Pix; depois, a integração com o Pix (Mercado Pago, em Sandbox).
-6. Avisos de erro e sucesso padronizados em JavaScript.
-7. Regenerar o `schema.sql` do repositório a partir do banco real, que hoje está desatualizado.
+1. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
+2. Telas e JavaScript: painel do animal e painel geral, com formulário, resumo e gráfico atualizados por `fetch`.
+3. Testes não funcionais: responsividade, acessibilidade e latência do banco.
+4. Migração 002: campanhas, tipo de perfil (protetor ou ONG) e chave Pix; depois, a integração com o Pix (Mercado Pago, em Sandbox).
+5. Avisos de erro e sucesso padronizados em JavaScript.
+6. Regenerar o `schema.sql` do repositório a partir do banco real, que hoje está desatualizado.
+7. Tratar a exclusão de animal que tenha lançamentos financeiros (hoje o banco recusa, por causa do `RESTRICT`).
 
 ## 8. Pendências conhecidas de segurança
 

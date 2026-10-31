@@ -1,0 +1,151 @@
+# Patinhas Protegidas: testes
+
+Este documento registra como o sistema é testado, o que já foi verificado, os resultados e as medições. Deve ser atualizado a cada etapa nova.
+
+Última atualização: 31/10/2026.
+
+## 1. Estratégia
+
+| Tipo | Como é feito | Situação |
+|---|---|---|
+| Funcional manual | uso das telas e das rotas, com duas contas (uma em janela normal e outra em janela anônima) | realizado a cada etapa |
+| Controle de acesso | rotas sem login, registros de outra conta, API sem login | realizado (manual e automatizado) |
+| Validação de entradas | valores, datas, filtros e textos inválidos | realizado (manual e automatizado) |
+| Automatizado (`pytest`) | testes em Python que chamam a API e conferem as respostas | 31 testes, todos passando |
+| Banco de dados | conferência das migrações e da restauração de backup com consultas SQL | realizado |
+| Não funcional | responsividade em celular, acessibilidade (WCAG 2.2) e latência do banco | planejado |
+
+## 2. Testes manuais realizados
+
+### 2.1 Segurança do back-end (Fase 1)
+
+Feitos com duas contas, primeiro no computador e depois no site publicado.
+
+| Área | Teste | Resultado |
+|---|---|---|
+| Senha | login com conta antiga | entrou e a senha foi convertida em hash |
+| Senha | cadastro e login com conta nova | funcionou, hash visível no banco |
+| Senha | senha errada | alerta de falha |
+| Acesso | rotas sem login | voltam para a tela de login |
+| Acesso | animal ou registro de outra conta | erro 404 |
+| Acesso | registro de uma conta com animal de outra na URL | erro 404, registro intacto |
+| Fluxo | cadastrar, editar e apagar animal, vacina, medicamento, consulta e histórico | funcionou, datas no padrão brasileiro |
+| Castração | marcar e desmarcar na edição, reabrir | valor e data corretos |
+| Chip | chip duplicado | alerta de chip já cadastrado |
+| Erros | nome com mais de 100 letras | mensagem simples na tela, erro completo só no terminal |
+| Medicação | alterar a frequência e reabrir | frequência salva e exibida |
+| Configuração | com e sem `FLASK_DEBUG=1` | depurador só aparece quando pedido |
+
+### 2.2 Banco de dados
+
+| Teste | Resultado |
+|---|---|
+| Número de usuários após restaurar o backup no novo serviço | 17, igual ao original |
+| Migração 001: contagem de categorias | 14 |
+| Migração 001: coluna `valor` em vacinas, medicamentos, consultas e transacoes | presente nas quatro tabelas |
+| Migração 001: regra das chaves estrangeiras de `transacoes` | três chaves, todas com `RESTRICT` |
+| Cadastro de vacina depois da migração | funcionou normalmente |
+
+### 2.3 API do Pet Finanças
+
+Feitos no navegador (console com `fetch` e endereços na barra), logada.
+
+| Teste | Resultado |
+|---|---|
+| Despesa geral, despesa de um animal e receita | 201, tipo definido pela categoria |
+| Valor zero, valor `"abc"` e categoria inexistente | 400, com mensagem explicando |
+| Animal de outra conta | 404 |
+| Chamada sem login | 401 |
+| Listagem sem filtro e com cada filtro (tipo, animal, categoria, período, limite) | conforme o esperado |
+| Filtros inválidos (tipo, data, período invertido, limite) | 400, com mensagem |
+| Listagem e resumo com uma segunda conta | lista vazia e totais zerados |
+| Resumo com os dados de teste | receitas 100,00; despesas 115,50; saldo -15,50 |
+
+## 3. Testes automatizados (pytest)
+
+### 3.1 Como rodar
+
+Com a venv ativa e o `.env` configurado, na raiz do projeto:
+
+```
+pip install -r requirements-dev.txt
+pytest -v
+```
+
+A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
+
+### 3.2 Como funcionam
+
+- Cada teste é uma função `test_...` que chama a API como um navegador e confere a resposta com `assert`.
+- As **fixtures** (em `tests/conftest.py`) preparam e limpam o cenário: criam uma pessoa de teste no banco (e-mail iniciado em `pytest_`), um animal quando preciso, e fazem o login simulado. No fim de cada teste, apagam tudo o que foi criado (transações, animais e usuário).
+- Como só existe um banco, os testes nunca limpam tabelas inteiras: removem só os registros que eles mesmos criaram. Os dados reais do grupo não são tocados.
+
+### 3.3 O que é testado (31 testes)
+
+| Assunto | Teste | O que verifica |
+|---|---|---|
+| Categorias | `test_categorias_exige_login` | sem login, 401 |
+| Categorias | `test_categorias_lista_receitas_e_despesas` | logada, devolve ao menos 14 categorias dos dois tipos |
+| Lançamento | `test_lancar_exige_login` | sem login, 401 |
+| Lançamento | `test_despesa_tem_tipo_definido_pela_categoria` | 201, tipo DESPESA, valor "25,50" gravado como 25.50 |
+| Lançamento | `test_receita_tem_tipo_definido_pela_categoria` | 201, tipo RECEITA |
+| Lançamento | `test_valor_invalido_e_recusado` (5 casos) | 0, -5, "abc", vazio e acima do limite dão 400 |
+| Lançamento | `test_categoria_inexistente_e_recusada` | 400 |
+| Lançamento | `test_corpo_que_nao_e_json_e_recusado` | 400 |
+| Lançamento | `test_lancar_em_animal_proprio` | 201 |
+| Lançamento | `test_lancar_em_animal_de_outra_conta_e_recusado` | 404 e nada gravado |
+| Lançamento | `test_lancar_em_animal_inexistente_e_recusado` | 404 |
+| Listagem | `test_listagem_filtra_por_tipo` | filtro por RECEITA devolve só receitas |
+| Listagem | `test_listagem_filtra_por_periodo` | filtro de data devolve só o período |
+| Listagem | `test_listagem_so_mostra_dados_do_proprio_usuario` | outra conta vê lista vazia |
+| Listagem | `test_filtros_invalidos_sao_recusados` (7 casos) | tipo, datas, período invertido, limites e ids inválidos dão 400 |
+| Listagem | `test_listagem_filtra_por_animal_e_por_geral` | `animal_id=N` e `animal_id=geral` separam corretamente |
+| Resumo | `test_resumo_exige_login` | sem login, 401 |
+| Resumo | `test_resumo_calcula_totais_e_saldo` | receitas 100,00; despesas 35,50; saldo 64,50; 3 categorias |
+| Resumo | `test_resumo_vazio_para_quem_nao_tem_lancamentos` | tudo zerado e sem categorias |
+| Resumo | `test_resumo_nao_mistura_dados_de_outra_conta` | outra conta vê zeros |
+| Resumo | `test_resumo_filtra_por_animal_e_por_geral` | totais separados por animal e geral |
+
+### 3.4 Resultado
+
+Última execução completa: **31 passaram em 177,54 s** (2 min 57 s).
+
+## 4. Medições
+
+| Execução | Testes | Tempo total | Média por teste |
+|---|---|---|---|
+| 31/10/2026, primeira versão | 26 | 128,07 s | 4,9 s |
+| 31/10/2026, com testes de animais | 31 | 177,54 s | 5,7 s |
+
+Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre várias conexões (criar o usuário, lançar, consultar e limpar). O tempo é, portanto, dominado pela comunicação com o banco. Esses números são apenas um indício: não separam a latência de conexão da latência de consulta. A medição específica de latência, prevista no relatório, ainda será feita.
+
+## 5. O que ainda não está coberto
+
+- Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
+- Telas e JavaScript do Pet Finanças.
+- Testes automatizados das rotas de usuário, animais e saúde (hoje cobertas só por testes manuais).
+- Testes não funcionais: responsividade em celular, acessibilidade (WCAG 2.2) e medição de latência.
+- Campanhas e integração com o Pix.
+
+## 6. Limpeza de resíduos
+
+Se uma execução for interrompida no meio (por exemplo, com Ctrl+C), pode sobrar uma pessoa de teste no banco. Para remover, no MySQL Workbench:
+
+```sql
+SET SQL_SAFE_UPDATES = 0;
+
+DELETE t FROM transacoes t
+JOIN usuarios u ON u.id = t.usuario_id
+WHERE u.email LIKE 'pytest\_%@exemplo.invalido';
+
+DELETE FROM usuarios WHERE email LIKE 'pytest\_%@exemplo.invalido';
+```
+
+A segunda linha também apaga os animais dessas pessoas, porque a chave estrangeira de `animais` é em cascata. A primeira vem antes porque as transações têm `RESTRICT`.
+
+## 7. Como acrescentar um teste
+
+1. Escreva uma função `test_...` em `tests/test_financas_api.py` (ou em um arquivo novo `tests/test_*.py`).
+2. Peça as fixtures de que precisa pelos parâmetros: `client` (sem login), `client_logado`, `outro_client`, `animal`, `animal_de_outro`.
+3. Rode `pytest -v` e confira.
+4. Atualize a tabela da seção 3.3 e o resultado da seção 3.4.

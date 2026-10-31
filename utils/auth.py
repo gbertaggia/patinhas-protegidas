@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import session, redirect
+from flask import session, redirect, jsonify
 from database.connection import conectar_banco
 
 TABELAS_SAUDE = ('vacinas', 'medicamentos', 'consultas', 'historico_veterinario')
@@ -11,6 +11,15 @@ def login_required(f):
     def decorada(*args, **kwargs):
         if 'id_usuario' not in session:
             return redirect('/login')
+        return f(*args, **kwargs)
+    return decorada
+
+def api_login_required(f):
+    """Como o login_required, mas responde JSON 401 em vez de redirecionar."""
+    @wraps(f)
+    def decorada(*args, **kwargs):
+        if 'id_usuario' not in session:
+            return jsonify({"erro": "Faça login para continuar."}), 401
         return f(*args, **kwargs)
     return decorada
 
