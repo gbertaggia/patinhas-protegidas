@@ -23,6 +23,16 @@ def _como_inteiro(valor):
         return int(valor)
     return None
 
+def _ler_data(nome):
+    """Lê uma data AAAA-MM-DD da URL. Devolve (data, erro)."""
+    texto = request.args.get(nome, '').strip()
+    if not texto:
+        return None, None
+    try:
+        return date.fromisoformat(texto), None
+    except ValueError:
+        return None, f"Data inválida em '{nome}'. Use o formato AAAA-MM-DD."
+
 
 @financas_bp.route('/api/categorias')
 @api_login_required
@@ -111,3 +121,94 @@ def criar_transacao():
         return _erro("Não foi possível salvar o lançamento.", 500)
     finally:
         conexao.close()
+
+@financas_bp.route('/api/financas/transacoes')
+@api_login_required
+def listar_transacoes():
+    # Sempre filtra pela pessoa logada: ninguém vê lançamento de outra conta.
+    condicoes = ["t.usuario_id = %s"]
+    parametros = [session['id_usuario']]
+
+    inicio, erro = _ler_data('inicio')
+    if erro:
+        return _erro(erro)
+    fim, erro = _ler_data('fim')
+    if erro:
+        return _erro(erro)
+    if inicio and fim and inicio > fim:
+        return _erro("A data inicial não pode ser maior que a final.")
+    if inicio:
+        condicoes.append("t.data_transacao >= %s")
+        parametros.append(inicio)
+    if fim:
+        condicoes.append("t.data_transacao <= %s")
+        parametros.append(fim)
+
+    tipo = request.args.get('tipo', '').strip().upper()
+    if tipo:
+        if tipo not in ('RECEITA', 'DESPESA'):
+            return _erro("Tipo inválido. Use RECEITA ou DESPESA.")
+        condicoes.append("t.tipo = %s")
+        parametros.append(tipo)
+
+    categoria = request.args.get('categoria_id', '').strip()
+    if categoria:
+        categoria_id = _como_inteiro(categoria)
+        if categoria_id is None:
+            return _erro("Categoria inválida.")
+        condicoes.append("t.categoria_id = %s")
+        parametros.append(categoria_id)
+
+    # animal_id=7 filtra um animal; animal_id=geral traz só os lançamentos gerais
+    animal = request.args.get('animal_id', '').strip()
+    if animal:
+        if animal.lower() == 'geral':
+            condicoes.append("t.animal_id IS NULL")
+        else:
+            animal_id = _como_inteiro(animal)
+            if animal_id is None:
+                return _erro("Animal inválido.")
+            condicoes.append("t.animal_id = %s")
+            parametros.append(animal_id)
+
+    limite = _como_inteiro(request.args.get('limite', '100'))
+    if limite is None or not 1 <= limite <= 500:
+        return _erro("O limite deve estar entre 1 e 500.")
+    parametros.append(limite)
+
+    # As condições acima são textos fixos do código; os valores vão em parâmetros (%s).
+    consulta = f"""
+        SELECT t.id, t.tipo, t.valor, t.descricao, t.data_transacao,
+               t.categoria_id, c.nome AS categoria,
+               t.animal_id, a.nome AS animal,
+               t.origem_tipo, t.origem_id
+        FROM transacoes t
+        JOIN categorias c ON c.id = t.categoria_id
+        LEFT JOIN animais a ON a.id = t.animal_id
+        WHERE {' AND '.join(condicoes)}
+        ORDER BY t.data_transacao DESC, t.id DESC
+        LIMIT %s
+    """
+
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute(consulta, parametros)
+            linhas = cursor.fetchall()
+    finally:
+        conexao.close()
+
+    return jsonify([{
+        "id": l['id'],
+        "tipo": l['tipo'],
+        "valor": str(l['valor']),
+        "descricao": l['descricao'],
+        "data_transacao": l['data_transacao'].isoformat(),
+        "categoria_id": l['categoria_id'],
+        "categoria": l['categoria'],
+        "animal_id": l['animal_id'],
+        "animal": l['animal'],
+        "origem_tipo": l['origem_tipo'],
+        "origem_id": l['origem_id'],
+    } for l in linhas])
+
