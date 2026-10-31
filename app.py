@@ -3,6 +3,7 @@ import config
 from routes.auth import bp as auth_bp
 from routes.animais import bp as animais_bp
 from routes.saude import bp as saude_bp
+from routes.financas import financas_bp
 
 
 app = Flask(__name__)  # Instancia a aplicação web Flask
@@ -14,6 +15,7 @@ app.secret_key = config.SECRET_KEY
 app.register_blueprint(auth_bp)
 app.register_blueprint(animais_bp)
 app.register_blueprint(saude_bp)
+app.register_blueprint(financas_bp)
 
 
 # PÁGINA PÚBLICA
