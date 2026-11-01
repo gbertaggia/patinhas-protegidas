@@ -153,6 +153,12 @@ O mesmo arquivo `static/js/financas.js` atende as duas telas. O cartão tem o at
 
 A conferência de dono continua no servidor: o painel só aparece para quem é dono do animal (a própria rota da Página Pet responde 404 para os demais), e a API só devolve lançamentos da pessoa logada.
 
+### 4.8 Página do animal: link para voltar ao painel (branch `pagina-animal-voltar`)
+
+O teste da Página Pet em celular real mostrou uma lacuna de navegação que já existia: a barra de topo usa `navbar-expand-lg`, que em telas com menos de 992 px esconde o menu dentro de um bloco recolhido, e a página não tem o botão de menu (hambúrguer) que o abriria. Por isso o link "Voltar ao Painel" só aparecia no computador.
+
+A correção foi acrescentar, logo depois do nome do sistema, um segundo link para `/painel` com a classe `d-lg-none` (visível apenas em telas pequenas). Em telas largas continua aparecendo um único link, o do menu. Nada foi removido da barra.
+
 ## 5. Decisões de projeto e motivos
 
 | Decisão | Motivo |
@@ -169,7 +175,7 @@ Pontos que diferem do relatório parcial e devem ser corrigidos no relatório fi
 
 ## 6. Como testar
 
-Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 37 testes automatizados com `pytest`, que cobrem a API, a página de finanças e o painel da Página Pet.
+Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 38 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet e o link de volta ao painel.
 
 Para rodar os automatizados, com a venv ativa e o `.env` configurado:
 
