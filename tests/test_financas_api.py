@@ -224,3 +224,12 @@ def test_pagina_do_animal_mostra_o_painel_financeiro(client_logado, animal):
 
 def test_pagina_do_animal_de_outra_conta_da_404(client_logado, animal_de_outro):
     assert client_logado.get(f'/pagina_animal/{animal_de_outro}').status_code == 404
+
+
+def test_pagina_do_animal_tem_link_para_voltar_ao_painel_no_celular(client_logado, animal):
+    import re
+
+    html = client_logado.get(f'/pagina_animal/{animal}').get_data(as_text=True)
+    links = re.findall(r'<a\b[^>]*>', html)
+    # d-lg-none = visível só em telas pequenas (a navbar não tem botão de menu)
+    assert any('d-lg-none' in a and 'href="/painel"' in a for a in links)
