@@ -1,10 +1,12 @@
 from datetime import date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
-from flask import Blueprint, current_app, jsonify, request, session
+from flask import Blueprint, current_app, jsonify, render_template, request, session
 
 from database.connection import conectar_banco
-from utils.auth import animal_do_usuario, api_login_required
+from utils.auth import animal_do_usuario, api_login_required, login_required
+
+financas_bp = Blueprint('financas', __name__)
 
 financas_bp = Blueprint('financas', __name__)
 
@@ -268,3 +270,8 @@ def resumo_financeiro():
             "quantidade": l['quantidade'],
         } for l in linhas],
     })
+
+@financas_bp.route('/financas')
+@login_required
+def pagina_financas():
+    return render_template('financas.html')

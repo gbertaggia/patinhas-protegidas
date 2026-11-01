@@ -192,3 +192,16 @@ def test_resumo_filtra_por_animal_e_por_geral(client_logado, animal):
 
     assert do_animal['despesas'] == '80.00'
     assert gerais['despesas'] == '10.00'
+
+    # ---------- Página de finanças ----------
+
+def test_pagina_financas_exige_login(client):
+    resposta = client.get('/financas')
+    assert resposta.status_code == 302
+    assert '/login' in resposta.headers['Location']
+
+
+def test_pagina_financas_abre_para_quem_esta_logado(client_logado):
+    resposta = client_logado.get('/financas')
+    assert resposta.status_code == 200
+    assert 'Finanças' in resposta.get_data(as_text=True)
