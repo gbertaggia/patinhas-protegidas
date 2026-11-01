@@ -10,7 +10,7 @@ VALORES_DOACAO = [5, 10, 20, 50]
 # Formulário externo (Google Forms) para quem quer adotar ou apadrinhar
 LINK_FORMULARIO = (
     'https://docs.google.com/forms/d/e/'
-    '1FAIpQLSe5xhUYgMcGLOS_Fx-n2urv-4qtMcew3ykvceASDmMdlRqSqA/viewform?usp=publish-editor'
+    '1FAIpQLSe5xhUYgMcGLOS_Fx-n2urv-4qtMcew3ykvceASDmMdlRqSqA/viewform'
 )
 
 FOTO_PADRAO = 'https://dummyimage.com/600x400/e9ecef/6c757d.png&text=Sem+foto'
