@@ -1,5 +1,18 @@
 'use strict';
 
+// Na página do animal, o painel tem data-animal-id; na página geral, não.
+const raiz = document.querySelector('[data-animal-id]');
+const ANIMAL_ID = raiz ? raiz.dataset.animalId : null;
+
+function montarUrl(caminho, parametros = {}) {
+  const consulta = new URLSearchParams(parametros);
+  if (ANIMAL_ID) {
+    consulta.set('animal_id', ANIMAL_ID);
+  }
+  const texto = consulta.toString();
+  return texto ? `${caminho}?${texto}` : caminho;
+}
+
 function formatarMoeda(texto) {
   return Number(texto).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -47,38 +60,40 @@ async function carregarCategorias() {
 }
 
 async function carregarResumo() {
-  const resumo = await buscarJson('/api/financas/resumo');
+  const resumo = await buscarJson(montarUrl('/api/financas/resumo'));
   document.getElementById('total-receitas').textContent = formatarMoeda(resumo.receitas);
   document.getElementById('total-despesas').textContent = formatarMoeda(resumo.despesas);
 
   const saldo = document.getElementById('total-saldo');
   saldo.textContent = formatarMoeda(resumo.saldo);
-  saldo.className = 'h4 mb-0 ' + (Number(resumo.saldo) < 0 ? 'text-danger' : 'text-success');
+  saldo.classList.remove('text-danger', 'text-success');
+  saldo.classList.add(Number(resumo.saldo) < 0 ? 'text-danger' : 'text-success');
 }
 
 async function carregarLancamentos() {
-  const lancamentos = await buscarJson('/api/financas/transacoes?limite=20');
+  const lancamentos = await buscarJson(montarUrl('/api/financas/transacoes', { limite: 20 }));
   const corpo = document.getElementById('lancamentos');
   corpo.replaceChildren();
   document.getElementById('sem-lancamentos').hidden = lancamentos.length > 0;
 
   for (const item of lancamentos) {
     const ehDespesa = item.tipo === 'DESPESA';
-    const celulas = [
-      formatarData(item.data_transacao),
-      item.categoria,
-      item.animal || 'Geral',
-      item.descricao || '',
-      (ehDespesa ? '− ' : '+ ') + formatarMoeda(item.valor),
-    ];
+    const celulas = [formatarData(item.data_transacao), item.categoria];
+    if (!ANIMAL_ID) {
+      celulas.push(item.animal || 'Geral');
+    }
+    celulas.push(item.descricao || '', (ehDespesa ? '− ' : '+ ') + formatarMoeda(item.valor));
+    const ultima = celulas.length - 1;
 
     const linha = document.createElement('tr');
     celulas.forEach((texto, posicao) => {
       const celula = document.createElement('td');
       celula.textContent = texto;
-      if (posicao === 4) {
-        celula.className = 'text-end ' + (ehDespesa ? 'text-danger' : 'text-success');
-      }
+        if (posicao === 0) {
+        celula.className = 'text-nowrap';
+        } else if (posicao === ultima) {
+        celula.className = 'text-end text-nowrap ' + (ehDespesa ? 'text-danger' : 'text-success');
+        }
       linha.appendChild(celula);
     });
     corpo.appendChild(linha);

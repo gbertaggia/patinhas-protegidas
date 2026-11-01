@@ -215,3 +215,12 @@ def test_pagina_financas_lista_os_animais_do_proprio_usuario(client_logado, anim
 def test_pagina_financas_nao_lista_animal_de_outra_conta(client_logado, animal_de_outro):
     html = client_logado.get('/financas').get_data(as_text=True)
     assert 'Animal de teste' not in html
+
+def test_pagina_do_animal_mostra_o_painel_financeiro(client_logado, animal):
+    resposta = client_logado.get(f'/pagina_animal/{animal}')
+    assert resposta.status_code == 200
+    assert f'data-animal-id="{animal}"' in resposta.get_data(as_text=True)
+
+
+def test_pagina_do_animal_de_outra_conta_da_404(client_logado, animal_de_outro):
+    assert client_logado.get(f'/pagina_animal/{animal_de_outro}').status_code == 404
