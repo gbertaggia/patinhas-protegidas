@@ -76,26 +76,31 @@ async function carregarLancamentos() {
   corpo.replaceChildren();
   document.getElementById('sem-lancamentos').hidden = lancamentos.length > 0;
 
-  for (const item of lancamentos) {
+    for (const item of lancamentos) {
     const ehDespesa = item.tipo === 'DESPESA';
-    const celulas = [formatarData(item.data_transacao), item.categoria];
-    if (!ANIMAL_ID) {
-      celulas.push(item.animal || 'Geral');
-    }
-    celulas.push(item.descricao || '', (ehDespesa ? '− ' : '+ ') + formatarMoeda(item.valor));
-    const ultima = celulas.length - 1;
-
     const linha = document.createElement('tr');
-    celulas.forEach((texto, posicao) => {
-      const celula = document.createElement('td');
-      celula.textContent = texto;
-        if (posicao === 0) {
-        celula.className = 'text-nowrap';
-        } else if (posicao === ultima) {
-        celula.className = 'text-end text-nowrap ' + (ehDespesa ? 'text-danger' : 'text-success');
-        }
-      linha.appendChild(celula);
-    });
+
+    adicionarCelula(linha, formatarData(item.data_transacao), 'text-nowrap');
+
+    const categoria = adicionarCelula(linha, item.categoria);
+    if (ANIMAL_ID) {
+      // Na página do animal não há coluna de descrição: ela vai abaixo da categoria.
+      if (item.descricao) {
+        const detalhe = document.createElement('small');
+        detalhe.className = 'd-block text-muted';
+        detalhe.textContent = item.descricao;
+        categoria.appendChild(detalhe);
+      }
+    } else {
+      adicionarCelula(linha, item.animal || 'Geral');
+      adicionarCelula(linha, item.descricao || '');
+    }
+
+    adicionarCelula(
+      linha,
+      (ehDespesa ? '− ' : '+ ') + formatarMoeda(item.valor),
+      'text-end text-nowrap ' + (ehDespesa ? 'text-danger' : 'text-success')
+    );
     corpo.appendChild(linha);
   }
 }
@@ -160,6 +165,16 @@ async function iniciar() {
     aviso.textContent = erro.message;
     aviso.hidden = false;
   }
+
+}
+function adicionarCelula(linha, texto, classes = '') {
+  const celula = document.createElement('td');
+  celula.textContent = texto;
+  if (classes) {
+    celula.className = classes;
+  }
+  linha.appendChild(celula);
+  return celula;
 }
 
 document.addEventListener('DOMContentLoaded', iniciar);
