@@ -2,7 +2,7 @@
 
 Este documento registra como o sistema é testado, o que já foi verificado, os resultados e as medições. Deve ser atualizado a cada etapa nova.
 
-Última atualização: 31/10/2026.
+Última atualização: 01/11/2026.
 
 ## 1. Estratégia
 
@@ -45,6 +45,10 @@ Feitos com duas contas, primeiro no computador e depois no site publicado.
 | Migração 001: coluna `valor` em vacinas, medicamentos, consultas e transacoes | presente nas quatro tabelas |
 | Migração 001: regra das chaves estrangeiras de `transacoes` | três chaves, todas com `RESTRICT` |
 | Cadastro de vacina depois da migração | funcionou normalmente |
+| Migração 002: colunas `tipo` e `cidade` em `usuarios`, `visivel_publico` e `info_saude` em `animais` | presentes, com os tipos e padrões esperados |
+| Migração 002: contas existentes | 19 contas, todas `PROTETOR` |
+| Migração 002: animais existentes | 22 animais, todos com `visivel_publico = 0` (nenhum fica público sem a pessoa marcar) |
+| Migração 002: testes automatizados das páginas, depois de aplicada | 7 passaram |
 
 ### 2.3 API do Pet Finanças
 
