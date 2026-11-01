@@ -100,3 +100,19 @@ def animal(usuario):
 def animal_de_outro(outro_usuario):
     """Um animal que pertence à segunda pessoa."""
     return _criar_animal(outro_usuario)
+
+@pytest.fixture
+def emails_de_teste():
+    """Lista de e-mails criados pelo teste via cadastro; as contas são apagadas no fim."""
+    emails = []
+    yield emails
+    for email in emails:
+        conexao = conectar_banco()
+        try:
+            with conexao.cursor() as cursor:
+                cursor.execute("SELECT id FROM usuarios WHERE email = %s", (email,))
+                linha = cursor.fetchone()
+        finally:
+            conexao.close()
+        if linha:
+            _remover_usuario(linha['id'])

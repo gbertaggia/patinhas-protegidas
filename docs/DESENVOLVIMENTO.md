@@ -188,6 +188,22 @@ Decisões:
 
 As contas e os animais que já existiam ficaram com os valores padrão (todas `PROTETOR`, nenhum animal público). A migração deve ser aplicada uma única vez. Um backup do banco foi feito antes.
 
+### 4.11 Cadastro com perfil, cidade e estado (migração 003, branch `cadastro-perfil-ong`)
+
+Para a divulgação de animais, quem adota precisa saber **onde** está o animal, e cidade sem estado não basta. A migração `database/migrations/003_uf_do_usuario.sql` acrescentou `usuarios.uf` (`CHAR(2)`, a sigla do estado), logo depois de `cidade`. As migrações já aplicadas não são editadas: toda mudança nova vira um arquivo novo.
+
+O cadastro (`/cadastro` e `/cadastrar`, em `routes/auth.py` e `templates/cadastro.html`) passou a pedir:
+- **Perfil**: "Protetor(a) independente" ou "ONG". O banco guarda o código (`PROTETOR` ou `ONG`) e a tela mostra o rótulo. Nenhuma opção vem marcada, para a pessoa escolher de propósito.
+- **Cidade** (texto, até 100 caracteres) e **Estado** (lista com as 27 siglas). Os dois são obrigatórios no cadastro. No banco continuam aceitando vazio, porque as contas antigas não têm esses dados.
+- Um pequeno JavaScript (`static/js/cadastro.js`) troca o rótulo do campo de nome para "Nome da ONG" ou "Seu nome completo", conforme a escolha, para evitar que uma ONG cadastre o nome de uma pessoa.
+
+A validação é feita **no servidor** (o HTML também exige os campos, mas ele pode ser contornado): nome, e-mail e senha preenchidos; perfil dentro dos dois valores permitidos; cidade preenchida e com até 100 caracteres; estado dentro das 27 siglas. Dados inválidos recebem uma página de erro com o código 400 e nada é gravado. O formulário também passou a usar `min-height` em vez de `height` na tela inteira, para que a página não seja cortada em celulares, já que tem mais campos.
+
+Decisões e limitações:
+- **Uma conta por e-mail**, como já era. Isso não impede que uma ONG tenha duas contas com e-mails diferentes, nem prova que quem escolhe "ONG" realmente é uma. A orientação é que cada ONG use **um e-mail institucional compartilhado pela equipe**. A verificação de ONGs (CNPJ e aprovação manual) fica como melhoria futura, e é relevante para adoção, porque evita perfis falsos.
+- **Cidade e estado de quem divulga** só vão aparecer na página pública para os animais que a pessoa marcar para divulgação.
+- Ainda não existe como **editar** o perfil, a cidade e o estado depois do cadastro. É a próxima tarefa, e serve também para as contas antigas completarem os dados.
+
 ## 5. Decisões de projeto e motivos
 
 | Decisão | Motivo |
@@ -204,7 +220,7 @@ Pontos que diferem do relatório parcial e devem ser corrigidos no relatório fi
 
 ## 6. Como testar
 
-Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 40 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, o link de volta ao painel e a exclusão de animais.
+Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 54 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, o link de volta ao painel, a exclusão de animais e o cadastro de contas.
 
 Para rodar os automatizados, com a venv ativa e o `.env` configurado:
 
@@ -218,7 +234,7 @@ Como só existe um banco, cada teste cria os próprios registros (com e-mail ini
 ## 7. Próximos passos
 
 **Em andamento (prioridade, prazo de entrega em 06/11/2026):** divulgação de animais na página pública.
-1. Cadastro com escolha de perfil (protetor ou ONG) e cidade.
+1. Edição do perfil (tipo, cidade e estado), para as contas que já existiam completarem os dados. O cadastro novo já pede esses dados (seção 4.11).
 2. Formulário do animal com "divulgar na página pública" e informações de saúde em texto livre.
 3. API pública (`GET /api/publico/animais`, sem login) que devolve apenas os animais divulgados e uma lista fixa de campos, sem dados pessoais, chip, histórico clínico ou financeiro.
 4. Página pública (feita por outra integrante do grupo) usando essa API, com o botão "Entrar" para protetores e ONGs e o botão de adoção/apadrinhamento levando a um formulário externo.

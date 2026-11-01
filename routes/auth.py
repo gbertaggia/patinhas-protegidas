@@ -14,18 +14,48 @@ def home():
     return render_template('login.html')
 
 
+UFS = (
+    'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT',
+    'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO',
+)
+TIPOS_DE_CONTA = ('PROTETOR', 'ONG')
+
+
 @bp.route('/cadastro')
 def tela_cadastro():
     # Renderiza a interface de registro de novos usuários
-    return render_template('cadastro.html')
+    return render_template('cadastro.html', ufs=UFS)
+
+
+def _erro_cadastro(mensagem):
+    """Página simples de erro de validação do cadastro (resposta 400)."""
+    return f"""
+        <h1 style="color: red; text-align: center; margin-top: 50px;">{mensagem}</h1>
+        <div style="text-align: center;">
+            <a href="/cadastro" style="font-size: 18px;">Voltar ao cadastro</a>
+        </div>
+    """, 400
 
 
 @bp.route('/cadastrar', methods=['POST'])
 def criar_conta():
-    nome = request.form.get('nome')
-    email = request.form.get('email')
-    senha = request.form.get('senha')
-    telefone = request.form.get('telefone')
+    nome = (request.form.get('nome') or '').strip()
+    email = (request.form.get('email') or '').strip()
+    senha = request.form.get('senha') or ''
+    telefone = (request.form.get('telefone') or '').strip() or None
+    tipo = request.form.get('tipo')
+    cidade = (request.form.get('cidade') or '').strip()
+    uf = request.form.get('uf')
+
+    # Validação no servidor: o HTML também exige os campos, mas ele pode ser burlado
+    if not nome or not email or not senha:
+        return _erro_cadastro('Preencha nome, e-mail e senha.')
+    if tipo not in TIPOS_DE_CONTA:
+        return _erro_cadastro('Escolha se você é protetor(a) ou ONG.')
+    if not cidade or len(cidade) > 100:
+        return _erro_cadastro('Informe a cidade (até 100 caracteres).')
+    if uf not in UFS:
+        return _erro_cadastro('Escolha o estado.')
 
     try:
         conexao = conectar_banco()
@@ -47,8 +77,12 @@ def criar_conta():
                 </div>
             """
 
-        comando_sql = "INSERT INTO usuarios (nome, email, senha, telefone) VALUES (%s, %s, %s, %s)"
-        valores = (nome, email, generate_password_hash(senha), telefone)
+        comando_sql = """
+            INSERT INTO usuarios (nome, email, senha, telefone, tipo, cidade, uf)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+        valores = (nome, email, generate_password_hash(senha), telefone, tipo, cidade, uf)
+        
         cursor.execute(comando_sql, valores)
         conexao.commit()
 
