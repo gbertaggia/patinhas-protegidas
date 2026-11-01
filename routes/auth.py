@@ -27,14 +27,27 @@ def tela_cadastro():
     return render_template('cadastro.html', ufs=UFS)
 
 
-def _erro_cadastro(mensagem):
-    """Página simples de erro de validação do cadastro (resposta 400)."""
+def _pagina_de_erro(mensagem, voltar_para, texto_do_link):
+    """Página simples de erro de validação de formulário (resposta 400)."""
     return f"""
         <h1 style="color: red; text-align: center; margin-top: 50px;">{mensagem}</h1>
         <div style="text-align: center;">
-            <a href="/cadastro" style="font-size: 18px;">Voltar ao cadastro</a>
+            <a href="{voltar_para}" style="font-size: 18px;">{texto_do_link}</a>
         </div>
     """, 400
+
+
+def _validar_perfil(nome, tipo, cidade, uf):
+    """Regras do perfil, iguais no cadastro e na edição. Devolve a mensagem de erro ou None."""
+    if not nome or len(nome) > 100:
+        return 'Informe o nome (até 100 caracteres).'
+    if tipo not in TIPOS_DE_CONTA:
+        return 'Escolha se você é protetor(a) ou ONG.'
+    if not cidade or len(cidade) > 100:
+        return 'Informe a cidade (até 100 caracteres).'
+    if uf not in UFS:
+        return 'Escolha o estado.'
+    return None
 
 
 @bp.route('/cadastrar', methods=['POST'])
@@ -48,14 +61,11 @@ def criar_conta():
     uf = request.form.get('uf')
 
     # Validação no servidor: o HTML também exige os campos, mas ele pode ser burlado
-    if not nome or not email or not senha:
-        return _erro_cadastro('Preencha nome, e-mail e senha.')
-    if tipo not in TIPOS_DE_CONTA:
-        return _erro_cadastro('Escolha se você é protetor(a) ou ONG.')
-    if not cidade or len(cidade) > 100:
-        return _erro_cadastro('Informe a cidade (até 100 caracteres).')
-    if uf not in UFS:
-        return _erro_cadastro('Escolha o estado.')
+    if not email or not senha:
+        return _pagina_de_erro('Preencha e-mail e senha.', '/cadastro', 'Voltar ao cadastro')
+    erro = _validar_perfil(nome, tipo, cidade, uf)
+    if erro:
+        return _pagina_de_erro(erro, '/cadastro', 'Voltar ao cadastro')
 
     try:
         conexao = conectar_banco()
@@ -149,16 +159,25 @@ def fazer_login():
 @login_required
 def editar_perfil_usuario():
     id_usuario = session['id_usuario']
-    conexao = conectar_banco()
-    cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
     if request.method == 'POST':
-        novo_nome = request.form.get('nome')
-        novo_telefone = request.form.get('telefone')
+        novo_nome = (request.form.get('nome') or '').strip()
+        novo_telefone = (request.form.get('telefone') or '').strip() or None
+        novo_tipo = request.form.get('tipo')
+        nova_cidade = (request.form.get('cidade') or '').strip()
+        novo_uf = request.form.get('uf')
 
+        erro = _validar_perfil(novo_nome, novo_tipo, nova_cidade, novo_uf)
+        if erro:
+            return _pagina_de_erro(erro, '/editar_usuario', 'Voltar à edição do perfil')
+
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
         try:
-            cursor.execute("UPDATE usuarios SET nome = %s, telefone = %s WHERE id = %s",
-                           (novo_nome, novo_telefone if novo_telefone else None, id_usuario))
+            cursor.execute(
+                "UPDATE usuarios SET nome = %s, telefone = %s, tipo = %s, cidade = %s, uf = %s WHERE id = %s",
+                (novo_nome, novo_telefone, novo_tipo, nova_cidade, novo_uf, id_usuario),
+            )
             conexao.commit()
 
             # Atualiza o nome na sessão para o painel mostrar o texto de boas-vindas novo
@@ -172,14 +191,17 @@ def editar_perfil_usuario():
             cursor.close()
             conexao.close()
 
-    # Método GET: busca os dados atuais para preencher a tela
-    cursor.execute("SELECT * FROM usuarios WHERE id = %s", (id_usuario,))
+    # Método GET: busca os dados atuais para preencher a tela (sem a senha)
+    conexao = conectar_banco()
+    cursor = conexao.cursor(pymysql.cursors.DictCursor)
+    cursor.execute(
+        "SELECT nome, email, telefone, tipo, cidade, uf FROM usuarios WHERE id = %s", (id_usuario,)
+    )
     usuario = cursor.fetchone()
-
     cursor.close()
     conexao.close()
 
-    return render_template('editarUsuario.html', usuario=usuario)
+    return render_template('editarUsuario.html', usuario=usuario, ufs=UFS)
 
 
 @bp.route('/logout')
