@@ -167,6 +167,27 @@ Agora a rota confere antes, com um `SELECT COUNT(*)` em `transacoes`. Se o anima
 
 A regra do banco foi mantida de propósito: ela protege o histórico financeiro. A consequência é que, por enquanto, um animal com lançamentos não pode ser removido, nem os lançamentos podem ser corrigidos ou apagados. Isso está nos próximos passos (seção 7).
 
+### 4.10 Página pública: preparo do banco (migração 002)
+
+A página pública vai mostrar os animais que protetores e ONGs escolherem divulgar para adoção ou apadrinhamento. O arquivo `database/migrations/002_perfil_e_divulgacao.sql` prepara o banco para isso, com quatro colunas novas:
+
+| Tabela | Coluna | Função |
+|---|---|---|
+| `usuarios` | `tipo` (`PROTETOR` ou `ONG`, padrão `PROTETOR`) | diferenciar o perfil da conta |
+| `usuarios` | `cidade` (texto, opcional) | mostrar a cidade de quem divulga |
+| `animais` | `visivel_publico` (0 ou 1, padrão 0) | só os animais marcados aparecem na página pública |
+| `animais` | `info_saude` (texto de até 500 caracteres, opcional) | informações gerais escritas livremente, como "vermifugado, FIV/FELV negativo" |
+
+Decisões:
+- **Qualquer conta pode divulgar animais**, protetor individual ou ONG; o tipo é só o perfil, com dados extras.
+- **`visivel_publico` começa em 0**: nenhum animal já cadastrado se torna público sem que a pessoa marque. É uma decisão de privacidade.
+- **Informações de saúde em texto livre**, em vez de campos fixos (vermifugado, FIV, FELV...), porque esses campos ainda não existem e o texto é mais rápido e flexível. Pode ser trocado por campos específicos no futuro. O "vacinado" será calculado a partir das vacinas com status aplicada.
+- **Código e rótulo são coisas diferentes**: o banco guarda `PROTETOR`, e o rótulo "Protetor(a)" aparece só no formulário.
+- **Adoção e apadrinhamento** levam a um formulário externo único (Google Forms), com as perguntas de triagem (moradia, tela de proteção, outros animais etc.). O sistema não guarda nenhum dado pessoal de quem quer adotar, o que é bom para a LGPD. A limitação é que as respostas ficam todas em um só lugar, e não na ONG de cada animal.
+- **A idade continua sendo texto** (`varchar`), para aceitar "3 meses" ou "10 anos".
+
+As contas e os animais que já existiam ficaram com os valores padrão (todas `PROTETOR`, nenhum animal público). A migração deve ser aplicada uma única vez. Um backup do banco foi feito antes.
+
 ## 5. Decisões de projeto e motivos
 
 | Decisão | Motivo |
@@ -179,7 +200,7 @@ A regra do banco foi mantida de propósito: ela protege o histórico financeiro.
 | Animal vazio = lançamento geral | quem diz se o gasto é do animal ou da organização é o `animal_id`, e não a categoria |
 | 404 em vez de 403 | não revelar a existência de registros de outras pessoas |
 
-Pontos que diferem do relatório parcial e devem ser corrigidos no relatório final: `BIGINT` para `INT`; `ENTRADA`/`SAIDA` para `RECEITA`/`DESPESA`; categoria como tabela; `ON DELETE RESTRICT`; campos de Pix e status de pagamento movidos para a migração 002.
+Pontos que diferem do relatório parcial e devem ser corrigidos no relatório final: `BIGINT` para `INT`; `ENTRADA`/`SAIDA` para `RECEITA`/`DESPESA`; categoria como tabela; `ON DELETE RESTRICT`; campos de Pix e status de pagamento movidos para uma migração futura (a migração 002 ficou com o perfil e a divulgação de animais).
 
 ## 6. Como testar
 
@@ -196,13 +217,20 @@ Como só existe um banco, cada teste cria os próprios registros (com e-mail ini
 
 ## 7. Próximos passos
 
-1. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
-2. Tela de finanças: filtros e gráfico de despesas por categoria.
-3. Testes não funcionais: responsividade, acessibilidade e latência do banco.
-4. Migração 002: campanhas, tipo de perfil (protetor ou ONG) e chave Pix; depois, a integração com o Pix (Mercado Pago, em Sandbox).
-5. Avisos de erro e sucesso padronizados em JavaScript.
-6. Regenerar o `schema.sql` do repositório a partir do banco real, que hoje está desatualizado.
-7. Permitir editar e apagar lançamentos e/ou "arquivar" um animal. Hoje, um animal que tenha lançamentos não pode ser apagado (seção 4.9), e ainda não existe como corrigir ou remover um lançamento.
+**Em andamento (prioridade, prazo de entrega em 06/11/2026):** divulgação de animais na página pública.
+1. Cadastro com escolha de perfil (protetor ou ONG) e cidade.
+2. Formulário do animal com "divulgar na página pública" e informações de saúde em texto livre.
+3. API pública (`GET /api/publico/animais`, sem login) que devolve apenas os animais divulgados e uma lista fixa de campos, sem dados pessoais, chip, histórico clínico ou financeiro.
+4. Página pública (feita por outra integrante do grupo) usando essa API, com o botão "Entrar" para protetores e ONGs e o botão de adoção/apadrinhamento levando a um formulário externo.
+
+**Depois, se houver tempo:**
+5. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
+6. Tela de finanças: filtros e gráfico de despesas por categoria.
+7. Testes não funcionais: responsividade, acessibilidade e latência do banco.
+8. Campanhas, chave Pix e a integração com o Pix (Mercado Pago, em Sandbox), em uma migração futura.
+9. Avisos de erro e sucesso padronizados em JavaScript.
+10. Regenerar o `schema.sql` do repositório a partir do banco real, que hoje está desatualizado.
+11. Permitir editar e apagar lançamentos e/ou "arquivar" um animal. Hoje, um animal que tenha lançamentos não pode ser apagado (seção 4.9), e ainda não existe como corrigir ou remover um lançamento.
 
 ## 8. Pendências conhecidas de segurança
 
