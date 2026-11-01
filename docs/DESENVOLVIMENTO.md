@@ -240,9 +240,26 @@ Privacidade e segurança:
 Atenção para a página pública (parte da outra integrante do grupo): como esses textos agora são **digitados por usuários**, o JavaScript não pode mais montar a página com `innerHTML` sem tratar o conteúdo, porque alguém poderia digitar código HTML ou JavaScript no nome ou na informação de saúde (ataque XSS). Os textos devem ser inseridos com `textContent` ou ter os caracteres especiais escapados.
 
 Limitações conhecidas:
-- Enquanto o formulário do animal não tiver a opção "divulgar na página pública" (próxima etapa), a divulgação só é possível alterando o banco.
+- A divulgação pela tela foi feita na etapa seguinte (seção 4.14).
 - A API devolve todos os animais divulgados de uma vez, sem paginação, o que é suficiente para o volume do projeto.
 - O cartão de cada ONG ainda não tem descrição própria nem campanhas (ficam vazios).
+
+### 4.14 Formulário do animal: divulgação e informações de saúde (branch `animal-divulgacao`)
+
+As telas de **cadastro** e de **edição** do animal (`templates/cadastroAnimal.html`, `templates/editar_animal.html`, rotas em `routes/animais.py`) ganharam dois campos, que alimentam a API pública da seção 4.13:
+- **Informações de saúde** (`info_saude`): texto livre de até 500 caracteres, opcional, com um aviso para não escrever telefone, e-mail ou outros dados pessoais, já que o texto fica público.
+- **Divulgar na página pública para adoção** (`visivel_publico`): caixa de marcação, desligada por padrão. Um texto abaixo explica o que os visitantes passam a ver: nome, espécie, raça, idade, foto, se é castrado, se tem chip (sem o número), se está vacinado, as informações de saúde, a cidade e o estado. Se a conta for de ONG, o nome da ONG aparece; se for de protetor(a), o nome da pessoa não aparece.
+
+Regras:
+- **Só divulga quem tem cidade e estado no perfil**, porque quem quer adotar precisa saber onde o animal está. Sem eles, a opção aparece desabilitada, com um link para "Meu perfil".
+- A regra é conferida **também no servidor**, e não só na tela, porque o HTML pode ser contornado: divulgar sem cidade e estado, ou enviar um texto de saúde com mais de 500 caracteres, recebe uma página de erro (400) e nada é gravado.
+- **Salvar sem marcar a opção** tira o animal da página pública. Só o dono do animal consegue alterar a divulgação, porque a atualização exige o id do usuário da sessão.
+- O texto digitado é escapado pelo Jinja ao reaparecer na tela de edição.
+- Para não repetir regras, a leitura dos campos e a validação ficaram em funções únicas (`_ler_divulgacao`, `_erro_de_divulgacao` e `_conta_tem_cidade_e_uf`), usadas pelo cadastro e pela edição.
+
+Limitações:
+- O resultado na página pública depende de a página (feita por outra integrante do grupo) passar a usar a API, o que ainda não aconteceu.
+- Não há aviso na tela do painel de quais animais estão divulgados; isso só aparece na tela de edição.
 
 ## 5. Decisões de projeto e motivos
 
@@ -260,7 +277,7 @@ Pontos que diferem do relatório parcial e devem ser corrigidos no relatório fi
 
 ## 6. Como testar
 
-Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 77 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, o link de volta ao painel, a exclusão de animais, o cadastro de contas, a edição do perfil e a API pública.
+Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 90 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, o link de volta ao painel, a exclusão de animais, o cadastro de contas, a edição do perfil, a API pública e a divulgação pelo formulário do animal.
 
 Para rodar os automatizados, com a venv ativa e o `.env` configurado:
 
@@ -274,20 +291,19 @@ Como só existe um banco, cada teste cria os próprios registros (com e-mail ini
 ## 7. Próximos passos
 
 **Em andamento (prioridade, prazo de entrega em 06/11/2026):** divulgação de animais na página pública.
-Já feitos nesta frente: o preparo do banco (seção 4.10), o cadastro com perfil, cidade e estado (4.11), a edição do perfil (4.12) e a API pública (4.13).
+Já feitos nesta frente: o preparo do banco (seção 4.10), o cadastro com perfil, cidade e estado (4.11), a edição do perfil (4.12), a API pública (4.13) e o formulário do animal com a divulgação (4.14).
 
-1. Formulário do animal com "divulgar na página pública" e informações de saúde em texto livre. Só deve deixar divulgar quem já tiver cidade e estado no perfil.
-2. Página pública (feita por outra integrante do grupo) passar a usar `/api/publico/dados` no lugar do arquivo de exemplo, escapar os textos, mostrar os novos campos, ganhar o botão "Entrar" para protetores e ONGs e o botão de adoção/apadrinhamento levando ao formulário externo.
+1. Página pública (feita por outra integrante do grupo) passar a usar `/api/publico/dados` no lugar do arquivo de exemplo, escapar os textos, mostrar os novos campos, ganhar o botão "Entrar" para protetores e ONGs e o botão de adoção/apadrinhamento levando ao formulário externo.
 
 **Depois, se houver tempo:**
-4. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
-5. Tela de finanças: filtros e gráfico de despesas por categoria.
-6. Testes não funcionais: responsividade, acessibilidade e latência do banco.
-7. Campanhas, chave Pix e a integração com o Pix (Mercado Pago, em Sandbox), em uma migração futura.
-8. Avisos de erro e sucesso padronizados em JavaScript.
-9. Regenerar o `schema.sql` do repositório a partir do banco real, que hoje está desatualizado.
-10. Permitir editar e apagar lançamentos e/ou "arquivar" um animal. Hoje, um animal que tenha lançamentos não pode ser apagado (seção 4.9), e ainda não existe como corrigir ou remover um lançamento.
-11. Verificação de ONGs (CNPJ e aprovação manual), para evitar perfis falsos (seção 4.11).
+2. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
+3. Tela de finanças: filtros e gráfico de despesas por categoria.
+4. Testes não funcionais: responsividade, acessibilidade e latência do banco.
+5. Campanhas, chave Pix e a integração com o Pix (Mercado Pago, em Sandbox), em uma migração futura.
+6. Avisos de erro e sucesso padronizados em JavaScript.
+7. Regenerar o `schema.sql` do repositório a partir do banco real, que hoje está desatualizado.
+8. Permitir editar e apagar lançamentos e/ou "arquivar" um animal. Hoje, um animal que tenha lançamentos não pode ser apagado (seção 4.9), e ainda não existe como corrigir ou remover um lançamento.
+9. Verificação de ONGs (CNPJ e aprovação manual), para evitar perfis falsos (seção 4.11).
 
 ## 8. Pendências conhecidas de segurança
 

@@ -137,6 +137,18 @@ Feito no navegador, com o sistema rodando localmente. O animal usado voltou ao e
 | `temChip` e `vacinado` | `temChip: true` (o animal tem chip, mas o número não vai); `vacinado: false` (não há vacina aplicada) |
 | Desfazer a divulgação (`visivel_publico = 0`) | o animal deixa de aparecer |
 
+### 2.10 Formulário do animal: divulgação e informações de saúde
+
+Feito no navegador, com o sistema rodando localmente, na conta principal do grupo. A divulgação foi desfeita no fim.
+
+| Teste | Resultado |
+|---|---|
+| Cadastro de animal numa conta **sem** cidade e estado | a opção "Divulgar" aparece desabilitada, com o aviso e o link para "Meu perfil" |
+| Preencher cidade e estado em "Meu perfil" e voltar ao cadastro | a opção "Divulgar" fica habilitada, com o texto que explica o que os visitantes veem |
+| Tela de edição de um animal que já tinha texto de saúde | o campo vem preenchido com o que estava salvo |
+| Editar o animal, marcar "Divulgar" e salvar; abrir `/api/publico/dados` | o animal aparece no cartão dos protetores independentes, com cidade, estado e texto de saúde, `temChip: true` e sem o número do chip |
+| Editar de novo, desmarcar "Divulgar" e salvar | o animal some da API pública |
+
 ## 3. Testes automatizados (pytest)
 
 ### 3.1 Como rodar
@@ -156,9 +168,9 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 - As **fixtures** (em `tests/conftest.py`) preparam e limpam o cenário: criam uma pessoa de teste no banco (e-mail iniciado em `pytest_`), um animal quando preciso, e fazem o login simulado. No fim de cada teste, apagam tudo o que foi criado (transações, animais e usuário). Nos testes do cadastro, que criam contas pela própria tela, a fixture `emails_de_teste` guarda os e-mails usados e apaga essas contas no fim.
 - Como só existe um banco, os testes nunca limpam tabelas inteiras: removem só os registros que eles mesmos criaram. Os dados reais do grupo não são tocados.
 
-### 3.3 O que é testado (77 testes)
+### 3.3 O que é testado (90 testes)
 
-Os testes de finanças, da página do animal e da exclusão ficam em `tests/test_financas_api.py`, os do cadastro em `tests/test_cadastro.py`, os da edição do perfil em `tests/test_perfil.py` e os da API pública em `tests/test_publico.py`.
+Os testes de finanças, da página do animal e da exclusão ficam em `tests/test_financas_api.py`, os do cadastro em `tests/test_cadastro.py`, os da edição do perfil em `tests/test_perfil.py`, os da API pública em `tests/test_publico.py` e os da divulgação pelo formulário do animal em `tests/test_divulgacao.py`.
 
 | Assunto | Teste | O que verifica |
 |---|---|---|
@@ -211,10 +223,22 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | API pública | `test_vacinado_so_com_vacina_aplicada` | vacina agendada não conta; ao ficar `aplicada`, `vacinado` vira verdadeiro |
 | API pública | `test_protetor_independente_vai_para_o_cartao_agrupado_sem_nome` | nome e telefone da pessoa não aparecem; o animal vai para o cartão "Protetores independentes" |
 | API pública | `test_so_a_lista_fixa_de_campos_e_divulgada` | as chaves do animal e do cartão são exatamente as permitidas (trava contra vazamento de campo novo) |
+| Divulgação | `test_tela_de_cadastro_libera_a_divulgacao_com_cidade_e_estado` | com cidade e estado, a opção de divulgar vem habilitada, junto com o campo de saúde |
+| Divulgação | `test_tela_de_cadastro_bloqueia_a_divulgacao_sem_cidade_e_estado` | sem eles, a opção vem desabilitada e a tela traz o link para o perfil |
+| Divulgação | `test_tela_de_edicao_mostra_o_que_esta_salvo` | a edição traz o texto de saúde e a opção marcada, como salvos |
+| Divulgação | `test_cadastrar_animal_com_divulgacao` | grava `visivel_publico = 1` e o texto de saúde, sem os espaços das pontas |
+| Divulgação | `test_cadastrar_animal_sem_marcar_nao_divulga` | sem marcar, grava 0 e texto vazio (NULL) |
+| Divulgação | `test_divulgar_sem_cidade_e_estado_e_recusado` | resposta 400 e nenhum animal gravado |
+| Divulgação | `test_cadastrar_sem_divulgar_funciona_mesmo_sem_cidade_e_estado` | cadastrar sem divulgar continua permitido para quem não tem cidade e estado |
+| Divulgação | `test_limite_do_texto_de_saude` (2 casos) | 500 caracteres é aceito; 501 dá 400 e nada é gravado |
+| Divulgação | `test_editar_animal_liga_e_desliga_a_divulgacao` | marcar divulga; salvar de novo sem marcar tira da página pública |
+| Divulgação | `test_editar_para_divulgar_sem_cidade_e_estado_e_recusado` | 400 e o animal continua não divulgado |
+| Divulgação | `test_nao_divulga_animal_de_outra_conta` | outra pessoa não consegue divulgar nem alterar o texto do animal alheio |
+| Divulgação | `test_animal_divulgado_pelo_formulario_aparece_na_api_publica` | de ponta a ponta: animal cadastrado com divulgação aparece na API, sem login, com cidade, estado e texto, e o número do chip não sai |
 
 ### 3.4 Resultado
 
-Última execução completa: **77 passaram em 405,15 s** (6 min 45 s).
+Última execução completa: **90 passaram em 500,86 s** (8 min 20 s).
 
 ## 4. Medições
 
@@ -229,6 +253,7 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | 01/11/2026, com os testes do cadastro | 54 | 287,44 s | 5,3 s |
 | 01/11/2026, com os testes da edição do perfil | 69 | 364,06 s | 5,3 s |
 | 01/11/2026, com os testes da API pública | 77 | 405,15 s | 5,3 s |
+| 01/11/2026, com os testes da divulgação no formulário do animal | 90 | 500,86 s | 5,6 s |
 
 Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre várias conexões (criar o usuário, lançar, consultar e limpar). O tempo é, portanto, dominado pela comunicação com o banco. Esses números são apenas um indício: não separam a latência de conexão da latência de consulta. A medição específica de latência, prevista no relatório, ainda será feita.
 
@@ -236,7 +261,6 @@ Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre vá
 
 - Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
 - O JavaScript da tela de finanças e o da página pública (hoje verificados só manualmente).
-- O formulário do animal com a opção de divulgar (ainda por fazer).
 - Filtros e gráfico na tela de finanças.
 - Testes automatizados do login e das rotas de animais e saúde (o cadastro e a edição de perfil já são cobertos; o restante só por testes manuais).
 - Testes não funcionais: acessibilidade (WCAG 2.2) e medição de latência. A responsividade da página de finanças e da Página Pet já foi verificada em celular real (seções 2.4 e 2.5).
