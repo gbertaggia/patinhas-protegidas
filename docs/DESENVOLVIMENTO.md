@@ -159,6 +159,14 @@ O teste da Página Pet em celular real mostrou uma lacuna de navegação que já
 
 A correção foi acrescentar, logo depois do nome do sistema, um segundo link para `/painel` com a classe `d-lg-none` (visível apenas em telas pequenas). Em telas largas continua aparecendo um único link, o do menu. Nada foi removido da barra.
 
+### 4.9 Exclusão de animal que tem lançamentos (branch `animal-exclusao-com-financas`)
+
+As tabelas financeiras usam `ON DELETE RESTRICT`, então o banco recusa apagar um animal que tenha lançamentos. Antes desta etapa, a rota `deletar_animal` tentava o `DELETE` direto e, ao falhar, mostrava "Erro ao excluir o animal. Tente novamente.", uma mensagem enganosa, já que tentar de novo nunca resolveria.
+
+Agora a rota confere antes, com um `SELECT COUNT(*)` em `transacoes`. Se o animal tem lançamentos, ela não tenta apagar: responde com o código 409 (conflito) e uma página explicando que o animal não pode ser apagado porque o histórico de dinheiro é preservado, com um link de volta à página do animal. Animais sem lançamentos continuam sendo apagados normalmente, e a conferência de dono (o animal precisa ser do usuário logado) continua valendo.
+
+A regra do banco foi mantida de propósito: ela protege o histórico financeiro. A consequência é que, por enquanto, um animal com lançamentos não pode ser removido, nem os lançamentos podem ser corrigidos ou apagados. Isso está nos próximos passos (seção 7).
+
 ## 5. Decisões de projeto e motivos
 
 | Decisão | Motivo |
@@ -175,7 +183,7 @@ Pontos que diferem do relatório parcial e devem ser corrigidos no relatório fi
 
 ## 6. Como testar
 
-Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 38 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet e o link de volta ao painel.
+Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 40 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, o link de volta ao painel e a exclusão de animais.
 
 Para rodar os automatizados, com a venv ativa e o `.env` configurado:
 
@@ -194,7 +202,7 @@ Como só existe um banco, cada teste cria os próprios registros (com e-mail ini
 4. Migração 002: campanhas, tipo de perfil (protetor ou ONG) e chave Pix; depois, a integração com o Pix (Mercado Pago, em Sandbox).
 5. Avisos de erro e sucesso padronizados em JavaScript.
 6. Regenerar o `schema.sql` do repositório a partir do banco real, que hoje está desatualizado.
-7. Tratar a exclusão de animal que tenha lançamentos financeiros (hoje o banco recusa, por causa do `RESTRICT`).
+7. Permitir editar e apagar lançamentos e/ou "arquivar" um animal. Hoje, um animal que tenha lançamentos não pode ser apagado (seção 4.9), e ainda não existe como corrigir ou remover um lançamento.
 
 ## 8. Pendências conhecidas de segurança
 

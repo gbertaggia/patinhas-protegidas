@@ -11,7 +11,7 @@ Este documento registra como o sistema é testado, o que já foi verificado, os 
 | Funcional manual | uso das telas e das rotas, com duas contas (uma em janela normal e outra em janela anônima) | realizado a cada etapa |
 | Controle de acesso | rotas sem login, registros de outra conta, API sem login | realizado (manual e automatizado) |
 | Validação de entradas | valores, datas, filtros e textos inválidos | realizado (manual e automatizado) |
-| Automatizado (`pytest`) | testes em Python que chamam a API e a página de finanças e conferem as respostas | 38 testes, todos passando |
+| Automatizado (`pytest`) | testes em Python que chamam a API e a página de finanças e conferem as respostas | 40 testes, todos passando |
 | Banco de dados | conferência das migrações e da restauração de backup com consultas SQL | realizado |
 | Não funcional | responsividade em celular, acessibilidade (WCAG 2.2) e latência do banco | planejado |
 
@@ -90,6 +90,15 @@ Feitos no navegador, com o sistema rodando localmente.
 | Celular real: voltar da Página Pet ao painel | **falha encontrada**: não havia botão de voltar visível (o menu da barra de topo fica recolhido em telas pequenas, sem botão para abri-lo) |
 | Simulação de celular, depois da correção | link "Voltar ao Painel" visível abaixo do nome do sistema |
 | Tela larga, depois da correção | continua aparecendo um único "Voltar ao Painel" |
+| Celular real, depois da correção publicada no Render | o link "Voltar ao Painel" aparece e leva ao painel |
+
+### 2.6 Exclusão de animal que tem lançamentos
+
+Feito no navegador, com o sistema rodando localmente.
+
+| Teste | Resultado |
+|---|---|
+| Apagar o animal SURURU, que tem lançamentos financeiros | mensagem "Este animal não pode ser apagado", com link de volta; o animal continua no painel |
 
 ## 3. Testes automatizados (pytest)
 
@@ -110,7 +119,7 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 - As **fixtures** (em `tests/conftest.py`) preparam e limpam o cenário: criam uma pessoa de teste no banco (e-mail iniciado em `pytest_`), um animal quando preciso, e fazem o login simulado. No fim de cada teste, apagam tudo o que foi criado (transações, animais e usuário).
 - Como só existe um banco, os testes nunca limpam tabelas inteiras: removem só os registros que eles mesmos criaram. Os dados reais do grupo não são tocados.
 
-### 3.3 O que é testado (38 testes)
+### 3.3 O que é testado (40 testes)
 
 | Assunto | Teste | O que verifica |
 |---|---|---|
@@ -142,10 +151,12 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 | Página do animal | `test_pagina_do_animal_mostra_o_painel_financeiro` | a Página Pet traz o painel, ligado ao id do animal |
 | Página do animal | `test_pagina_do_animal_de_outra_conta_da_404` | animal de outra conta responde 404 |
 | Página do animal | `test_pagina_do_animal_tem_link_para_voltar_ao_painel_no_celular` | a página traz um link para `/painel` visível em telas pequenas |
+| Exclusão de animal | `test_animal_com_lancamentos_nao_pode_ser_apagado` | animal com lançamento: resposta 409 com a mensagem, e o animal continua existindo |
+| Exclusão de animal | `test_animal_sem_lancamentos_continua_podendo_ser_apagado` | animal sem lançamentos: redireciona (302) e a página do animal passa a dar 404 |
 
 ### 3.4 Resultado
 
-Última execução completa: **38 passaram em 232,48 s** (3 min 52 s).
+Última execução completa: **40 passaram em 252,21 s** (4 min 12 s).
 
 ## 4. Medições
 
@@ -156,6 +167,7 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 | 31/10/2026, com testes da página de finanças | 35 | 204,21 s | 5,8 s |
 | 31/10/2026, com testes da página do animal | 37 | 222,77 s | 6,0 s |
 | 31/10/2026, com o teste do link de voltar | 38 | 232,48 s | 6,1 s |
+| 31/10/2026, com os testes de exclusão de animal | 40 | 252,21 s | 6,3 s |
 
 Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre várias conexões (criar o usuário, lançar, consultar e limpar). O tempo é, portanto, dominado pela comunicação com o banco. Esses números são apenas um indício: não separam a latência de conexão da latência de consulta. A medição específica de latência, prevista no relatório, ainda será feita.
 
