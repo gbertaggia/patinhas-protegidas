@@ -368,9 +368,80 @@
 
         </div>
       </div>
+            <div class="card" id="painel-financeiro" data-animal-id="{{ animal.id }}" style="grid-column: 1 / -1;">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #cfe8f3;">
+          <h5 class="mb-0" id="titulo-financas-animal">Finanças</h5>
+          <button class="btn btn-sm btn-outline-primary fw-bold" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#form-colapso"
+                  aria-expanded="false" aria-controls="form-colapso">+ Registrar</button>
+        </div>
+        <div class="card-body">
+          <div id="aviso-erro" class="alert alert-danger" role="alert" hidden></div>
+
+          <div class="row text-center g-2 mb-3" aria-live="polite">
+            <div class="col-4">
+              <small class="text-muted d-block">Receitas</small>
+              <strong class="text-success" id="total-receitas">Carregando…</strong>
+            </div>
+            <div class="col-4">
+              <small class="text-muted d-block">Despesas</small>
+              <strong class="text-danger" id="total-despesas">Carregando…</strong>
+            </div>
+            <div class="col-4">
+              <small class="text-muted d-block">Saldo</small>
+              <strong id="total-saldo">Carregando…</strong>
+            </div>
+          </div>
+
+          <div class="collapse" id="form-colapso">
+            <form id="form-lancamento" class="mb-3">
+              <input type="hidden" id="animal_id" name="animal_id" value="{{ animal.id }}">
+              <div class="row g-2">
+                <div class="col-12 col-md-4">
+                  <label for="categoria_id" class="form-label small mb-1">Categoria</label>
+                  <select id="categoria_id" name="categoria_id" class="form-select form-select-sm" required>
+                    <option value="">Escolha uma categoria</option>
+                  </select>
+                </div>
+                <div class="col-6 col-md-2">
+                  <label for="valor" class="form-label small mb-1">Valor (R$)</label>
+                  <input type="text" id="valor" name="valor" class="form-control form-control-sm"
+                         inputmode="decimal" autocomplete="off" placeholder="0,00" required>
+                </div>
+                <div class="col-6 col-md-3">
+                  <label for="data_transacao" class="form-label small mb-1">Data</label>
+                  <input type="date" id="data_transacao" name="data_transacao" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-12 col-md-3">
+                  <label for="descricao" class="form-label small mb-1">Descrição</label>
+                  <input type="text" id="descricao" name="descricao" class="form-control form-control-sm"
+                         maxlength="255" autocomplete="off">
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm mt-2">Registrar</button>
+              <div id="mensagem-formulario" role="status" hidden></div>
+            </form>
+          </div>
+
+          <p id="sem-lancamentos" class="text-muted small" hidden>Nenhum lançamento para este animal.</p>
+          <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+            <table class="table table-sm table-hover align-middle mb-0" aria-labelledby="titulo-financas-animal">
+              <thead>
+                <tr>
+                  <th scope="col">Data</th>
+                  <th scope="col">Categoria</th>                  
+                  <th scope="col" class="text-end">Valor</th>
+                </tr>
+              </thead>
+              <tbody id="lancamentos"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/financas.js') }}" defer></script>
   </body>
 </html>
