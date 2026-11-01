@@ -63,6 +63,49 @@
             </div>
         </section>
 
+                <section aria-labelledby="titulo-novo" class="mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 id="titulo-novo" class="h5 mb-3">Novo lançamento</h2>
+                    <form id="form-lancamento">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-4">
+                                <label for="categoria_id" class="form-label">Categoria</label>
+                                <select id="categoria_id" name="categoria_id" class="form-select" required>
+                                    <option value="">Escolha uma categoria</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label for="valor" class="form-label">Valor (R$)</label>
+                                <input type="text" id="valor" name="valor" class="form-control"
+                                       inputmode="decimal" autocomplete="off" placeholder="0,00" required>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label for="data_transacao" class="form-label">Data</label>
+                                <input type="date" id="data_transacao" name="data_transacao" class="form-control" required>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label for="animal_id" class="form-label">Animal</label>
+                                <select id="animal_id" name="animal_id" class="form-select">
+                                    <option value="">Geral (sem animal)</option>
+                                    {% for animal in animais %}
+                                    <option value="{{ animal.id }}">{{ animal.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label for="descricao" class="form-label">Descrição (opcional)</label>
+                                <input type="text" id="descricao" name="descricao" class="form-control"
+                                       maxlength="255" autocomplete="off">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3">Registrar</button>
+                        <div id="mensagem-formulario" role="status" hidden></div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
         <section aria-labelledby="titulo-lancamentos">
             <div class="card shadow-sm">
                 <div class="card-body">

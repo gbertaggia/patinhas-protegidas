@@ -205,3 +205,13 @@ def test_pagina_financas_abre_para_quem_esta_logado(client_logado):
     resposta = client_logado.get('/financas')
     assert resposta.status_code == 200
     assert 'Finanças' in resposta.get_data(as_text=True)
+
+
+def test_pagina_financas_lista_os_animais_do_proprio_usuario(client_logado, animal):
+    html = client_logado.get('/financas').get_data(as_text=True)
+    assert 'Animal de teste' in html
+
+
+def test_pagina_financas_nao_lista_animal_de_outra_conta(client_logado, animal_de_outro):
+    html = client_logado.get('/financas').get_data(as_text=True)
+    assert 'Animal de teste' not in html
