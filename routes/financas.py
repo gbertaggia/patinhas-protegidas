@@ -116,8 +116,12 @@ def criar_transacao():
         valor = Decimal(str(dados.get('valor', '')).strip().replace(',', '.'))
     except InvalidOperation:
         return _erro("Valor inválido.")
-    if not valor.is_finite() or valor <= 0 or valor > VALOR_MAXIMO:
-        return _erro("O valor deve ser maior que zero e menor que 100 milhões.")
+    if not valor.is_finite():
+        return _erro("Valor inválido.")
+    if valor <= 0:
+        return _erro("O valor deve ser maior que zero.")
+    if valor > VALOR_MAXIMO:
+        return _erro("O valor máximo permitido é R$ 99.999.999,99.")
     valor = valor.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     # Categoria
@@ -274,4 +278,14 @@ def resumo_financeiro():
 @financas_bp.route('/financas')
 @login_required
 def pagina_financas():
-    return render_template('financas.html')
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute(
+                "SELECT id, nome FROM animais WHERE usuario_id = %s ORDER BY nome",
+                (session['id_usuario'],)
+            )
+            animais = cursor.fetchall()
+    finally:
+        conexao.close()
+    return render_template('financas.html', animais=animais)

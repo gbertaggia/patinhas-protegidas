@@ -11,7 +11,7 @@ Este documento registra como o sistema é testado, o que já foi verificado, os 
 | Funcional manual | uso das telas e das rotas, com duas contas (uma em janela normal e outra em janela anônima) | realizado a cada etapa |
 | Controle de acesso | rotas sem login, registros de outra conta, API sem login | realizado (manual e automatizado) |
 | Validação de entradas | valores, datas, filtros e textos inválidos | realizado (manual e automatizado) |
-| Automatizado (`pytest`) | testes em Python que chamam a API e conferem as respostas | 31 testes, todos passando |
+| Automatizado (`pytest`) | testes em Python que chamam a API e a página de finanças e conferem as respostas | 35 testes, todos passando |
 | Banco de dados | conferência das migrações e da restauração de backup com consultas SQL | realizado |
 | Não funcional | responsividade em celular, acessibilidade (WCAG 2.2) e latência do banco | planejado |
 
@@ -61,6 +61,22 @@ Feitos no navegador (console com `fetch` e endereços na barra), logada.
 | Listagem e resumo com uma segunda conta | lista vazia e totais zerados |
 | Resumo com os dados de teste | receitas 100,00; despesas 115,50; saldo -15,50 |
 
+### 2.4 Tela de finanças (JavaScript)
+
+Feitos no navegador, na página `/financas` do sistema rodando localmente.
+
+| Teste | Resultado |
+|---|---|
+| Totais e lista de lançamentos conferidos com os dados do banco | receitas 100,00; despesas 115,50; saldo -15,50; quatro linhas com data no padrão brasileiro e "Geral" nos lançamentos sem animal |
+| Segunda conta, sem lançamentos | totais em R$ 0,00 e a mensagem "Nenhum lançamento ainda." |
+| Página sem login | redireciona para a tela de login |
+| Lançamentos registrados pelo formulário (despesas e receita com animal) | aparecem na tabela e entram nos totais |
+| Descrição com código HTML (`<b>oi</b>`) | exibida como texto literal na tabela, sem ser interpretada |
+| Valor igual a zero | mensagem de erro do servidor, mostrada acima do formulário |
+| Simulação de celular (modo dispositivo do navegador) | cartões e campos empilham; a tabela ganha rolagem horizontal; nada estoura a tela |
+
+Pendente: teste em celular real, pelo site publicado.
+
 ## 3. Testes automatizados (pytest)
 
 ### 3.1 Como rodar
@@ -80,7 +96,7 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 - As **fixtures** (em `tests/conftest.py`) preparam e limpam o cenário: criam uma pessoa de teste no banco (e-mail iniciado em `pytest_`), um animal quando preciso, e fazem o login simulado. No fim de cada teste, apagam tudo o que foi criado (transações, animais e usuário).
 - Como só existe um banco, os testes nunca limpam tabelas inteiras: removem só os registros que eles mesmos criaram. Os dados reais do grupo não são tocados.
 
-### 3.3 O que é testado (31 testes)
+### 3.3 O que é testado (35 testes)
 
 | Assunto | Teste | O que verifica |
 |---|---|---|
@@ -105,10 +121,14 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 | Resumo | `test_resumo_vazio_para_quem_nao_tem_lancamentos` | tudo zerado e sem categorias |
 | Resumo | `test_resumo_nao_mistura_dados_de_outra_conta` | outra conta vê zeros |
 | Resumo | `test_resumo_filtra_por_animal_e_por_geral` | totais separados por animal e geral |
+| Página | `test_pagina_financas_exige_login` | sem login, redireciona para a tela de login |
+| Página | `test_pagina_financas_abre_para_quem_esta_logado` | logada, a página abre (200) |
+| Página | `test_pagina_financas_lista_os_animais_do_proprio_usuario` | o formulário traz os animais da pessoa |
+| Página | `test_pagina_financas_nao_lista_animal_de_outra_conta` | animal de outra conta não aparece |
 
 ### 3.4 Resultado
 
-Última execução completa: **31 passaram em 177,54 s** (2 min 57 s).
+Última execução completa: **35 passaram em 204,21 s** (3 min 24 s).
 
 ## 4. Medições
 
@@ -116,15 +136,17 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 |---|---|---|---|
 | 31/10/2026, primeira versão | 26 | 128,07 s | 4,9 s |
 | 31/10/2026, com testes de animais | 31 | 177,54 s | 5,7 s |
+| 31/10/2026, com testes da página de finanças | 35 | 204,21 s | 5,8 s |
 
 Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre várias conexões (criar o usuário, lançar, consultar e limpar). O tempo é, portanto, dominado pela comunicação com o banco. Esses números são apenas um indício: não separam a latência de conexão da latência de consulta. A medição específica de latência, prevista no relatório, ainda será feita.
 
 ## 5. O que ainda não está coberto
 
 - Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
-- Telas e JavaScript do Pet Finanças.
+- O JavaScript da tela de finanças (hoje verificado só manualmente).
+- Filtros e gráfico na tela, e o painel financeiro dentro da página de cada animal.
 - Testes automatizados das rotas de usuário, animais e saúde (hoje cobertas só por testes manuais).
-- Testes não funcionais: responsividade em celular, acessibilidade (WCAG 2.2) e medição de latência.
+- Testes não funcionais: responsividade em celular real, acessibilidade (WCAG 2.2) e medição de latência.
 - Campanhas e integração com o Pix.
 
 ## 6. Limpeza de resíduos
