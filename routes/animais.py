@@ -6,12 +6,64 @@ from utils.auth import login_required, animal_do_usuario
 # Blueprint dos animais e do painel do usuário
 bp = Blueprint('animais', __name__)
 
+# Tamanho máximo do texto de saúde (a coluna info_saude é VARCHAR(500))
+LIMITE_INFO_SAUDE = 500
+
+
+def _conta_tem_cidade_e_uf(id_usuario):
+    """
+    Divulgar animal na página pública exige que a conta tenha cidade e estado,
+    porque quem quer adotar precisa saber onde o animal está.
+    """
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute("SELECT cidade, uf FROM usuarios WHERE id = %s", (id_usuario,))
+            conta = cursor.fetchone()
+    finally:
+        conexao.close()
+
+    return bool(conta and (conta['cidade'] or '').strip() and (conta['uf'] or '').strip())
+
+
+def _ler_divulgacao():
+    """
+    Lê do formulário a opção "divulgar na página pública" e o texto de saúde.
+    Devolve (divulgar, info_saude): divulgar é 0 ou 1; info_saude é texto ou None.
+    """
+    divulgar = 1 if request.form.get('divulgar') == '1' else 0
+    info_saude = (request.form.get('info_saude') or '').strip() or None
+    return divulgar, info_saude
+
+
+def _erro_de_divulgacao(divulgar, info_saude, id_usuario, link_de_volta):
+    """
+    Valida no servidor (o HTML pode ser contornado). Devolve uma página de erro
+    com código 400, ou None se estiver tudo certo.
+    """
+    if info_saude and len(info_saude) > LIMITE_INFO_SAUDE:
+        return (
+            "<h1>Informações de saúde muito longas</h1>"
+            f"<p>Use no máximo {LIMITE_INFO_SAUDE} caracteres.</p>"
+            f'<p><a href="{link_de_volta}">Voltar</a></p>'
+        ), 400
+
+    if divulgar and not _conta_tem_cidade_e_uf(id_usuario):
+        return (
+            "<h1>Complete seu perfil para divulgar</h1>"
+            "<p>Para divulgar um animal, informe a cidade e o estado em <strong>Meu perfil</strong>.</p>"
+            '<p><a href="/editar_usuario">Ir para Meu perfil</a></p>'
+        ), 400
+
+    return None
+
 
 @bp.route('/cadastro_animal')
 @login_required
 def tela_cadastro_pet():
     # Renderiza a interface de registro de animais
-    return render_template('cadastroAnimal.html')
+    pode_divulgar = _conta_tem_cidade_e_uf(session['id_usuario'])
+    return render_template('cadastroAnimal.html', pode_divulgar=pode_divulgar)
 
 
 @bp.route('/pagina_animal/<int:id_animal>')
@@ -97,18 +149,27 @@ def cadastrar_animal():
     data_castracao = request.form.get('data') if request.form.get('data') else None
     chip_identificacao = request.form.get('chip') if request.form.get('chip') else None
 
+    # Divulgação na página pública e informações de saúde (texto livre)
+    divulgar, info_saude = _ler_divulgacao()
+
     try:
+        erro = _erro_de_divulgacao(divulgar, info_saude, id_protetor, '/cadastro_animal')
+        if erro:
+            return erro
+
         conexao = conectar_banco()
         cursor = conexao.cursor()
 
         comando_sql = """
             INSERT INTO animais
-            (usuario_id, nome, especie, raca, idade, foto_url, castrado, data_castracao, chip)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (usuario_id, nome, especie, raca, idade, foto_url, castrado, data_castracao, chip,
+             visivel_publico, info_saude)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
 
         valores = (id_protetor, nome_animal, especie_animal, raca_animal,
-                   idade_animal, foto_animal, castrado, data_castracao, chip_identificacao)
+                   idade_animal, foto_animal, castrado, data_castracao, chip_identificacao,
+                   divulgar, info_saude)
 
         cursor.execute(comando_sql, valores)
         conexao.commit()
@@ -193,7 +254,10 @@ def carregar_edicao_animal(id_animal):
         if not animal_para_editar:
             return "<h1>Registro não localizado ou acesso negado.</h1>"
 
-        return render_template('editar_animal.html', animal=animal_para_editar)
+        pode_divulgar = _conta_tem_cidade_e_uf(id_protetor)
+
+        return render_template('editar_animal.html', animal=animal_para_editar,
+                               pode_divulgar=pode_divulgar)
 
     except Exception as e:
         current_app.logger.exception("Erro ao carregar animal para edição")
@@ -219,19 +283,28 @@ def salvar_edicao_animal(id_animal):
     # Sem castração, não guarda data
     data_castracao = request.form.get('data') if (castrado and request.form.get('data')) else None
 
+    # Divulgação na página pública e informações de saúde (texto livre)
+    divulgar, info_saude = _ler_divulgacao()
+
     try:
+        erro = _erro_de_divulgacao(divulgar, info_saude, id_protetor, f'/editar_animal/{id_animal}')
+        if erro:
+            return erro
+
         conexao = conectar_banco()
         cursor = conexao.cursor()
 
         comando_sql = """
             UPDATE animais
             SET nome = %s, especie = %s, idade = %s, raca = %s, foto_url = %s,
-                chip = %s, castrado = %s, data_castracao = %s
+                chip = %s, castrado = %s, data_castracao = %s,
+                visivel_publico = %s, info_saude = %s
             WHERE id = %s AND usuario_id = %s
         """
 
         valores = (novo_nome, nova_especie, nova_idade, nova_raca, nova_foto,
-                   novo_chip, castrado, data_castracao, id_animal, id_protetor)
+                   novo_chip, castrado, data_castracao, divulgar, info_saude,
+                   id_animal, id_protetor)
 
         cursor.execute(comando_sql, valores)
         conexao.commit()

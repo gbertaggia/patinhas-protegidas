@@ -111,6 +111,35 @@
                 <input type="text" class="form-control" id="foto-pet" name="foto-pet" placeholder="URL da foto">
             </div>
 
+            <div class="mb-3">
+                <label for="info_saude" class="form-label">Informações de saúde (opcional):</label>
+                <textarea class="form-control" id="info_saude" name="info_saude" rows="3" maxlength="500"
+                    placeholder="Ex.: vermifugado, FIV/FELV negativo" aria-describedby="ajuda-info-saude"></textarea>
+                <div id="ajuda-info-saude" class="form-text">
+                    Até 500 caracteres. Este texto aparece na página pública se você divulgar o animal.
+                    Não escreva telefone, e-mail ou outros dados pessoais.
+                </div>
+            </div>
+
+            <div class="mb-4 border rounded p-3 bg-white">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="divulgar" name="divulgar" value="1"
+                        aria-describedby="ajuda-divulgar" {% if not pode_divulgar %}disabled{% endif %}>
+                    <label class="form-check-label fw-bold" for="divulgar">Divulgar na página pública para adoção</label>
+                </div>
+                <div id="ajuda-divulgar" class="form-text">
+                    {% if pode_divulgar %}
+                        Aparecem para qualquer visitante: nome, espécie, raça, idade, foto, se é castrado,
+                        se tem chip (sem o número), se está vacinado, as informações de saúde acima e a
+                        cidade e o estado do seu perfil. Se a sua conta for de ONG, o nome da ONG também
+                        aparece; se for de protetor(a), o seu nome não aparece.
+                    {% else %}
+                        Para divulgar, informe a cidade e o estado em
+                        <a href="/editar_usuario">Meu perfil</a>.
+                    {% endif %}
+                </div>
+            </div>
+
             <button type="submit" class="btn btn-success w-100 btn-lg shadow-sm fw-bold">Cadastrar Animal</button>
 
             <a href="{{ url_for('animais.painel') }}" class="btn btn-outline-secondary w-100 mt-2">
