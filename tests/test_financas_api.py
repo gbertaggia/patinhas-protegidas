@@ -233,3 +233,23 @@ def test_pagina_do_animal_tem_link_para_voltar_ao_painel_no_celular(client_logad
     links = re.findall(r'<a\b[^>]*>', html)
     # d-lg-none = visível só em telas pequenas (a navbar não tem botão de menu)
     assert any('d-lg-none' in a and 'href="/painel"' in a for a in links)
+
+
+def test_animal_com_lancamentos_nao_pode_ser_apagado(client_logado, animal):
+    categoria = _id_categoria(client_logado, 'DESPESA', 'Vacina')
+    _lancar(client_logado, categoria_id=categoria, valor=80, animal_id=animal)
+
+    resposta = client_logado.get(f'/deletar_animal/{animal}')
+
+    assert resposta.status_code == 409
+    assert 'não pode ser apagado' in resposta.get_data(as_text=True)
+    # o animal continua existindo
+    assert client_logado.get(f'/pagina_animal/{animal}').status_code == 200
+
+
+def test_animal_sem_lancamentos_continua_podendo_ser_apagado(client_logado, animal):
+    resposta = client_logado.get(f'/deletar_animal/{animal}')
+
+    assert resposta.status_code == 302
+    # depois de apagado, a página do animal não existe mais
+    assert client_logado.get(f'/pagina_animal/{animal}').status_code == 404

@@ -147,9 +147,18 @@ def deletar_animal(id_animal):
         animal_valido = cursor.fetchone()
 
         if animal_valido:
+            cursor.execute("SELECT COUNT(*) AS total FROM transacoes WHERE animal_id = %s", (id_animal,))
+            if cursor.fetchone()['total'] > 0:
+                cursor.close()
+                conexao.close()
+                return (
+                    "<h1>Este animal não pode ser apagado</h1>"
+                    "<p>Ele tem lançamentos financeiros, e o histórico de dinheiro é preservado.</p>"
+                    f'<p><a href="/pagina_animal/{id_animal}">Voltar para a página do animal</a></p>'
+                ), 409
+
             cursor.execute("DELETE FROM animais WHERE id = %s", (id_animal,))
             conexao.commit()
-
         cursor.close()
         conexao.close()
 
