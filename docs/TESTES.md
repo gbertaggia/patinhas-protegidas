@@ -125,6 +125,18 @@ Feito no navegador, com o sistema rodando localmente.
 |---|---|
 | Editar o perfil de uma conta (perfil, nome, cidade e estado) | alterações gravadas, conferidas no banco: `tipo = ONG`, cidade e `uf` preenchidos |
 
+### 2.9 API pública dos animais
+
+Feito no navegador, com o sistema rodando localmente. O animal usado voltou ao estado original depois.
+
+| Teste | Resultado |
+|---|---|
+| Marcar um animal de teste como divulgado (`visivel_publico = 1`) e abrir `/api/publico/dados` **sem estar logada** | resposta 200 em JSON, com o animal dentro do cartão "Protetores independentes" |
+| Campos do animal na resposta | só os previstos: nome, espécie, raça, idade, foto, castrado, `temChip`, `vacinado`, `infoSaude`, cidade e estado |
+| Dados que não podem sair | número do chip, telefone, e-mail, nome da pessoa e histórico não aparecem em lugar nenhum da resposta |
+| `temChip` e `vacinado` | `temChip: true` (o animal tem chip, mas o número não vai); `vacinado: false` (não há vacina aplicada) |
+| Desfazer a divulgação (`visivel_publico = 0`) | o animal deixa de aparecer |
+
 ## 3. Testes automatizados (pytest)
 
 ### 3.1 Como rodar
@@ -144,9 +156,9 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 - As **fixtures** (em `tests/conftest.py`) preparam e limpam o cenário: criam uma pessoa de teste no banco (e-mail iniciado em `pytest_`), um animal quando preciso, e fazem o login simulado. No fim de cada teste, apagam tudo o que foi criado (transações, animais e usuário). Nos testes do cadastro, que criam contas pela própria tela, a fixture `emails_de_teste` guarda os e-mails usados e apaga essas contas no fim.
 - Como só existe um banco, os testes nunca limpam tabelas inteiras: removem só os registros que eles mesmos criaram. Os dados reais do grupo não são tocados.
 
-### 3.3 O que é testado (69 testes)
+### 3.3 O que é testado (77 testes)
 
-Os testes de finanças, da página do animal e da exclusão ficam em `tests/test_financas_api.py`, os do cadastro em `tests/test_cadastro.py` e os da edição do perfil em `tests/test_perfil.py`.
+Os testes de finanças, da página do animal e da exclusão ficam em `tests/test_financas_api.py`, os do cadastro em `tests/test_cadastro.py`, os da edição do perfil em `tests/test_perfil.py` e os da API pública em `tests/test_publico.py`.
 
 | Assunto | Teste | O que verifica |
 |---|---|---|
@@ -191,10 +203,18 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | Edição do perfil | `test_tela_de_edicao_mostra_os_dados_salvos` | a tela abre com a cidade que foi salva |
 | Edição do perfil | `test_edicao_invalida_e_recusada` (9 casos) | perfil, estado, cidade e nome inválidos dão 400 e os dados da conta não mudam |
 | Edição do perfil | `test_editar_perfil_nao_altera_a_conta_de_outra_pessoa` | a edição só afeta a conta de quem está logada |
+| API pública | `test_dados_publicos_nao_exigem_login` | sem login, responde 200 com a lista de ONGs e os valores de doação |
+| API pública | `test_animal_nao_divulgado_nao_aparece` | animal com `visivel_publico = 0` não aparece |
+| API pública | `test_animal_divulgado_por_ong_aparece_no_cartao_da_ong` | animal de conta ONG aparece no cartão da ONG, com os dados esperados |
+| API pública | `test_animal_sem_foto_recebe_a_foto_padrao` | sem foto cadastrada, a resposta traz a imagem padrão |
+| API pública | `test_numero_do_chip_nunca_e_divulgado` | com chip cadastrado, só `temChip` sai; o número não aparece na resposta |
+| API pública | `test_vacinado_so_com_vacina_aplicada` | vacina agendada não conta; ao ficar `aplicada`, `vacinado` vira verdadeiro |
+| API pública | `test_protetor_independente_vai_para_o_cartao_agrupado_sem_nome` | nome e telefone da pessoa não aparecem; o animal vai para o cartão "Protetores independentes" |
+| API pública | `test_so_a_lista_fixa_de_campos_e_divulgada` | as chaves do animal e do cartão são exatamente as permitidas (trava contra vazamento de campo novo) |
 
 ### 3.4 Resultado
 
-Última execução completa: **69 passaram em 364,06 s** (6 min 4 s).
+Última execução completa: **77 passaram em 405,15 s** (6 min 45 s).
 
 ## 4. Medições
 
@@ -208,13 +228,15 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | 31/10/2026, com os testes de exclusão de animal | 40 | 252,21 s | 6,3 s |
 | 01/11/2026, com os testes do cadastro | 54 | 287,44 s | 5,3 s |
 | 01/11/2026, com os testes da edição do perfil | 69 | 364,06 s | 5,3 s |
+| 01/11/2026, com os testes da API pública | 77 | 405,15 s | 5,3 s |
 
 Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre várias conexões (criar o usuário, lançar, consultar e limpar). O tempo é, portanto, dominado pela comunicação com o banco. Esses números são apenas um indício: não separam a latência de conexão da latência de consulta. A medição específica de latência, prevista no relatório, ainda será feita.
 
 ## 5. O que ainda não está coberto
 
 - Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
-- O JavaScript da tela de finanças (hoje verificado só manualmente).
+- O JavaScript da tela de finanças e o da página pública (hoje verificados só manualmente).
+- O formulário do animal com a opção de divulgar (ainda por fazer).
 - Filtros e gráfico na tela de finanças.
 - Testes automatizados do login e das rotas de animais e saúde (o cadastro e a edição de perfil já são cobertos; o restante só por testes manuais).
 - Testes não funcionais: acessibilidade (WCAG 2.2) e medição de latência. A responsividade da página de finanças e da Página Pet já foi verificada em celular real (seções 2.4 e 2.5).
@@ -222,7 +244,9 @@ Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre vá
 
 ## 6. Limpeza de resíduos
 
-Se uma execução for interrompida no meio (por exemplo, com Ctrl+C), pode sobrar uma pessoa de teste no banco. Para remover, no MySQL Workbench:
+Se uma execução for interrompida no meio (por exemplo, com Ctrl+C, ou porque a internet caiu), pode sobrar uma pessoa de teste no banco. Isso aconteceu uma vez, em 01/11/2026: a conexão com o banco caiu no fim da rodada completa, três testes deram erro de conexão (`getaddrinfo failed` e *timeout*), e a limpeza de um deles não rodou, deixando uma conta de teste com um animal marcado como divulgado. Esse resíduo era perigoso porque o animal de teste apareceria na página pública real. Foi removido com o SQL abaixo e a rodada completa foi repetida, com sucesso. Lição: como os testes dependem de uma conexão estável com a nuvem, um erro de rede não indica falha do código. Para repetir só os que falharam, use `pytest --lf`.
+
+Para remover resíduos, no MySQL Workbench:
 
 ```sql
 SET SQL_SAFE_UPDATES = 0;
@@ -234,7 +258,16 @@ WHERE u.email LIKE 'pytest\_%@exemplo.invalido';
 DELETE FROM usuarios WHERE email LIKE 'pytest\_%@exemplo.invalido';
 ```
 
-A segunda linha também apaga os animais dessas pessoas, porque a chave estrangeira de `animais` é em cascata. A primeira vem antes porque as transações têm `RESTRICT`.
+A segunda linha também apaga os animais (e suas vacinas) dessas pessoas, porque a chave estrangeira de `animais` é em cascata. A primeira vem antes porque as transações têm `RESTRICT`.
+
+Para conferir se ficou algo para trás, as duas consultas abaixo devem voltar **sem nenhuma linha de teste**:
+
+```sql
+SELECT id, email FROM usuarios WHERE email LIKE 'pytest\_%@exemplo.invalido';
+SELECT id, nome, usuario_id FROM animais WHERE visivel_publico = 1;
+```
+
+(A segunda lista os animais divulgados de verdade; só não pode haver animal de teste nela.)
 
 ## 7. Como acrescentar um teste
 

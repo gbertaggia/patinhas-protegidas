@@ -2,7 +2,7 @@
 
 Este documento registra como o sistema está organizado, o que foi feito desde a refatoração do back-end e quais decisões foram tomadas. Ele deve ser atualizado a cada etapa concluída.
 
-Última atualização: 31/10/2026.
+Última atualização: 01/11/2026.
 
 ## 1. Visão geral
 
@@ -33,6 +33,7 @@ routes/
   animais.py            painel e cadastro, edição e exclusão de animais
   saude.py              vacinas, medicamentos, consultas e histórico veterinário
   financas.py           Pet Finanças (API em JSON)
+  publico.py            API pública dos animais divulgados (sem login)
 utils/
   auth.py               controle de acesso (login e dono do registro)
 templates/              páginas HTML
@@ -217,6 +218,32 @@ O que mudou por dentro:
 
 A pessoa só consegue editar a **própria** conta, porque a rota usa o `id_usuario` da sessão e não aceita id nenhum pela tela.
 
+### 4.13 API pública dos animais divulgados (branch `api-publica`)
+
+Para a página pública mostrar animais reais, e não mais um arquivo de exemplo, foi criado o endereço `GET /api/publico/dados` (em `routes/publico.py`, blueprint `publico_bp`). Ele **não exige login**, porque quem adota não tem conta. Devolve em JSON os animais marcados como divulgados (`visivel_publico = 1`), já agrupados do jeito que a página pública espera.
+
+Como os dados são agrupados:
+- Cada conta do tipo **ONG** vira um cartão próprio, com o nome da ONG, cidade e estado.
+- As contas do tipo **protetor independente** vão todas para **um único cartão**, "Protetores independentes", sem nenhum nome de pessoa e com a região "Vários locais". Isso protege a privacidade de quem cuida sozinho (LGPD) e já funciona sem precisar mudar o desenho da página.
+- O cartão dos protetores independentes só aparece se tiver ao menos um animal. A lista de valores de doação e o link do formulário de adoção (formulário externo do Google, o mesmo para todos) também vêm na resposta.
+
+O que cada animal traz: `id`, `nome`, `especie`, `raca`, `idade`, `foto`, `castrado`, `temChip`, `vacinado`, `infoSaude`, `cidade` e `estado`.
+- `temChip` é apenas sim ou não. O **número do chip nunca sai** do servidor.
+- `vacinado` é calculado: vale "sim" se o animal tem ao menos uma vacina com status `aplicada`. Vacina só agendada não conta.
+- `infoSaude` é o texto livre digitado por quem cuida (por exemplo, "vermifugado, FIV/FELV negativo"). Foi escolhido um campo livre porque as situações são variadas e não cabem em campos fixos.
+- Animal sem foto recebe uma imagem padrão ("Sem foto").
+
+Privacidade e segurança:
+- A resposta usa uma **lista fixa de campos** (a consulta SQL escolhe uma a uma as colunas). Telefone, e-mail, número do chip, histórico clínico, vacinas detalhadas e finanças **nunca** entram. Um teste automatizado compara as chaves da resposta com a lista permitida, e quebra se alguém acrescentar um campo por engano.
+- Em caso de erro no banco, a rota registra o problema no log do servidor e responde 500 com uma mensagem genérica, sem detalhes técnicos.
+
+Atenção para a página pública (parte da outra integrante do grupo): como esses textos agora são **digitados por usuários**, o JavaScript não pode mais montar a página com `innerHTML` sem tratar o conteúdo, porque alguém poderia digitar código HTML ou JavaScript no nome ou na informação de saúde (ataque XSS). Os textos devem ser inseridos com `textContent` ou ter os caracteres especiais escapados.
+
+Limitações conhecidas:
+- Enquanto o formulário do animal não tiver a opção "divulgar na página pública" (próxima etapa), a divulgação só é possível alterando o banco.
+- A API devolve todos os animais divulgados de uma vez, sem paginação, o que é suficiente para o volume do projeto.
+- O cartão de cada ONG ainda não tem descrição própria nem campanhas (ficam vazios).
+
 ## 5. Decisões de projeto e motivos
 
 | Decisão | Motivo |
@@ -233,7 +260,7 @@ Pontos que diferem do relatório parcial e devem ser corrigidos no relatório fi
 
 ## 6. Como testar
 
-Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 69 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, o link de volta ao painel, a exclusão de animais, o cadastro de contas e a edição do perfil.
+Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 77 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, o link de volta ao painel, a exclusão de animais, o cadastro de contas, a edição do perfil e a API pública.
 
 Para rodar os automatizados, com a venv ativa e o `.env` configurado:
 
@@ -247,11 +274,10 @@ Como só existe um banco, cada teste cria os próprios registros (com e-mail ini
 ## 7. Próximos passos
 
 **Em andamento (prioridade, prazo de entrega em 06/11/2026):** divulgação de animais na página pública.
-Já feitos nesta frente: o preparo do banco (seção 4.10), o cadastro com perfil, cidade e estado (4.11) e a edição do perfil (4.12).
+Já feitos nesta frente: o preparo do banco (seção 4.10), o cadastro com perfil, cidade e estado (4.11), a edição do perfil (4.12) e a API pública (4.13).
 
 1. Formulário do animal com "divulgar na página pública" e informações de saúde em texto livre. Só deve deixar divulgar quem já tiver cidade e estado no perfil.
-2. API pública (`GET /api/publico/animais`, sem login) que devolve apenas os animais divulgados e uma lista fixa de campos, sem dados pessoais, chip, histórico clínico ou financeiro.
-3. Página pública (feita por outra integrante do grupo) usando essa API, com o botão "Entrar" para protetores e ONGs e o botão de adoção/apadrinhamento levando a um formulário externo.
+2. Página pública (feita por outra integrante do grupo) passar a usar `/api/publico/dados` no lugar do arquivo de exemplo, escapar os textos, mostrar os novos campos, ganhar o botão "Entrar" para protetores e ONGs e o botão de adoção/apadrinhamento levando ao formulário externo.
 
 **Depois, se houver tempo:**
 4. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
@@ -270,7 +296,8 @@ Já feitos nesta frente: o preparo do banco (seção 4.10), o cadastro com perfi
 - Limite de tentativas de login.
 - Recuperação de senha.
 - Banco separado para desenvolvimento e produção.
-- A página pública lê dados com `innerHTML`; trocar por `textContent` onde o conteúdo vier do banco.
+- A página pública lê dados com `innerHTML`; trocar por `textContent` (ou escapar) onde o conteúdo vier do banco, agora que a API pública entrega textos digitados por usuários (seção 4.13).
+- A API pública não tem limite de requisições; para o porte do projeto é aceitável.
 
 ## 9. Glossário rápido
 
