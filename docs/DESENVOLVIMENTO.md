@@ -125,6 +125,26 @@ A listagem e o resumo aceitam os mesmos filtros na URL, lidos por uma única fun
 
 Todas as consultas filtram pela pessoa logada, então ninguém vê os lançamentos de outra conta. O resumo devolve `receitas`, `despesas`, `saldo` e `por_categoria` (categoria, tipo, total e quantidade).
 
+### 4.6 Pet Finanças: tela de finanças (branch `pet-financas-painel`)
+
+A página `/financas` (rota `pagina_financas`, que exige login) mostra o painel financeiro geral. O botão **Finanças** do painel leva até ela. Os arquivos são `templates/financas.html` e `static/js/financas.js`.
+
+| Parte da tela | De onde vêm os dados |
+|---|---|
+| Cartões de receitas, despesas e saldo | `GET /api/financas/resumo` |
+| Tabela com os últimos lançamentos | `GET /api/financas/transacoes?limite=20` |
+| Lista de categorias do formulário | `GET /api/categorias` |
+| Lista de animais do formulário | consulta feita pelo servidor ao montar a página |
+| Botão **Registrar** | `POST /api/financas/transacoes` |
+
+O JavaScript chama a API com `fetch` e atualiza a página sem recarregá-la: depois de registrar um lançamento, os cartões e a tabela são recarregados. Pontos de cuidado:
+
+- os textos vindos do banco entram na tela com `textContent`, e não com `innerHTML`, para que um texto digitado pela pessoa (por exemplo, `<b>oi</b>`) apareça como texto e nunca seja executado como código;
+- se a sessão expirar (resposta 401), a página volta para a tela de login;
+- as mensagens de erro da API aparecem acima do formulário;
+- acessibilidade: campos com `label`, tabela com cabeçalhos (`th scope`), regiões com `aria-live` e erro anunciado por `role="status"`;
+- responsividade: a tela usa a grade do Bootstrap (mobile-first), e a tabela ganha rolagem horizontal em telas estreitas.
+
 ## 5. Decisões de projeto e motivos
 
 | Decisão | Motivo |
@@ -141,7 +161,7 @@ Pontos que diferem do relatório parcial e devem ser corrigidos no relatório fi
 
 ## 6. Como testar
 
-Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 31 testes automatizados com `pytest`, que cobrem a API do Pet Finanças.
+Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 35 testes automatizados com `pytest`, que cobrem a API e a página do Pet Finanças.
 
 Para rodar os automatizados, com a venv ativa e o `.env` configurado:
 
@@ -155,7 +175,7 @@ Como só existe um banco, cada teste cria os próprios registros (com e-mail ini
 ## 7. Próximos passos
 
 1. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
-2. Telas e JavaScript: painel do animal e painel geral, com formulário, resumo e gráfico atualizados por `fetch`.
+2. Tela de finanças: filtros e gráfico de despesas por categoria; painel financeiro dentro da página de cada animal.
 3. Testes não funcionais: responsividade, acessibilidade e latência do banco.
 4. Migração 002: campanhas, tipo de perfil (protetor ou ONG) e chave Pix; depois, a integração com o Pix (Mercado Pago, em Sandbox).
 5. Avisos de erro e sucesso padronizados em JavaScript.
