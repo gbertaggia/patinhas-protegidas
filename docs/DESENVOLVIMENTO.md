@@ -202,7 +202,20 @@ A validação é feita **no servidor** (o HTML também exige os campos, mas ele 
 Decisões e limitações:
 - **Uma conta por e-mail**, como já era. Isso não impede que uma ONG tenha duas contas com e-mails diferentes, nem prova que quem escolhe "ONG" realmente é uma. A orientação é que cada ONG use **um e-mail institucional compartilhado pela equipe**. A verificação de ONGs (CNPJ e aprovação manual) fica como melhoria futura, e é relevante para adoção, porque evita perfis falsos.
 - **Cidade e estado de quem divulga** só vão aparecer na página pública para os animais que a pessoa marcar para divulgação.
-- Ainda não existe como **editar** o perfil, a cidade e o estado depois do cadastro. É a próxima tarefa, e serve também para as contas antigas completarem os dados.
+- A edição do perfil, da cidade e do estado depois do cadastro foi feita na etapa seguinte (seção 4.12).
+
+### 4.12 Edição do perfil (branch `editar-perfil`)
+
+A tela "Meu perfil" (`/editar_usuario`, em `routes/auth.py` e `templates/editarUsuario.html`) passou a permitir alterar também o **perfil** (protetor ou ONG), a **cidade** e o **estado**, além do nome e do telefone. Isso serve às contas que já existiam, que não têm cidade nem estado, e a quem escolheu o perfil errado no cadastro. O e-mail continua sem poder ser alterado.
+
+O que mudou por dentro:
+- As regras do perfil ficaram em **uma função só**, `_validar_perfil`, usada pelo cadastro e pela edição. Assim as duas telas seguem exatamente as mesmas regras (nome de 1 a 100 caracteres, perfil dentro dos dois valores permitidos, cidade preenchida e de até 100 caracteres, estado dentro das 27 siglas), em vez de a regra ser escrita duas vezes e divergir com o tempo.
+- Antes, a edição só tinha o `required` do HTML. Agora ela também **valida no servidor**: dado inválido recebe uma página de erro com o código 400, com link de volta, e nada é gravado.
+- A busca dos dados para preencher a tela deixou de usar `SELECT *` e traz só as colunas necessárias, **sem a senha** (o hash não chega mais ao template).
+- O mesmo `static/js/cadastro.js` serve às duas telas e ajusta o rótulo do nome ("Nome da ONG" ou "Seu nome completo") também quando a tela abre com um perfil já marcado.
+- Cidade e estado são obrigatórios na edição. Quem tem conta antiga precisa preenchê-los para salvar qualquer alteração.
+
+A pessoa só consegue editar a **própria** conta, porque a rota usa o `id_usuario` da sessão e não aceita id nenhum pela tela.
 
 ## 5. Decisões de projeto e motivos
 
@@ -220,7 +233,7 @@ Pontos que diferem do relatório parcial e devem ser corrigidos no relatório fi
 
 ## 6. Como testar
 
-Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 54 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, o link de volta ao painel, a exclusão de animais e o cadastro de contas.
+Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 69 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, o link de volta ao painel, a exclusão de animais, o cadastro de contas e a edição do perfil.
 
 Para rodar os automatizados, com a venv ativa e o `.env` configurado:
 
@@ -234,19 +247,21 @@ Como só existe um banco, cada teste cria os próprios registros (com e-mail ini
 ## 7. Próximos passos
 
 **Em andamento (prioridade, prazo de entrega em 06/11/2026):** divulgação de animais na página pública.
-1. Edição do perfil (tipo, cidade e estado), para as contas que já existiam completarem os dados. O cadastro novo já pede esses dados (seção 4.11).
-2. Formulário do animal com "divulgar na página pública" e informações de saúde em texto livre.
-3. API pública (`GET /api/publico/animais`, sem login) que devolve apenas os animais divulgados e uma lista fixa de campos, sem dados pessoais, chip, histórico clínico ou financeiro.
-4. Página pública (feita por outra integrante do grupo) usando essa API, com o botão "Entrar" para protetores e ONGs e o botão de adoção/apadrinhamento levando a um formulário externo.
+Já feitos nesta frente: o preparo do banco (seção 4.10), o cadastro com perfil, cidade e estado (4.11) e a edição do perfil (4.12).
+
+1. Formulário do animal com "divulgar na página pública" e informações de saúde em texto livre. Só deve deixar divulgar quem já tiver cidade e estado no perfil.
+2. API pública (`GET /api/publico/animais`, sem login) que devolve apenas os animais divulgados e uma lista fixa de campos, sem dados pessoais, chip, histórico clínico ou financeiro.
+3. Página pública (feita por outra integrante do grupo) usando essa API, com o botão "Entrar" para protetores e ONGs e o botão de adoção/apadrinhamento levando a um formulário externo.
 
 **Depois, se houver tempo:**
-5. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
-6. Tela de finanças: filtros e gráfico de despesas por categoria.
-7. Testes não funcionais: responsividade, acessibilidade e latência do banco.
-8. Campanhas, chave Pix e a integração com o Pix (Mercado Pago, em Sandbox), em uma migração futura.
-9. Avisos de erro e sucesso padronizados em JavaScript.
-10. Regenerar o `schema.sql` do repositório a partir do banco real, que hoje está desatualizado.
-11. Permitir editar e apagar lançamentos e/ou "arquivar" um animal. Hoje, um animal que tenha lançamentos não pode ser apagado (seção 4.9), e ainda não existe como corrigir ou remover um lançamento.
+4. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
+5. Tela de finanças: filtros e gráfico de despesas por categoria.
+6. Testes não funcionais: responsividade, acessibilidade e latência do banco.
+7. Campanhas, chave Pix e a integração com o Pix (Mercado Pago, em Sandbox), em uma migração futura.
+8. Avisos de erro e sucesso padronizados em JavaScript.
+9. Regenerar o `schema.sql` do repositório a partir do banco real, que hoje está desatualizado.
+10. Permitir editar e apagar lançamentos e/ou "arquivar" um animal. Hoje, um animal que tenha lançamentos não pode ser apagado (seção 4.9), e ainda não existe como corrigir ou remover um lançamento.
+11. Verificação de ONGs (CNPJ e aprovação manual), para evitar perfis falsos (seção 4.11).
 
 ## 8. Pendências conhecidas de segurança
 

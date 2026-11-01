@@ -13,3 +13,5 @@ function atualizarRotuloDoNome() {
 document.querySelectorAll('input[name="tipo"]').forEach((opcao) => {
   opcao.addEventListener('change', atualizarRotuloDoNome);
 });
+
+atualizarRotuloDoNome();

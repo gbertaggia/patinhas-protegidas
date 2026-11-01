@@ -58,6 +58,7 @@ def test_cadastro_grava_perfil_cidade_e_estado(client, emails_de_teste, tipo):
     {'cidade': 'x' * 101},
     {'nome': ''},
     {'senha': ''},
+    {'nome': 'x' * 101},    
 ])
 def test_cadastro_invalido_e_recusado(client, emails_de_teste, mudanca):
     dados = _dados(**mudanca)

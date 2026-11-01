@@ -11,7 +11,7 @@ Este documento registra como o sistema é testado, o que já foi verificado, os 
 | Funcional manual | uso das telas e das rotas, com duas contas (uma em janela normal e outra em janela anônima) | realizado a cada etapa |
 | Controle de acesso | rotas sem login, registros de outra conta, API sem login | realizado (manual e automatizado) |
 | Validação de entradas | valores, datas, filtros e textos inválidos | realizado (manual e automatizado) |
-| Automatizado (`pytest`) | testes em Python que chamam a API, as páginas e o cadastro e conferem as respostas | 54 testes, todos passando |
+| Automatizado (`pytest`) | testes em Python que chamam a API, as páginas e o cadastro e conferem as respostas | 69 testes, todos passando |
 | Banco de dados | conferência das migrações e da restauração de backup com consultas SQL | realizado |
 | Não funcional | responsividade em celular, acessibilidade (WCAG 2.2) e latência do banco | planejado |
 
@@ -114,6 +114,16 @@ Feitos no navegador, com o sistema rodando localmente. As contas de teste foram 
 | Cadastro como ONG, com cidade e estado | conta criada com `tipo = ONG`, cidade e `uf` corretos, e entrada no painel |
 | Escolha do perfil no formulário | nenhuma opção marcada no começo; o navegador exige a escolha |
 | Rótulo do campo de nome | muda para "Nome da ONG" ou "Seu nome completo" conforme o perfil |
+| Formulário em tela de celular | cabe sem corte, com o botão "Criar Conta" visível |
+| Cadastro no site publicado (Render) | a tela `/cadastro` nova abre normalmente |
+
+### 2.8 Edição do perfil
+
+Feito no navegador, com o sistema rodando localmente.
+
+| Teste | Resultado |
+|---|---|
+| Editar o perfil de uma conta (perfil, nome, cidade e estado) | alterações gravadas, conferidas no banco: `tipo = ONG`, cidade e `uf` preenchidos |
 
 ## 3. Testes automatizados (pytest)
 
@@ -134,9 +144,9 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 - As **fixtures** (em `tests/conftest.py`) preparam e limpam o cenário: criam uma pessoa de teste no banco (e-mail iniciado em `pytest_`), um animal quando preciso, e fazem o login simulado. No fim de cada teste, apagam tudo o que foi criado (transações, animais e usuário). Nos testes do cadastro, que criam contas pela própria tela, a fixture `emails_de_teste` guarda os e-mails usados e apaga essas contas no fim.
 - Como só existe um banco, os testes nunca limpam tabelas inteiras: removem só os registros que eles mesmos criaram. Os dados reais do grupo não são tocados.
 
-### 3.3 O que é testado (54 testes)
+### 3.3 O que é testado (69 testes)
 
-Os testes de finanças, da página do animal e da exclusão ficam em `tests/test_financas_api.py`, e os do cadastro em `tests/test_cadastro.py`.
+Os testes de finanças, da página do animal e da exclusão ficam em `tests/test_financas_api.py`, os do cadastro em `tests/test_cadastro.py` e os da edição do perfil em `tests/test_perfil.py`.
 
 | Assunto | Teste | O que verifica |
 |---|---|---|
@@ -172,13 +182,19 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | Exclusão de animal | `test_animal_sem_lancamentos_continua_podendo_ser_apagado` | animal sem lançamentos: redireciona (302) e a página do animal passa a dar 404 |
 | Cadastro | `test_tela_de_cadastro_traz_perfil_e_estados` | o formulário traz as opções Protetor(a) e ONG e a lista de estados |
 | Cadastro | `test_cadastro_grava_perfil_cidade_e_estado` (2 casos) | PROTETOR e ONG: redireciona para o painel e grava perfil, cidade e estado |
-| Cadastro | `test_cadastro_invalido_e_recusado` (9 casos) | perfil inválido ou vazio, estado inválido ou vazio, cidade vazia, só com espaços ou com mais de 100 letras, nome vazio e senha vazia dão 400 e não gravam nada |
+| Cadastro | `test_cadastro_invalido_e_recusado` (10 casos) | perfil inválido ou vazio, estado inválido ou vazio, cidade vazia, só com espaços ou com mais de 100 letras, nome vazio ou com mais de 100 letras e senha vazia dão 400 e não gravam nada |
 | Cadastro | `test_cadastro_sem_escolher_o_perfil_e_recusado` | sem o campo do perfil, 400 e nada gravado |
 | Cadastro | `test_email_repetido_continua_sendo_recusado` | segundo cadastro com o mesmo e-mail é barrado |
+| Edição do perfil | `test_editar_perfil_exige_login` | sem login, redireciona para a tela de login |
+| Edição do perfil | `test_editar_perfil_grava_os_novos_dados` | grava nome, telefone, perfil, cidade e estado |
+| Edição do perfil | `test_telefone_vazio_vira_nulo` | telefone em branco é gravado como vazio (NULL) |
+| Edição do perfil | `test_tela_de_edicao_mostra_os_dados_salvos` | a tela abre com a cidade que foi salva |
+| Edição do perfil | `test_edicao_invalida_e_recusada` (9 casos) | perfil, estado, cidade e nome inválidos dão 400 e os dados da conta não mudam |
+| Edição do perfil | `test_editar_perfil_nao_altera_a_conta_de_outra_pessoa` | a edição só afeta a conta de quem está logada |
 
 ### 3.4 Resultado
 
-Última execução completa: **54 passaram em 287,44 s** (4 min 47 s).
+Última execução completa: **69 passaram em 364,06 s** (6 min 4 s).
 
 ## 4. Medições
 
@@ -191,6 +207,7 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | 31/10/2026, com o teste do link de voltar | 38 | 232,48 s | 6,1 s |
 | 31/10/2026, com os testes de exclusão de animal | 40 | 252,21 s | 6,3 s |
 | 01/11/2026, com os testes do cadastro | 54 | 287,44 s | 5,3 s |
+| 01/11/2026, com os testes da edição do perfil | 69 | 364,06 s | 5,3 s |
 
 Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre várias conexões (criar o usuário, lançar, consultar e limpar). O tempo é, portanto, dominado pela comunicação com o banco. Esses números são apenas um indício: não separam a latência de conexão da latência de consulta. A medição específica de latência, prevista no relatório, ainda será feita.
 
@@ -199,7 +216,7 @@ Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre vá
 - Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
 - O JavaScript da tela de finanças (hoje verificado só manualmente).
 - Filtros e gráfico na tela de finanças.
-- Testes automatizados do login, da edição de perfil e das rotas de animais e saúde (o cadastro já é coberto; o restante só por testes manuais).
+- Testes automatizados do login e das rotas de animais e saúde (o cadastro e a edição de perfil já são cobertos; o restante só por testes manuais).
 - Testes não funcionais: acessibilidade (WCAG 2.2) e medição de latência. A responsividade da página de finanças e da Página Pet já foi verificada em celular real (seções 2.4 e 2.5).
 - Campanhas e integração com o Pix.
 
