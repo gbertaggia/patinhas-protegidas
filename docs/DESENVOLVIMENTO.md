@@ -145,6 +145,14 @@ O JavaScript chama a API com `fetch` e atualiza a página sem recarregá-la: dep
 - acessibilidade: campos com `label`, tabela com cabeçalhos (`th scope`), regiões com `aria-live` e erro anunciado por `role="status"`;
 - responsividade: a tela usa a grade do Bootstrap (mobile-first), e a tabela ganha rolagem horizontal em telas estreitas.
 
+### 4.7 Pet Finanças: painel na página do animal (branch `pet-financas-animal`)
+
+A Página Pet de cada animal ganhou o cartão **Finanças**, com os totais de receitas, despesas e saldo daquele animal, o botão **+ Registrar** (que abre o formulário de lançamento) e a lista dos lançamentos dele.
+
+O mesmo arquivo `static/js/financas.js` atende as duas telas. O cartão tem o atributo `data-animal-id`, e é por ele que o JavaScript sabe que está na página de um animal: nesse caso, todas as chamadas à API recebem `animal_id`, a tabela passa a ter três colunas (data, categoria com a descrição em letra pequena abaixo, e valor), sem a coluna "Animal", para caber em telas de celular, e o lançamento registrado já fica ligado àquele animal (campo escondido no formulário). Na página geral, esse atributo não existe e o comportamento é o de antes.
+
+A conferência de dono continua no servidor: o painel só aparece para quem é dono do animal (a própria rota da Página Pet responde 404 para os demais), e a API só devolve lançamentos da pessoa logada.
+
 ## 5. Decisões de projeto e motivos
 
 | Decisão | Motivo |
@@ -161,7 +169,7 @@ Pontos que diferem do relatório parcial e devem ser corrigidos no relatório fi
 
 ## 6. Como testar
 
-Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 35 testes automatizados com `pytest`, que cobrem a API e a página do Pet Finanças.
+Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 37 testes automatizados com `pytest`, que cobrem a API, a página de finanças e o painel da Página Pet.
 
 Para rodar os automatizados, com a venv ativa e o `.env` configurado:
 
@@ -175,7 +183,7 @@ Como só existe um banco, cada teste cria os próprios registros (com e-mail ini
 ## 7. Próximos passos
 
 1. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
-2. Tela de finanças: filtros e gráfico de despesas por categoria; painel financeiro dentro da página de cada animal.
+2. Tela de finanças: filtros e gráfico de despesas por categoria.
 3. Testes não funcionais: responsividade, acessibilidade e latência do banco.
 4. Migração 002: campanhas, tipo de perfil (protetor ou ONG) e chave Pix; depois, a integração com o Pix (Mercado Pago, em Sandbox).
 5. Avisos de erro e sucesso padronizados em JavaScript.

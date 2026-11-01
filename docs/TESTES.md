@@ -11,7 +11,7 @@ Este documento registra como o sistema é testado, o que já foi verificado, os 
 | Funcional manual | uso das telas e das rotas, com duas contas (uma em janela normal e outra em janela anônima) | realizado a cada etapa |
 | Controle de acesso | rotas sem login, registros de outra conta, API sem login | realizado (manual e automatizado) |
 | Validação de entradas | valores, datas, filtros e textos inválidos | realizado (manual e automatizado) |
-| Automatizado (`pytest`) | testes em Python que chamam a API e a página de finanças e conferem as respostas | 35 testes, todos passando |
+| Automatizado (`pytest`) | testes em Python que chamam a API e a página de finanças e conferem as respostas | 37 testes, todos passando |
 | Banco de dados | conferência das migrações e da restauração de backup com consultas SQL | realizado |
 | Não funcional | responsividade em celular, acessibilidade (WCAG 2.2) e latência do banco | planejado |
 
@@ -74,8 +74,20 @@ Feitos no navegador, na página `/financas` do sistema rodando localmente.
 | Descrição com código HTML (`<b>oi</b>`) | exibida como texto literal na tabela, sem ser interpretada |
 | Valor igual a zero | mensagem de erro do servidor, mostrada acima do formulário |
 | Simulação de celular (modo dispositivo do navegador) | cartões e campos empilham; a tabela ganha rolagem horizontal; nada estoura a tela |
+| Celular real, pelo site publicado no Render (botão Finanças, cartões, formulário, registro de lançamento e tabela) | funcionou normalmente |
 
-Pendente: teste em celular real, pelo site publicado.
+### 2.5 Painel financeiro na página do animal
+
+Feitos no navegador, com o sistema rodando localmente.
+
+| Teste | Resultado |
+|---|---|
+| Cartão "Finanças" na Página Pet | mostra só os lançamentos daquele animal; para o SURURU, receitas 5,00, despesas 80,00 e saldo -75,00 |
+| Tabela do cartão | três colunas (data, categoria com a descrição em letra pequena abaixo, e valor), para caber em telas de celular |
+| Lançamento registrado pelo cartão (despesa de medicamento) | aparece na lista do animal e entra nos totais |
+| Simulação de celular | o cartão ocupa a largura toda; sinal e valor ficam na mesma linha e as três colunas cabem na tela |
+
+Pendente: teste da página do animal em celular real, pelo site publicado.
 
 ## 3. Testes automatizados (pytest)
 
@@ -96,7 +108,7 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 - As **fixtures** (em `tests/conftest.py`) preparam e limpam o cenário: criam uma pessoa de teste no banco (e-mail iniciado em `pytest_`), um animal quando preciso, e fazem o login simulado. No fim de cada teste, apagam tudo o que foi criado (transações, animais e usuário).
 - Como só existe um banco, os testes nunca limpam tabelas inteiras: removem só os registros que eles mesmos criaram. Os dados reais do grupo não são tocados.
 
-### 3.3 O que é testado (35 testes)
+### 3.3 O que é testado (37 testes)
 
 | Assunto | Teste | O que verifica |
 |---|---|---|
@@ -125,10 +137,12 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 | Página | `test_pagina_financas_abre_para_quem_esta_logado` | logada, a página abre (200) |
 | Página | `test_pagina_financas_lista_os_animais_do_proprio_usuario` | o formulário traz os animais da pessoa |
 | Página | `test_pagina_financas_nao_lista_animal_de_outra_conta` | animal de outra conta não aparece |
+| Página do animal | `test_pagina_do_animal_mostra_o_painel_financeiro` | a Página Pet traz o painel, ligado ao id do animal |
+| Página do animal | `test_pagina_do_animal_de_outra_conta_da_404` | animal de outra conta responde 404 |
 
 ### 3.4 Resultado
 
-Última execução completa: **35 passaram em 204,21 s** (3 min 24 s).
+Última execução completa: **37 passaram em 222,77 s** (3 min 43 s).
 
 ## 4. Medições
 
@@ -137,6 +151,7 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 | 31/10/2026, primeira versão | 26 | 128,07 s | 4,9 s |
 | 31/10/2026, com testes de animais | 31 | 177,54 s | 5,7 s |
 | 31/10/2026, com testes da página de finanças | 35 | 204,21 s | 5,8 s |
+| 31/10/2026, com testes da página do animal | 37 | 222,77 s | 6,0 s |
 
 Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre várias conexões (criar o usuário, lançar, consultar e limpar). O tempo é, portanto, dominado pela comunicação com o banco. Esses números são apenas um indício: não separam a latência de conexão da latência de consulta. A medição específica de latência, prevista no relatório, ainda será feita.
 
@@ -144,9 +159,9 @@ Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre vá
 
 - Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
 - O JavaScript da tela de finanças (hoje verificado só manualmente).
-- Filtros e gráfico na tela, e o painel financeiro dentro da página de cada animal.
+- Filtros e gráfico na tela de finanças.
 - Testes automatizados das rotas de usuário, animais e saúde (hoje cobertas só por testes manuais).
-- Testes não funcionais: responsividade em celular real, acessibilidade (WCAG 2.2) e medição de latência.
+- Testes não funcionais: responsividade da página do animal em celular real, acessibilidade (WCAG 2.2) e medição de latência.
 - Campanhas e integração com o Pix.
 
 ## 6. Limpeza de resíduos
