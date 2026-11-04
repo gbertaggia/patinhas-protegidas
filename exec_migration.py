@@ -9,11 +9,11 @@ from database.connection import conectar_banco
 
 def aplicar_migration():
     # Caminho até o arquivo SQL dentro da pasta migrations
-    caminho_sql = os.path.join(os.path.dirname(__file__), "migrations", "004_perfil_ong.sql")
+    caminho_sql = os.path.join(os.path.dirname(__file__), "migrations", "005_campanhas_doacao.sql")
 
     if not os.path.exists(caminho_sql):
         # Tenta também dentro de database/migrations caso esteja lá
-        caminho_sql = os.path.join(os.path.dirname(__file__), "database", "migrations", "004_perfil_ong.sql")
+        caminho_sql = os.path.join(os.path.dirname(__file__), "database", "migrations", "005_campanhas_doacao.sql")
 
     if not os.path.exists(caminho_sql):
         print(f"Erro: Arquivo não encontrado em {caminho_sql}")

@@ -8,8 +8,6 @@ from utils.auth import animal_do_usuario, api_login_required, login_required
 
 financas_bp = Blueprint('financas', __name__)
 
-financas_bp = Blueprint('financas', __name__)
-
 VALOR_MAXIMO = Decimal('99999999.99')
 
 
@@ -38,11 +36,7 @@ def _ler_data(nome):
 
 
 def _montar_filtros():
-    """Lê os filtros da URL e monta as condições do WHERE.
-
-    Devolve (condicoes, parametros, erro). Sempre filtra pela pessoa logada:
-    ninguém vê lançamento de outra conta.
-    """
+    """Lê os filtros da URL e monta as condições do WHERE."""
     condicoes = ["t.usuario_id = %s"]
     parametros = [session['id_usuario']]
 
@@ -76,7 +70,6 @@ def _montar_filtros():
         condicoes.append("t.categoria_id = %s")
         parametros.append(categoria_id)
 
-    # animal_id=7 filtra um animal; animal_id=geral traz só os lançamentos gerais
     animal = request.args.get('animal_id', '').strip()
     if animal:
         if animal.lower() == 'geral':
@@ -90,6 +83,10 @@ def _montar_filtros():
 
     return condicoes, parametros, None
 
+
+# ==========================================
+# ROTAS DE CATEGORIAS E TRANSAÇÕES
+# ==========================================
 
 @financas_bp.route('/api/categorias')
 @api_login_required
@@ -111,32 +108,26 @@ def criar_transacao():
     if not isinstance(dados, dict):
         return _erro("Envie os dados em formato JSON.")
 
-    # Valor: aceita 25.5 ou "25,50"
     try:
         valor = Decimal(str(dados.get('valor', '')).strip().replace(',', '.'))
     except InvalidOperation:
         return _erro("Valor inválido.")
-    if not valor.is_finite():
-        return _erro("Valor inválido.")
-    if valor <= 0:
+    if not valor.is_finite() or valor <= 0:
         return _erro("O valor deve ser maior que zero.")
     if valor > VALOR_MAXIMO:
         return _erro("O valor máximo permitido é R$ 99.999.999,99.")
     valor = valor.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    # Categoria
     categoria_id = _como_inteiro(dados.get('categoria_id'))
     if categoria_id is None:
         return _erro("Escolha uma categoria.")
 
-    # Animal (opcional: sem animal = lançamento geral)
     animal_id = None
     if dados.get('animal_id') not in (None, ''):
         animal_id = _como_inteiro(dados.get('animal_id'))
         if animal_id is None or not animal_do_usuario(animal_id):
             return _erro("Animal não encontrado.", 404)
 
-    # Data (opcional: padrão é hoje)
     data_transacao = date.today()
     if dados.get('data_transacao') not in (None, ''):
         try:
@@ -144,7 +135,6 @@ def criar_transacao():
         except ValueError:
             return _erro("Data inválida. Use o formato AAAA-MM-DD.")
 
-    # Descrição (opcional)
     descricao = dados.get('descricao')
     if descricao is not None:
         if not isinstance(descricao, str):
@@ -196,12 +186,11 @@ def listar_transacoes():
         return _erro("O limite deve estar entre 1 e 500.")
     parametros.append(limite)
 
-    # As condições são textos fixos do código; os valores vão em parâmetros (%s).
     consulta = f"""
         SELECT t.id, t.tipo, t.valor, t.descricao, t.data_transacao,
                t.categoria_id, c.nome AS categoria,
                t.animal_id, a.nome AS animal,
-               t.origem_tipo, t.origem_id
+               t.origem_tipo, t.origem_id, t.campanha_id
         FROM transacoes t
         JOIN categorias c ON c.id = t.categoria_id
         LEFT JOIN animais a ON a.id = t.animal_id
@@ -230,6 +219,7 @@ def listar_transacoes():
         "animal": l['animal'],
         "origem_tipo": l['origem_tipo'],
         "origem_id": l['origem_id'],
+        "campanha_id": l.get('campanha_id'),
     } for l in linhas])
 
 
@@ -274,6 +264,226 @@ def resumo_financeiro():
             "quantidade": l['quantidade'],
         } for l in linhas],
     })
+
+
+# ==========================================
+# ROTAS DO MÓDULO DE CAMPANHAS
+# ==========================================
+
+@financas_bp.route('/campanhas/nova')
+@login_required
+def pagina_nova_campanha():
+    """Renderiza o formulário de criação de campanhas com os animais da conta logada."""
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute(
+                "SELECT id, nome FROM animais WHERE usuario_id = %s ORDER BY nome ASC",
+                (session['id_usuario'],)
+            )
+            animais = cursor.fetchall()
+    finally:
+        conexao.close()
+    return render_template('campanha.html', animais=animais)
+
+
+@financas_bp.route('/api/campanhas', methods=['POST'])
+@api_login_required
+def criar_campanha():
+    dados = request.get_json(silent=True)
+    if not isinstance(dados, dict):
+        return _erro("Envie os dados em formato JSON.")
+
+    titulo = str(dados.get('titulo', '')).strip()
+    if not titulo or len(titulo) > 150:
+        return _erro("O título é obrigatório e deve ter até 150 caracteres.")
+
+    descricao = str(dados.get('descricao', '')).strip()
+    if not descricao:
+        return _erro("A descrição da campanha é obrigatória.")
+
+    try:
+        meta = Decimal(str(dados.get('meta', '')).strip().replace(',', '.'))
+    except InvalidOperation:
+        return _erro("Meta inválida.")
+    if not meta.is_finite() or meta <= 0:
+        return _erro("A meta deve ser maior que zero.")
+    if meta > VALOR_MAXIMO:
+        return _erro("Meta acima do valor permitido.")
+    meta = meta.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    # Animal vinculado (opcional)
+    animal_id = None
+    if dados.get('animal_id') not in (None, ''):
+        animal_id = _como_inteiro(dados.get('animal_id'))
+        if animal_id is None or not animal_do_usuario(animal_id):
+            return _erro("Animal não encontrado ou não pertence ao usuário.", 404)
+
+    foto_url = dados.get('foto_url')
+    if foto_url:
+        foto_url = str(foto_url).strip() or None
+
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO campanhas (usuario_id, animal_id, titulo, descricao, meta, foto_url, status)
+                VALUES (%s, %s, %s, %s, %s, %s, 'ativa')
+                """,
+                (session['id_usuario'], animal_id, titulo, descricao, meta, foto_url)
+            )
+            nova_campanha_id = cursor.lastrowid
+        conexao.commit()
+        return jsonify({
+            "id": nova_campanha_id,
+            "titulo": titulo,
+            "meta": str(meta),
+            "status": "ativa"
+        }), 201
+    except Exception:
+        conexao.rollback()
+        current_app.logger.exception("Erro ao criar campanha")
+        return _erro("Não foi possível salvar a campanha.", 500)
+    finally:
+        conexao.close()
+
+
+@financas_bp.route('/api/campanhas')
+@api_login_required
+def listar_campanhas_usuario():
+    """Lista as campanhas criadas pela organização logada."""
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT c.id, c.titulo, c.descricao, c.meta, c.arrecadado,
+                       c.foto_url, c.status, c.criado_em,
+                       c.animal_id, a.nome AS nome_animal
+                FROM campanhas c
+                LEFT JOIN animais a ON a.id = c.animal_id
+                WHERE c.usuario_id = %s
+                ORDER BY c.id DESC
+                """,
+                (session['id_usuario'],)
+            )
+            campanhas = cursor.fetchall()
+    finally:
+        conexao.close()
+
+    return jsonify([{
+        "id": c['id'],
+        "titulo": c['titulo'],
+        "descricao": c['descricao'],
+        "meta": str(c['meta']),
+        "arrecadado": str(c['arrecadado']),
+        "foto_url": c['foto_url'],
+        "status": c['status'],
+        "criado_em": c['criado_em'].strftime('%Y-%m-%d %H:%M:%S') if c.get('criado_em') else None,
+        "animal_id": c['animal_id'],
+        "nome_animal": c['nome_animal'],
+    } for c in campanhas])
+
+
+@financas_bp.route('/api/campanhas/<int:campanha_id>/doar', methods=['POST'])
+@api_login_required
+def registrar_doacao_campanha(campanha_id):
+    """
+    Registra uma doação financeira para a campanha:
+    1. Atualiza o montante arrecadado na tabela 'campanhas'.
+    2. Registra a entrada como 'RECEITA' na tabela 'transacoes' (origem_tipo='CAMPANHA').
+    """
+    dados = request.get_json(silent=True) or {}
+    try:
+        valor = Decimal(str(dados.get('valor', '')).strip().replace(',', '.'))
+    except InvalidOperation:
+        return _erro("Valor inválido.")
+    if not valor.is_finite() or valor <= 0:
+        return _erro("O valor da doação deve ser positivo.")
+    valor = valor.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    data_transacao = date.today()
+    if dados.get('data_transacao'):
+        try:
+            data_transacao = date.fromisoformat(str(dados['data_transacao']))
+        except ValueError:
+            return _erro("Data inválida. Use AAAA-MM-DD.")
+
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            # Verifica existência e permissão da campanha
+            cursor.execute(
+                """
+                SELECT id, usuario_id, animal_id, titulo, status 
+                FROM campanhas 
+                WHERE id = %s AND usuario_id = %s
+                """,
+                (campanha_id, session['id_usuario'])
+            )
+            campanha = cursor.fetchone()
+            if not campanha:
+                return _erro("Campanha não encontrada.", 404)
+            if campanha['status'] != 'ativa':
+                return _erro("Esta campanha não está mais ativa para receber doações.")
+
+            # Busca ID da categoria 'Doação via Campanha'
+            cursor.execute(
+                "SELECT id FROM categorias WHERE tipo = 'RECEITA' AND nome = 'Doação via Campanha' LIMIT 1"
+            )
+            categoria = cursor.fetchone()
+            if not categoria:
+                # Fallback caso a migration não tenha rodado
+                cursor.execute(
+                    "SELECT id FROM categorias WHERE tipo = 'RECEITA' LIMIT 1"
+                )
+                categoria = cursor.fetchone()
+
+            # 1. Incrementa total da campanha
+            cursor.execute(
+                "UPDATE campanhas SET arrecadado = arrecadado + %s WHERE id = %s",
+                (valor, campanha_id)
+            )
+
+            # 2. Insere a transação no livro-caixa
+            cursor.execute(
+                """
+                INSERT INTO transacoes
+                (usuario_id, animal_id, categoria_id, tipo, valor, descricao, data_transacao, origem_tipo, origem_id, campanha_id)
+                VALUES (%s, %s, %s, 'RECEITA', %s, %s, %s, 'CAMPANHA', %s, %s)
+                """,
+                (
+                    session['id_usuario'],
+                    campanha['animal_id'],
+                    categoria['id'],
+                    valor,
+                    f"Doação para campanha: {campanha['titulo']}",
+                    data_transacao,
+                    campanha_id,
+                    campanha_id
+                )
+            )
+            transacao_id = cursor.lastrowid
+
+        conexao.commit()
+        return jsonify({
+            "mensagem": "Doação registrada com sucesso!",
+            "transacao_id": transacao_id,
+            "campanha_id": campanha_id,
+            "valor": str(valor)
+        }), 201
+    except Exception:
+        conexao.rollback()
+        current_app.logger.exception("Erro ao registrar doação para campanha")
+        return _erro("Não foi possível registrar a doação.", 500)
+    finally:
+        conexao.close()
+
+
+# ==========================================
+# PÁGINA PRINCIPAL DE FINANÇAS
+# ==========================================
 
 @financas_bp.route('/financas')
 @login_required

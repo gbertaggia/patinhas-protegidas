@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Campanha | Patinhas Protegidas</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Nunito:wght@600;700;800&display=swap');
+
+    :root {
+      --green: #28765b;
+      --green-dark: #18543f;
+      --green-light: #eaf5ee;
+      --ink: #20332b;
+      --muted: #6b7b73;
+      --line: #e2eae5;
+      --paper: #f7faf7;
+      --white: #ffffff;
+      --shadow: 0 10px 30px rgba(35, 70, 52, .08);
+      --danger: #d9534f;
+      --danger-bg: #fdf2f2;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Topbar */
+    .topbar {
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 5vw;
+      background: var(--white);
+      border-bottom: 1px solid var(--line);
+    }
+    .brand {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      text-decoration: none;
+      color: var(--ink);
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.15rem;
+    }
+    .brand-icon {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: var(--green-light);
+      font-size: 1.3rem;
+    }
+    .brand strong { color: var(--green); }
+    .topbar-link {
+      color: var(--green);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .topbar-link:hover { text-decoration: underline; }
+
+    /* Container do Formulário */
+    main {
+      width: min(680px, 92%);
+      margin: 40px auto;
+    }
+
+    .card-form {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 36px;
+      box-shadow: var(--shadow);
+    }
+
+    .form-header {
+      margin-bottom: 28px;
+    }
+    .eyebrow {
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      font-size: .75rem;
+      font-weight: 800;
+    }
+    h1 {
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.8rem;
+      margin: 6px 0 8px;
+    }
+    .form-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    /* Campos */
+    .form-group {
+      margin-bottom: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .required { color: var(--danger); }
+    
+    input, select, textarea {
+      font: inherit;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: var(--white);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(40, 118, 91, .12);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .input-hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Mensagem de Erro/Alerta */
+    .alert-box {
+      display: none;
+      padding: 12px 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .alert-box.danger {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid #f5c6cb;
+      display: block;
+    }
+
+    /* Botões */
+    .form-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+    }
+    .btn-secondary {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      padding: 11px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 0.92rem;
+      transition: background .15s, color .15s;
+    }
+    .btn-secondary:hover {
+      background: #f1f5f2;
+      color: var(--ink);
+    }
+    .btn-primary {
+      border: none;
+      background: var(--green);
+      color: var(--white);
+      padding: 12px 26px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    .btn-primary:hover {
+      background: var(--green-dark);
+      transform: translateY(-1px);
+    }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    @media (max-width: 600px) {
+      .card-form { padding: 24px 18px; }
+      .form-actions { flex-direction: column-reverse; }
+      .btn-primary, .btn-secondary { width: 100%; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Início">
+      <span class="brand-icon">🐾</span>
+      <span>Patinhas <strong>Protegidas</strong></span>
+    </a>
+    <a href="{{ url_for('financas.pagina_financas') }}" class="topbar-link">← Voltar para Finanças</a>
+  </header>
+
+  <main>
+    <section class="card-form">
+      <div class="form-header">
+        <span class="eyebrow">Arrecadação e Apoio</span>
+        <h1>Criar Nova Campanha</h1>
+        <p>Preencha os dados abaixo para publicar uma campanha na página pública e começar a receber contribuições.</p>
+      </div>
+
+      <div id="mensagem-erro" class="alert-box"></div>
+
+      <form id="form-campanha">
+        <!-- Título -->
+        <div class="form-group">
+          <label for="titulo">Título da Campanha <span class="required">*</span></label>
+          <input type="text" id="titulo" name="titulo" maxlength="150" placeholder="Ex: Cirurgia ortopédica do Pipoca ou Ração para o abrigo" required>
+          <span class="input-hint">Até 150 caracteres. Seja claro e objetivo.</span>
+        </div>
+
+        <!-- Vínculo com Animal ou Despesa Geral -->
+        <div class="form-group">
+          <label for="animal_id">Vincular a um animal (opcional)</label>
+          <select id="animal_id" name="animal_id">
+            <option value="">Despesas gerais (Sem animal específico)</option>
+            {% for animal in animais %}
+              <option value="{{ animal.id }}">{{ animal.nome }}</option>
+            {% endfor %}
+          </select>
+          <span class="input-hint">Escolha se esta arrecadação é destinada aos cuidados de um resgatado específico.</span>
+        </div>
+
+        <!-- Meta Financeira -->
+        <div class="form-group">
+          <label for="meta">Meta de Arrecadação (R$) <span class="required">*</span></label>
+          <input type="number" step="0.01" min="1" id="meta" name="meta" placeholder="0,00" required>
+          <span class="input-hint">Valor total necessário para a causa.</span>
+        </div>
+
+        <!-- Foto da Campanha -->
+        <div class="form-group">
+          <label for="foto_url">Link da foto da campanha (opcional)</label>
+          <input type="url" id="foto_url" name="foto_url" placeholder="https://exemplo.com/foto.jpg">
+          <span class="input-hint">URL de uma imagem do animal ou do tratamento. Se vazio, usará a foto padrão.</span>
+        </div>
+
+        <!-- Descrição -->
+        <div class="form-group">
+          <label for="descricao">Descrição detalhada <span class="required">*</span></label>
+          <textarea id="descricao" name="descricao" placeholder="Conte a história, os custos dos procedimentos, exames ou o destino da arrecadação..." required></textarea>
+        </div>
+
+        <!-- Ações -->
+        <div class="form-actions">
+          <a href="{{ url_for('financas.pagina_financas') }}" class="btn-secondary">Cancelar</a>
+          <button type="submit" id="btn-submit" class="btn-primary">Publicar Campanha</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("form-campanha");
+      const btnSubmit = document.getElementById("btn-submit");
+      const erroBox = document.getElementById("mensagem-erro");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        erroBox.classList.remove("danger");
+        erroBox.style.display = "none";
+        
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = "Publicando...";
+
+        const payload = {
+          titulo: document.getElementById("titulo").value.trim(),
+          animal_id: document.getElementById("animal_id").value || null,
+          meta: document.getElementById("meta").value,
+          foto_url: document.getElementById("foto_url").value.trim() || null,
+          descricao: document.getElementById("descricao").value.trim()
+        };
+
+        try {
+          const resposta = await fetch("/api/campanhas", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const resultado = await resposta.json();
+
+          if (!resposta.ok) {
+            throw new Error(resultado.erro || "Ocorreu um erro ao salvar a campanha.");
+          }
+
+          // Redireciona para o painel de finanças após criar
+          window.location.href = "{{ url_for('financas.pagina_financas') }}";
+
+        } catch (erro) {
+          erroBox.textContent = erro.message;
+          erroBox.classList.add("danger");
+          btnSubmit.disabled = false;
+          btnSubmit.textContent = "Publicar Campanha";
+        }
+      });
+    });
+  </script>
+</body>
+</html>

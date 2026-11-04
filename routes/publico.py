@@ -1,4 +1,3 @@
-
 from flask import Blueprint, current_app, jsonify
 from database.connection import conectar_banco
 
@@ -16,13 +15,14 @@ def _regiao(cidade, uf):
 @publico_bp.route('/api/publico/dados')
 def dados_publicos():
     """
-    Animais divulgados para adoção agrupados por organização/protetor.
+    Animais divulgados para adoção e campanhas ativas, agrupados por organização/protetor.
     Lê diretamente do banco de dados (MySQL).
     """
     try:
         conexao = conectar_banco()
         try:
             with conexao.cursor() as cursor:
+                # 1. Consulta dos animais disponíveis
                 cursor.execute(
                     """
                     SELECT a.id, a.nome, a.especie, a.raca, a.idade, a.foto_url, a.castrado,
@@ -38,12 +38,26 @@ def dados_publicos():
                     ORDER BY u.nome, u.id, a.id DESC
                     """
                 )
-                linhas = cursor.fetchall()
+                linhas_animais = cursor.fetchall()
+
+                # 2. Consulta das campanhas ativas
+                cursor.execute(
+                    """
+                    SELECT c.id, c.usuario_id, c.animal_id, c.titulo, c.descricao,
+                           c.meta, c.arrecadado, c.foto_url,
+                           u.tipo AS usuario_tipo
+                    FROM campanhas c
+                    JOIN usuarios u ON u.id = c.usuario_id
+                    WHERE c.status = 'ativa'
+                    ORDER BY c.id DESC
+                    """
+                )
+                linhas_campanhas = cursor.fetchall()
         finally:
             conexao.close()
     except Exception:
         current_app.logger.exception("Erro ao carregar os dados públicos")
-        return jsonify({"erro": "Não foi possível carregar os animais agora."}), 500
+        return jsonify({"erro": "Não foi possível carregar os dados agora."}), 500
 
     ongs = {}
     independentes = {
@@ -61,7 +75,8 @@ def dados_publicos():
         'campanhas': [],
     }
 
-    for linha in linhas:
+    # Processamento dos animais
+    for linha in linhas_animais:
         animal = {
             'id': linha['id'],
             'nome': linha['nome'],
@@ -77,7 +92,6 @@ def dados_publicos():
             'estado': linha['uf'] or '',
         }
 
-        # Link próprio cadastrado (vazio vira None)
         link_form = (linha.get('link_formulario_adocao') or '').strip() or None
         logo_url = (linha.get('logo_url') or '').strip() or None
         missao = (linha.get('missao') or '').strip()
@@ -100,7 +114,6 @@ def dados_publicos():
             })
             ong['animais'].append(animal)
         else:
-            # Caso seja protetor independente e tenha configurado logo ou formulário
             if logo_url and not independentes['logoUrl']:
                 independentes['logoUrl'] = logo_url
             if link_form and not independentes['linkFormulario']:
@@ -108,8 +121,32 @@ def dados_publicos():
 
             independentes['animais'].append(animal)
 
+    # Processamento e alocação das campanhas
+    for camp in linhas_campanhas:
+        campanha_item = {
+            'id': camp['id'],
+            'titulo': camp['titulo'],
+            'descricao': camp['descricao'],
+            'meta': float(camp['meta']),
+            'arrecadado': float(camp['arrecadado']),
+            'foto': camp['foto_url'] or FOTO_PADRAO,
+            'animalId': camp['animal_id']
+        }
+
+        usuario_id = camp['usuario_id']
+
+        if camp['usuario_tipo'] == 'ONG':
+            # Se a ONG já existe no dicionário (pois possui animais cadastrados)
+            if usuario_id in ongs:
+                ongs[usuario_id]['campanhas'].append(campanha_item)
+            else:
+                # Caso a ONG ainda não tenha animais divulgados, mas tenha campanha ativa
+                pass
+        else:
+            independentes['campanhas'].append(campanha_item)
+
     lista = list(ongs.values())
-    if independentes['animais']:
+    if independentes['animais'] or independentes['campanhas']:
         lista.append(independentes)
 
     return jsonify({'valoresDoacao': VALORES_DOACAO, 'ongs': lista})
