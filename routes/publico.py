@@ -1,20 +1,12 @@
-from flask import Blueprint, current_app, jsonify
 
+from flask import Blueprint, current_app, jsonify
 from database.connection import conectar_banco
 
 publico_bp = Blueprint('publico', __name__)
 
-# Valores sugeridos nos botões de doação da página pública
 VALORES_DOACAO = [5, 10, 20, 50]
-
-# Formulário externo (Google Forms) para quem quer adotar ou apadrinhar
-LINK_FORMULARIO = (
-    'https://docs.google.com/forms/d/e/'
-    '1FAIpQLSe5xhUYgMcGLOS_Fx-n2urv-4qtMcew3ykvceASDmMdlRqSqA/viewform'
-)
-
 FOTO_PADRAO = 'https://dummyimage.com/600x400/e9ecef/6c757d.png&text=Sem+foto'
-ICONE = '🐾'
+ICONE_PADRAO = '🐾'
 
 
 def _regiao(cidade, uf):
@@ -24,9 +16,8 @@ def _regiao(cidade, uf):
 @publico_bp.route('/api/publico/dados')
 def dados_publicos():
     """
-    Animais divulgados para adoção, agrupados por ONG. Rota aberta (sem login):
-    devolve só uma lista fixa de campos, sem número de chip, histórico clínico,
-    contatos nem dados financeiros. Protetores independentes não têm o nome divulgado.
+    Animais divulgados para adoção agrupados por organização/protetor.
+    Lê diretamente do banco de dados (MySQL).
     """
     try:
         conexao = conectar_banco()
@@ -39,7 +30,8 @@ def dados_publicos():
                            (a.chip IS NOT NULL AND a.chip <> '') AS tem_chip,
                            EXISTS(SELECT 1 FROM vacinas v
                                   WHERE v.animal_id = a.id AND v.status_vacina = 'aplicada') AS vacinado,
-                           u.id AS usuario_id, u.nome AS nome_usuario, u.tipo, u.cidade, u.uf
+                           u.id AS usuario_id, u.nome AS nome_usuario, u.tipo, u.cidade, u.uf,
+                           u.logo_url, u.link_formulario_adocao, u.missao
                     FROM animais a
                     JOIN usuarios u ON u.id = a.usuario_id
                     WHERE a.visivel_publico = 1
@@ -57,13 +49,14 @@ def dados_publicos():
     independentes = {
         'id': 0,
         'nome': 'Protetores independentes',
-        'icone': ICONE,
+        'icone': ICONE_PADRAO,
+        'logoUrl': None,
         'regiao': 'Vários locais',
         'cidade': '',
         'estado': '',
         'resumo': 'Animais divulgados por protetores e protetoras independentes.',
-        'descricao': 'Pessoas que cuidam de animais por conta própria. Os nomes não são divulgados.',
-        'linkFormulario': LINK_FORMULARIO,
+        'descricao': 'Pessoas que cuidam de animais por conta própria. Os nomes individuais não são divulgados.',
+        'linkFormulario': None,
         'animais': [],
         'campanhas': [],
     }
@@ -84,23 +77,35 @@ def dados_publicos():
             'estado': linha['uf'] or '',
         }
 
+        # Link próprio cadastrado (vazio vira None)
+        link_form = (linha.get('link_formulario_adocao') or '').strip() or None
+        logo_url = (linha.get('logo_url') or '').strip() or None
+        missao = (linha.get('missao') or '').strip()
+
         if linha['tipo'] == 'ONG':
             regiao = _regiao(linha['cidade'], linha['uf'])
             ong = ongs.setdefault(linha['usuario_id'], {
                 'id': linha['usuario_id'],
                 'nome': linha['nome_usuario'],
-                'icone': ICONE,
+                'icone': ICONE_PADRAO,
+                'logoUrl': logo_url,
                 'regiao': regiao,
                 'cidade': linha['cidade'] or '',
                 'estado': linha['uf'] or '',
                 'resumo': f'ONG em {regiao}' if regiao else 'ONG parceira',
-                'descricao': '',
-                'linkFormulario': LINK_FORMULARIO,
+                'descricao': missao,
+                'linkFormulario': link_form,
                 'animais': [],
                 'campanhas': [],
             })
             ong['animais'].append(animal)
         else:
+            # Caso seja protetor independente e tenha configurado logo ou formulário
+            if logo_url and not independentes['logoUrl']:
+                independentes['logoUrl'] = logo_url
+            if link_form and not independentes['linkFormulario']:
+                independentes['linkFormulario'] = link_form
+
             independentes['animais'].append(animal)
 
     lista = list(ongs.values())

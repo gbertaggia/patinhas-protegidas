@@ -1,0 +1,4 @@
+ALTER TABLE usuarios 
+ADD COLUMN logo_url VARCHAR(500) NULL,
+ADD COLUMN link_formulario_adocao VARCHAR(500) NULL,
+ADD COLUMN missao TEXT NULL;

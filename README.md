@@ -23,7 +23,7 @@ Adicionar credenciais do banco Aiven.
 
 ## 5. Rodar migration
 
-python database/init_db.py
+python database.init_db
 
 ## 6. Rodar projeto
 

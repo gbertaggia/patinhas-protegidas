@@ -59,6 +59,9 @@ def criar_conta():
     tipo = request.form.get('tipo')
     cidade = (request.form.get('cidade') or '').strip()
     uf = request.form.get('uf')
+    missao = request.form.get("missao", "").strip()
+    logo_url = request.form.get("logo_url", "").strip()
+    link_formulario_adocao = request.form.get("link_formulario_adocao", "").strip()
 
     # Validação no servidor: o HTML também exige os campos, mas ele pode ser burlado
     if not email or not senha:
@@ -88,10 +91,10 @@ def criar_conta():
             """
 
         comando_sql = """
-            INSERT INTO usuarios (nome, email, senha, telefone, tipo, cidade, uf)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO usuarios (nome, email, senha, telefone, tipo, cidade, uf, missao, logo_url, link_formulario_adocao)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        valores = (nome, email, generate_password_hash(senha), telefone, tipo, cidade, uf)
+        valores = (nome, email, generate_password_hash(senha), telefone, tipo, cidade, uf, missao, logo_url, link_formulario_adocao)
         
         cursor.execute(comando_sql, valores)
         conexao.commit()
