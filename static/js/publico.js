@@ -1,11 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Variáveis de estado global
   let dadosApp = { valoresDoacao: [], ongs: [] };
   let ongSelecionada = null;
-  let limiteAnimaisExibidos = 3;
-  const PASSO_PAGINACAO = 3;
+  let limiteAnimaisExibidos = 6;
+  const PASSO_PAGINACAO = 6;
 
-  // Mapeamento dos elementos do DOM
   const elementos = {
     telaOngs: document.getElementById("tela-ongs"),
     telaOng: document.getElementById("tela-ong"),
@@ -15,13 +13,12 @@ document.addEventListener("DOMContentLoaded", () => {
     estadoOngs: document.getElementById("estado-ongs"),
     voltarOngs: document.getElementById("voltar-ongs"),
     
-    // Detalhes da ONG
     ongAvatar: document.getElementById("ong-avatar"),
     ongNome: document.getElementById("ong-nome"),
     ongLocal: document.getElementById("ong-local"),
     ongDescricao: document.getElementById("ong-descricao"),
+    ongLinkHero: document.getElementById("ong-link-formulario"),
     
-    // Listas de animais e campanhas
     contadorAnimais: document.getElementById("contador-animais"),
     listaAnimais: document.getElementById("lista-animais"),
     sentinelaAnimais: document.getElementById("sentinela-animais"),
@@ -29,32 +26,37 @@ document.addEventListener("DOMContentLoaded", () => {
     listaCampanhas: document.getElementById("lista-campanhas"),
     semCampanhas: document.getElementById("sem-campanhas"),
     
-    // Barra de doação
     barraDoacao: document.getElementById("barra-doacao"),
     valoresDoacao: document.getElementById("valores-doacao"),
     doarValorLivre: document.getElementById("doar-valor-livre"),
     toast: document.getElementById("toast")
   };
 
-  // Carrega o JSON da pasta static/data/
+  // Helper para renderizar logo com fallback para ícone
+  function gerarHtmlAvatar(logoUrl, iconePadrao = "🐾") {
+    if (logoUrl) {
+      return `<img src="${logoUrl}" alt="Logo" class="avatar-img" onerror="this.parentElement.textContent='${iconePadrao}'">`;
+    }
+    return iconePadrao;
+  }
+
+  // Carrega os dados direto da API do banco de dados
   async function carregarDados() {
     try {
-      const resposta = await fetch("/static/data/dados.json");
+      const resposta = await fetch("/api/publico/dados");
       if (!resposta.ok) {
         throw new Error(`Erro na requisição: ${resposta.statusText}`);
       }
       dadosApp = await resposta.json();
       
-      // Renderizações iniciais
       renderizarListaOngs(dadosApp.ongs);
-      renderizarValoresDoacao(dadosApp.valoresDoacao);
+      renderizarValoresDoacao(dadosApp.valoresDoacao || []);
     } catch (erro) {
       console.error("Erro ao carregar os dados:", erro);
       mostrarToast("Erro ao carregar informações das ONGs.");
     }
   }
 
-  // Renderiza o grid de ONGs
   function renderizarListaOngs(ongs) {
     elementos.listaOngs.innerHTML = "";
 
@@ -65,19 +67,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     elementos.estadoOngs.classList.add("hidden");
-    elementos.contadorOngs.textContent = `${ongs.length} ${ongs.length === 1 ? "ONG encontrada" : "ONGs encontradas"}`;
+    elementos.contadorOngs.textContent = `${ongs.length} ${ongs.length === 1 ? "organização encontrada" : "organizações encontradas"}`;
 
     ongs.forEach((ong) => {
       const card = document.createElement("article");
       card.className = "ong-card";
       card.tabIndex = 0;
       card.innerHTML = `
-        <div class="ong-icon">${ong.icone || "🐾"}</div>
+        <div class="ong-icon">${gerarHtmlAvatar(ong.logoUrl, ong.icone || "🐾")}</div>
         <div>
           <h3>${ong.nome}</h3>
-          <p><strong>${ong.regiao}</strong></p>
-          <p>${ong.resumo}</p>
-          <span class="card-arrow">Ver animais e doar →</span>
+          <p><strong>${ong.regiao || ""}</strong></p>
+          <p>${ong.resumo || ""}</p>
+          <span class="card-arrow">Ver animais e apoiar →</span>
         </div>
       `;
 
@@ -93,36 +95,34 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Filtra as ONGs no campo de busca
   elementos.buscaOng.addEventListener("input", (e) => {
     const termo = e.target.value.toLowerCase().trim();
-    const filtradas = dadosApp.ongs.filter(
+    const filtradas = (dadosApp.ongs || []).filter(
       (ong) =>
-        ong.nome.toLowerCase().includes(termo) ||
-        ong.regiao.toLowerCase().includes(termo) ||
-        ong.resumo.toLowerCase().includes(termo)
+        (ong.nome && ong.nome.toLowerCase().includes(termo)) ||
+        (ong.regiao && ong.regiao.toLowerCase().includes(termo)) ||
+        (ong.resumo && ong.resumo.toLowerCase().includes(termo))
     );
     renderizarListaOngs(filtradas);
   });
 
-  // Abre a tela detalhada de uma ONG
   function abrirPaginaOng(ong) {
     ongSelecionada = ong;
     limiteAnimaisExibidos = PASSO_PAGINACAO;
   
-    elementos.ongAvatar.textContent = ong.icone || "🐾";
+    // Avatar da ONG (Logo ou Ícone)
+    elementos.ongAvatar.innerHTML = gerarHtmlAvatar(ong.logoUrl, ong.icone || "🐾");
     elementos.ongNome.textContent = ong.nome;
     elementos.ongLocal.textContent = ong.regiao;
-    elementos.ongDescricao.textContent = ong.descricao;
+    elementos.ongDescricao.textContent = ong.descricao || "Nenhuma descrição informada.";
   
-    // Lógica para o link do formulário da ONG
-    const linkForm = document.getElementById("ong-link-formulario");
-    if (linkForm) {
+    // Botão de formulário geral no banner superior
+    if (elementos.ongLinkHero) {
       if (ong.linkFormulario) {
-        linkForm.href = ong.linkFormulario;
-        linkForm.classList.remove("hidden");
+        elementos.ongLinkHero.href = ong.linkFormulario;
+        elementos.ongLinkHero.classList.remove("hidden");
       } else {
-        linkForm.classList.add("hidden");
+        elementos.ongLinkHero.classList.add("hidden");
       }
     }
   
@@ -135,7 +135,17 @@ document.addEventListener("DOMContentLoaded", () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // Renderiza a lista de animais com suporte a paginação gradual
+  // Volta para a lista de ONGs
+  if (elementos.voltarOngs) {
+    elementos.voltarOngs.addEventListener("click", () => {
+      elementos.telaOng.classList.add("hidden");
+      elementos.barraDoacao.classList.add("hidden");
+      elementos.telaOngs.classList.remove("hidden");
+      ongSelecionada = null;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
+
   function renderizarAnimais() {
     elementos.listaAnimais.innerHTML = "";
     const animais = ongSelecionada.animais || [];
@@ -149,28 +159,40 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const animaisParaExibir = animais.slice(0, limiteAnimaisExibidos);
+    const temFormulario = Boolean(ongSelecionada && ongSelecionada.linkFormulario);
 
     animaisParaExibir.forEach((animal) => {
       const card = document.createElement("article");
       card.className = "animal-card";
+      
+      const detalhesSaude = [
+        animal.castrado ? "Castrado" : null,
+        animal.vacinado ? "Vacinado" : null,
+        animal.temChip ? "Microchipado" : null
+      ].filter(Boolean).join(" • ");
+
+      // Botão habilitado ou desabilitado conforme a presença de link de formulário
+      const botaoAdocaoHtml = temFormulario
+        ? `<button class="outline-button btn-adotar" type="button">Quero Adotar</button>`
+        : `<button class="outline-button btn-desabilitado" type="button" disabled title="Esta organização ainda não cadastrou o formulário de adoção">Adoção indisponível</button>`;
+
       card.innerHTML = `
         <img class="animal-photo" src="${animal.foto}" alt="${animal.nome}">
         <div class="animal-info">
           <span class="tag">${animal.especie}</span>
           <h3>${animal.nome}</h3>
-          <div class="animal-meta">${animal.idade} • Porte ${animal.porte}</div>
-          <p class="animal-description">${animal.descricao}</p>
-          <button class="outline-button" type="button">Quero Adotar</button>
+          <div class="animal-meta">${animal.raca ? animal.raca + ' • ' : ''}${animal.idade}</div>
+          ${detalhesSaude ? `<p class="animal-description" style="margin-bottom: 6px;"><strong>Saúde:</strong> ${detalhesSaude}</p>` : ''}
+          ${animal.infoSaude ? `<p class="animal-description">${animal.infoSaude}</p>` : ''}
+          ${botaoAdocaoHtml}
         </div>
       `;
 
-      card.querySelector(".outline-button").addEventListener("click", () => {
-        if (ongSelecionada && ongSelecionada.linkFormulario) {
-          window.open(ongSelecionada.linkFormulario, "_blank");
-        } else {
-          mostrarToast(`Interesse em adotar ${animal.nome} registrado com sucesso!`);
-        }
-      });
+      if (temFormulario) {
+        card.querySelector(".btn-adotar").addEventListener("click", () => {
+          window.open(ongSelecionada.linkFormulario, "_blank", "noopener,noreferrer");
+        });
+      }
 
       elementos.listaAnimais.appendChild(card);
     });
@@ -184,7 +206,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Configuração da rolagem infinita/gradual para carregar mais animais
   const observadorScroll = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting && ongSelecionada) {
       const totalAnimais = (ongSelecionada.animais || []).length;
@@ -197,7 +218,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   observadorScroll.observe(elementos.sentinelaAnimais);
 
-  // Renderiza as campanhas de arrecadação
   function renderizarCampanhas() {
     elementos.listaCampanhas.innerHTML = "";
     const campanhas = ongSelecionada.campanhas || [];
@@ -210,7 +230,10 @@ document.addEventListener("DOMContentLoaded", () => {
     elementos.semCampanhas.classList.add("hidden");
 
     campanhas.forEach((campanha) => {
-      const percentual = Math.min(100, Math.round((campanha.arrecadado / campanha.meta) * 100));
+      const meta = Number(campanha.meta) || 1;
+      const arrecadado = Number(campanha.arrecadado) || 0;
+      const percentual = Math.min(100, Math.round((arrecadado / meta) * 100));
+
       const card = document.createElement("article");
       card.className = "campaign-card";
       card.innerHTML = `
@@ -222,8 +245,8 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="progress-fill" style="width: ${percentual}%"></div>
           </div>
           <div class="campaign-totals">
-            <span>Arrecadado: <strong>R$ ${campanha.arrecadado}</strong></span>
-            <span>Meta: <strong>R$ ${campanha.meta}</strong></span>
+            <span>Arrecadado: <strong>R$ ${arrecadado}</strong></span>
+            <span>Meta: <strong>R$ ${meta}</strong></span>
           </div>
           <button class="donate-button" type="button">Ajudar com esta campanha</button>
         </div>
@@ -237,7 +260,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Renderiza os botões de doação da barra inferior
   function renderizarValoresDoacao(valores) {
     elementos.valoresDoacao.innerHTML = "";
     valores.forEach((valor) => {
@@ -246,25 +268,23 @@ document.addEventListener("DOMContentLoaded", () => {
       botao.type = "button";
       botao.textContent = `R$ ${valor}`;
       botao.addEventListener("click", () => {
-        const nomeOng = ongSelecionada ? ongSelecionada.nome : "a ONG";
+        const nomeOng = ongSelecionada ? ongSelecionada.nome : "a organização";
         mostrarToast(`Obrigado pela doação de R$ ${valor} para ${nomeOng}! ❤️`);
       });
       elementos.valoresDoacao.appendChild(botao);
     });
   }
 
-  // Ação para doação com valor customizado
   elementos.doarValorLivre.addEventListener("click", () => {
     const valorDigitado = prompt("Digite o valor que deseja doar (R$):");
     if (valorDigitado && !isNaN(valorDigitado) && Number(valorDigitado) > 0) {
-      const nomeOng = ongSelecionada ? ongSelecionada.nome : "a ONG";
+      const nomeOng = ongSelecionada ? ongSelecionada.nome : "a organização";
       mostrarToast(`Obrigado pela doação de R$ ${Number(valorDigitado).toFixed(2)} para ${nomeOng}! ❤️`);
     } else if (valorDigitado !== null) {
       mostrarToast("Por favor, informe um valor válido.");
     }
   });
 
-  // Exibe mensagens de notificação (Toast)
   function mostrarToast(mensagem) {
     elementos.toast.textContent = mensagem;
     elementos.toast.classList.remove("hidden");
@@ -273,6 +293,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 3500);
   }
 
-  // Inicializa o carregamento dos dados
   carregarDados();
 });

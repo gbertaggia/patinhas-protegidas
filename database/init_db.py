@@ -1,9 +1,17 @@
-from connection import conectar_banco
+import os
+import sys
+
+# Garante que o Python encontre a pasta raiz do projeto
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from database.connection import conectar_banco
+
 
 def run_migration():
     connection = conectar_banco()
 
-    with open("database/schema.sql", "r", encoding="utf-8") as file:
+    caminho_sql = os.path.join(os.path.dirname(__file__), "schema.sql")
+    with open(caminho_sql, "r", encoding="utf-8") as file:
         sql_script = file.read()
 
     cursor = connection.cursor()
@@ -18,6 +26,7 @@ def run_migration():
 
     cursor.close()
     connection.close()
+
 
 if __name__ == "__main__":
     run_migration()
