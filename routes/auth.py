@@ -59,11 +59,11 @@ def criar_conta():
     tipo = request.form.get('tipo')
     cidade = (request.form.get('cidade') or '').strip()
     uf = request.form.get('uf')
-    missao = request.form.get("missao", "").strip()
-    logo_url = request.form.get("logo_url", "").strip()
-    link_formulario_adocao = request.form.get("link_formulario_adocao", "").strip()
+    missao = request.form.get("missao", "").strip() or None
+    logo_url = request.form.get("logo_url", "").strip() or None
+    link_formulario_adocao = request.form.get("link_formulario_adocao", "").strip() or None
 
-    # Validação no servidor: o HTML também exige os campos, mas ele pode ser burlado
+    # Validação no servidor
     if not email or not senha:
         return _pagina_de_erro('Preencha e-mail e senha.', '/cadastro', 'Voltar ao cadastro')
     erro = _validar_perfil(nome, tipo, cidade, uf)
@@ -74,7 +74,6 @@ def criar_conta():
         conexao = conectar_banco()
         cursor = conexao.cursor()
 
-        # Trava de segurança: não permite dois cadastros com o mesmo e-mail
         cursor.execute("SELECT id FROM usuarios WHERE email = %s", (email,))
         usuario_existente = cursor.fetchone()
 
@@ -94,7 +93,10 @@ def criar_conta():
             INSERT INTO usuarios (nome, email, senha, telefone, tipo, cidade, uf, missao, logo_url, link_formulario_adocao)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        valores = (nome, email, generate_password_hash(senha), telefone, tipo, cidade, uf, missao, logo_url, link_formulario_adocao)
+        valores = (
+            nome, email, generate_password_hash(senha), telefone, tipo, cidade, uf,
+            missao, logo_url, link_formulario_adocao
+        )
         
         cursor.execute(comando_sql, valores)
         conexao.commit()
@@ -125,7 +127,6 @@ def fazer_login():
         conexao = conectar_banco()
         cursor = conexao.cursor(pymysql.cursors.DictCursor)
 
-        # Busca só pelo e-mail: a senha é conferida no Python, não no SQL
         cursor.execute("SELECT id, nome, email, senha FROM usuarios WHERE email = %s", (email_digitado,))
         usuario = cursor.fetchone()
 
@@ -133,10 +134,8 @@ def fazer_login():
         if usuario:
             senha_salva = usuario['senha']
             if senha_salva.startswith(('scrypt:', 'pbkdf2:')):
-                # Conta nova: a senha guardada é um hash
                 senha_correta = check_password_hash(senha_salva, senha_digitada)
             elif senha_salva == senha_digitada:
-                # Conta antiga (senha em texto puro): entra e já converte para hash
                 senha_correta = True
                 cursor.execute("UPDATE usuarios SET senha = %s WHERE id = %s",
                                (generate_password_hash(senha_digitada), usuario['id']))
@@ -169,6 +168,9 @@ def editar_perfil_usuario():
         novo_tipo = request.form.get('tipo')
         nova_cidade = (request.form.get('cidade') or '').strip()
         novo_uf = request.form.get('uf')
+        novo_missao = request.form.get('missao', '').strip() or None
+        novo_logo_url = request.form.get('logo_url', '').strip() or None
+        novo_link_formulario = request.form.get('link_formulario_adocao', '').strip() or None
 
         erro = _validar_perfil(novo_nome, novo_tipo, nova_cidade, novo_uf)
         if erro:
@@ -178,12 +180,19 @@ def editar_perfil_usuario():
         cursor = conexao.cursor()
         try:
             cursor.execute(
-                "UPDATE usuarios SET nome = %s, telefone = %s, tipo = %s, cidade = %s, uf = %s WHERE id = %s",
-                (novo_nome, novo_telefone, novo_tipo, nova_cidade, novo_uf, id_usuario),
+                """
+                UPDATE usuarios
+                SET tipo = %s, nome = %s, telefone = %s, cidade = %s, uf = %s,
+                    missao = %s, logo_url = %s, link_formulario_adocao = %s
+                WHERE id = %s
+                """,
+                (
+                    novo_tipo, novo_nome, novo_telefone, nova_cidade, novo_uf,
+                    novo_missao, novo_logo_url, novo_link_formulario, id_usuario
+                )
             )
             conexao.commit()
 
-            # Atualiza o nome na sessão para o painel mostrar o texto de boas-vindas novo
             session['nome_usuario'] = novo_nome
 
             return redirect('/painel')
@@ -194,15 +203,22 @@ def editar_perfil_usuario():
             cursor.close()
             conexao.close()
 
-    # Método GET: busca os dados atuais para preencher a tela (sem a senha)
+    # Método GET: busca os dados atuais para preencher a tela
     conexao = conectar_banco()
     cursor = conexao.cursor(pymysql.cursors.DictCursor)
-    cursor.execute(
-        "SELECT nome, email, telefone, tipo, cidade, uf FROM usuarios WHERE id = %s", (id_usuario,)
-    )
-    usuario = cursor.fetchone()
-    cursor.close()
-    conexao.close()
+    try:
+        cursor.execute(
+            """
+            SELECT id, nome, email, telefone, cidade, uf, tipo, missao, logo_url, link_formulario_adocao
+            FROM usuarios
+            WHERE id = %s
+            """,
+            (id_usuario,)
+        )
+        usuario = cursor.fetchone()
+    finally:
+        cursor.close()
+        conexao.close()
 
     return render_template('editarUsuario.html', usuario=usuario, ufs=UFS)
 
