@@ -343,10 +343,24 @@ def painel():
         cursor.execute(comando_sql, valores)
         lista_animais = cursor.fetchall()
 
+        
+        # Campanhas ativas do usuário, das mais novas para as mais antigas
+        cursor.execute(
+            """
+            SELECT c.id, c.titulo, c.meta, c.arrecadado, c.foto_url, a.nome AS nome_animal
+            FROM campanhas c
+            LEFT JOIN animais a ON a.id = c.animal_id
+            WHERE c.usuario_id = %s AND c.status = 'ativa'
+            ORDER BY c.criado_em DESC
+            """,
+            (id_protetor,)
+        )
+        lista_campanhas = cursor.fetchall()
+
         cursor.close()
         conexao.close()
 
-        return render_template('painel.html', email=email_do_usuario, animais=lista_animais)
+        return render_template('painel.html', email=email_do_usuario, animais=lista_animais, campanhas=lista_campanhas)
 
     except Exception as e:
         current_app.logger.exception("Erro ao carregar o painel")

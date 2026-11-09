@@ -319,8 +319,8 @@
             throw new Error(resultado.erro || "Ocorreu um erro ao salvar a campanha.");
           }
 
-          // Redireciona para o painel de finanças após criar
-          window.location.href = "{{ url_for('financas.pagina_financas') }}";
+          // Redireciona para o painel inicial após criar
+                    window.location.href = "{{ url_for('animais.painel') }}";
 
         } catch (erro) {
           erroBox.textContent = erro.message;

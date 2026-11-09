@@ -69,6 +69,48 @@
                     </div>
                 {% endif %}
 
+                
+                <h3 class="text-warning fw-bold mb-3">Minhas campanhas</h3>
+
+                {% if campanhas %}
+                    <div class="row row-cols-1 row-cols-md-3 justify-content-center g-4 mb-5">
+
+                        {% for campanha in campanhas %}
+                            {% set percentual = ((campanha.arrecadado / campanha.meta) * 100) if campanha.meta else 0 %}
+                            <div class="col">
+                                <div class="card shadow-sm h-100 mx-auto" style="width: 100%; max-width: 18rem;">
+
+                                    <img src="{{ campanha.foto_url if campanha.foto_url else 'https://dummyimage.com/300x200/fff3cd/856404.png&text=Campanha' }}" class="card-img-top" alt="Foto da campanha" style="height: 200px; object-fit: cover;">
+
+                                    <div class="card-body d-flex flex-column">
+                                        <h5 class="card-title text-warning fw-bold">{{ campanha.titulo }}</h5>
+                                        {% if campanha.nome_animal %}
+                                            <p class="text-muted mb-2"><strong>Para:</strong> {{ campanha.nome_animal }}</p>
+                                        {% endif %}
+
+                                        <div class="progress mb-2" role="progressbar" aria-label="Progresso da campanha"
+                                             aria-valuenow="{{ percentual | round | int }}" aria-valuemin="0" aria-valuemax="100">
+                                            <div class="progress-bar bg-warning" style="width: {{ [percentual, 100] | min }}%"></div>
+                                        </div>
+                                        <p class="text-muted small mb-3">
+                                            R$ {{ ('%.2f' | format(campanha.arrecadado)).replace('.', ',') }}
+                                            de R$ {{ ('%.2f' | format(campanha.meta)).replace('.', ',') }}
+                                            ({{ percentual | round | int }}%)
+                                        </p>
+
+                                        <a href="{{ url_for('financas.pagina_financas') }}" class="btn btn-warning w-100 fw-bold mt-auto">Ver finanças</a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning shadow-sm" role="alert">
+                        Você ainda não tem campanhas ativas. Clique em "Criar campanha" para começar!
+                    </div>
+                {% endif %}
+
             </div>
         </div>
     </div>        
