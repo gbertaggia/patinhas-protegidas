@@ -95,7 +95,13 @@
         <label class="form-label fw-bold mb-2 text-primary">Defina os horários das doses:</label>
         <div id="lista-inputs-horarios" class="row g-2"></div>
     </div>
-
+    <div class="mb-3">
+        <label for="valor" class="form-label fw-bold">Valor (R$):</label>
+        <input type="text" id="valor" name="valor" class="form-control"
+               inputmode="decimal" autocomplete="off" placeholder="0,00">
+        <div class="form-text">Opcional. O valor entra nas despesas do animal.</div>
+    </div>
+    
     <button type="submit" class="btn btn-warning w-100 btn-lg shadow-sm fw-bold">Agendar Medicação</button>
     
     <a href="{{ url_for('animais.pagina_animal', id_animal=animal.id) }}" 

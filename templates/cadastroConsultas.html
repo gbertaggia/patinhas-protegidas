@@ -86,6 +86,12 @@
                     </select>
                 </div>
 
+                <div class="mb-3">
+                    <label for="valor" class="form-label">Valor (R$):</label>
+                    <input type="text" id="valor" name="valor" class="form-control"
+                           inputmode="decimal" autocomplete="off" placeholder="0,00">
+                    <div class="form-text">Opcional. O valor entra nas despesas do animal.</div>
+                </div>
                 
                 <button type="submit" class="btn btn-success w-100 btn-lg shadow-sm">Salvar Registro</button>
                 <a href="{{ url_for('animais.pagina_animal', id_animal=animal.id) }}" 
