@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
 from database.connection import conectar_banco
 from utils.auth import login_required
+from utils.pix import normalizar_chave_pix
 
 # Blueprint = um "pedaço" do aplicativo, com suas próprias rotas
 bp = Blueprint('auth', __name__)
@@ -171,6 +172,9 @@ def editar_perfil_usuario():
         novo_missao = request.form.get('missao', '').strip() or None
         novo_logo_url = request.form.get('logo_url', '').strip() or None
         novo_link_formulario = request.form.get('link_formulario_adocao', '').strip() or None
+        nova_chave_pix, erro_pix = normalizar_chave_pix(request.form.get('chave_pix'))
+        if erro_pix:
+            return _pagina_de_erro(erro_pix, '/editar_usuario', 'Voltar à edição do perfil')
 
         erro = _validar_perfil(novo_nome, novo_tipo, nova_cidade, novo_uf)
         if erro:
@@ -183,12 +187,12 @@ def editar_perfil_usuario():
                 """
                 UPDATE usuarios
                 SET tipo = %s, nome = %s, telefone = %s, cidade = %s, uf = %s,
-                    missao = %s, logo_url = %s, link_formulario_adocao = %s
+                    missao = %s, logo_url = %s, link_formulario_adocao = %s, chave_pix = %s
                 WHERE id = %s
                 """,
                 (
                     novo_tipo, novo_nome, novo_telefone, nova_cidade, novo_uf,
-                    novo_missao, novo_logo_url, novo_link_formulario, id_usuario
+                    novo_missao, novo_logo_url, novo_link_formulario, nova_chave_pix, id_usuario
                 )
             )
             conexao.commit()
@@ -209,7 +213,7 @@ def editar_perfil_usuario():
     try:
         cursor.execute(
             """
-            SELECT id, nome, email, telefone, cidade, uf, tipo, missao, logo_url, link_formulario_adocao
+            SELECT id, nome, email, telefone, cidade, uf, tipo, missao, logo_url, link_formulario_adocao, chave_pix
             FROM usuarios
             WHERE id = %s
             """,

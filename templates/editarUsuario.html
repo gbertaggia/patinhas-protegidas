@@ -88,6 +88,17 @@
                     <div class="form-text text-muted">Link do Google Forms ou questionário externo para quem tiver interesse em adotar.</div>
                 </div>
 
+                                <div class="mb-4">
+                    <label for="chave_pix" class="form-label fw-bold">Chave Pix para doações</label>
+                    <input type="text" class="form-control" id="chave_pix" name="chave_pix" maxlength="77"
+                           autocomplete="off" value="{{ usuario.chave_pix if usuario.chave_pix else '' }}"
+                           placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
+                    <div class="form-text text-muted">
+                        Usada em todas as suas campanhas. Ela fica visível para quem quiser doar,
+                        por isso recomendamos a chave aleatória, criada no app do seu banco, em vez de CPF ou telefone pessoal.
+                    </div>
+                </div>
+                
                 <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm">Salvar Alterações</button>
                 <a href="/painel" class="btn btn-outline-secondary w-100 mt-2">Cancelar</a>
             </form>
