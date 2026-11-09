@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, abort, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, abort, current_app, session
 import pymysql
 from database.connection import conectar_banco
 from utils.auth import login_required, animal_do_usuario, registro_do_usuario
+from utils.financeiro import ler_valor, sincronizar_lancamento
 
 # Blueprint da área de saúde: vacinas, medicamentos, consultas e histórico veterinário
 bp = Blueprint('saude', __name__)
@@ -35,36 +36,46 @@ def salvar_vacina(id_animal):
     if not animal_do_usuario(id_animal):
         abort(404)
 
+    nome_vacina = (
+        request.form.get('nome_vacina_outra')
+        if request.form.get('vacina') == 'outros'
+        else request.form.get('vacina')
+    )
+    data_vacina = request.form.get('data_vacina')
+    status_vacina = request.form.get('status_vacina')
+    dose_vacina = request.form.get('dose')
+
+    valor, erro = ler_valor(request.form.get('valor'))
+    if erro:
+        return f"<h1>{erro}</h1><a href='/animal/{id_animal}/vacina'>Voltar</a>", 400
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
     try:
-        nome_vacina = (
-            request.form.get('nome_vacina_outra')
-            if request.form.get('vacina') == 'outros'
-            else request.form.get('vacina')
-        )
-        data_vacina = request.form.get('data_vacina')
-        status_vacina = request.form.get('status_vacina')
-        dose_vacina = request.form.get('dose')
-
-        conexao = conectar_banco()
-        cursor = conexao.cursor()
-
         cursor.execute(
             """
             INSERT INTO vacinas
-            (animal_id, nome_vacina, data_vacina, status_vacina, dose_vacina)
-            VALUES (%s, %s, %s, %s, %s)
+            (animal_id, nome_vacina, data_vacina, status_vacina, dose_vacina, valor)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
-            (id_animal, nome_vacina, data_vacina, status_vacina, dose_vacina)
+            (id_animal, nome_vacina, data_vacina, status_vacina, dose_vacina, valor)
+        )
+        id_vacina = cursor.lastrowid
+
+        # Toda vacina com valor vira despesa nas finanças do animal.
+        sincronizar_lancamento(
+            cursor, session['id_usuario'], id_animal, 'VACINA', id_vacina,
+            valor, data_vacina, f"Vacina {nome_vacina}"
         )
         conexao.commit()
-
-        cursor.close()
-        conexao.close()
-
         return redirect(f'/pagina_animal/{id_animal}')
     except Exception:
+        conexao.rollback()
         current_app.logger.exception("Erro ao salvar vacina")
         return "<h1>Erro ao salvar vacina.</h1>"
+    finally:
+        cursor.close()
+        conexao.close()
 
 
 @bp.route('/deletar_vacina/<int:id_vacina>/<int:id_animal>')
