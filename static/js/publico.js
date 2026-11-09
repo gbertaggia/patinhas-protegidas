@@ -253,7 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
 
       card.querySelector(".donate-button").addEventListener("click", () => {
-        mostrarToast(`Obrigado por apoiar a campanha "${campanha.titulo}"!`);
+        window.abrirDoacaoPix(campanha);
       });
 
       elementos.listaCampanhas.appendChild(card);

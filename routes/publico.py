@@ -45,7 +45,8 @@ def dados_publicos():
                     """
                     SELECT c.id, c.usuario_id, c.animal_id, c.titulo, c.descricao,
                            c.meta, c.arrecadado, c.foto_url,
-                           u.tipo AS usuario_tipo
+                           u.tipo AS usuario_tipo, u.chave_pix,
+                           u.nome AS nome_usuario, u.cidade AS cidade_usuario
                     FROM campanhas c
                     JOIN usuarios u ON u.id = c.usuario_id
                     WHERE c.status = 'ativa'
@@ -130,7 +131,11 @@ def dados_publicos():
             'meta': float(camp['meta']),
             'arrecadado': float(camp['arrecadado']),
             'foto': camp['foto_url'] or FOTO_PADRAO,
-            'animalId': camp['animal_id']
+            'animalId': camp['animal_id'],
+            'chavePix': camp['chave_pix'],
+            # ONG mostra o nome; protetor independente não tem o nome divulgado
+            'recebedor': camp['nome_usuario'] if camp['usuario_tipo'] == 'ONG' else 'Protetor(a) independente',
+            'cidade': camp['cidade_usuario'] or '',
         }
 
         usuario_id = camp['usuario_id']
