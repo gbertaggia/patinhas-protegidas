@@ -115,11 +115,57 @@
     .pix-botao svg { width: 20px; height: 20px; }
     .pix-link { display: block; margin: 12px auto 0; background: none; border: 0; color: #6d28d9;
       font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; text-decoration: underline; }
+    .pix-rodape { display: flex; flex-direction: column; align-items: center; gap: 8px;
+      margin-top: 20px; padding-top: 18px; border-top: 1px solid #e6e0f0; }
+    .pix-rodape-texto { margin: 0; font-size: .88rem; color: #5f5a70; text-align: center; }
+    .pix-finalizar { min-width: 340px; border: 1px solid #2b9d6b; background: #e9f7f0;
+      color: #17694a; border-radius: 10px; padding: 14px 28px; font: inherit; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .pix-rodape-aviso { margin: 0; font-size: .88rem; color: #b42318; }    
+    .pix-finalizar:hover { background: #d8f0e4; }
+    .pix-finalizar svg { width: 20px; height: 20px; }
+    .pix-confirmacao { position: fixed; inset: 0; background: rgba(30, 20, 50, .45); z-index: 1001;
+      display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .pix-confirmacao-caixa { background: #fff; border-radius: 16px; padding: 26px 24px; width: 100%;
+      max-width: 400px; text-align: center; box-shadow: 0 20px 50px rgba(0, 0, 0, .3); }
+    .pix-pergunta { font-size: 1.2rem; font-weight: 800; margin: 0 0 8px; color: #1e1b2e; }
+    .pix-detalhe { color: #5f5a70; font-size: .9rem; margin: 0 0 20px; line-height: 1.45; }
+    .pix-acoes { display: flex; gap: 10px; }
+    .pix-acoes .pix-botao { flex: 1; }
+    .pix-botao.pix-botao-claro { background: #fff; color: #4b4560; border: 1px solid #e3ddee; }
+    .pix-botao.pix-botao-claro:hover { background: #f4f2f8; }
+    .pix-botao:disabled { opacity: .6; cursor: wait; }
+    .pix-erro { color: #b42318; font-size: .88rem; margin: 14px 0 0; }
     .pix-sem-chave { color: #5f5a70; padding: 12px 0; line-height: 1.5; }
     .pix-fundo button:focus-visible, .pix-fundo input:focus-visible { outline: 3px solid #a78bfa; outline-offset: 2px; }
+    /* Telas mais baixas (notebooks): janela mais compacta, para caber sem barra de rolagem */
+    @media (max-height: 920px) {
+      .pix-janela { padding: 16px 18px 18px; }
+      .pix-topo { margin-bottom: 12px; }
+      .pix-grade { gap: 16px; }
+      .pix-coluna { gap: 12px; }
+      .pix-cartao { padding: 14px 16px; }
+      .pix-campanha img { width: 96px; height: 80px; }
+      .pix-valor { padding: 11px 4px; }
+      .pix-rotulo { margin-bottom: 10px; }
+      .pix-rotulo-leve { margin: 12px 0 6px; }
+      .pix-outro span, .pix-outro input { padding-top: 10px; padding-bottom: 10px; }
+      .pix-aviso { margin-top: 12px; padding: 10px 12px; }
+      .pix-lado-topo { margin-bottom: 6px; }
+      .pix-instrucao { margin-bottom: 10px; }
+      .pix-qr { padding: 8px; }
+      .pix-legenda { margin: 6px 0 10px; }
+      .pix-chave { margin-bottom: 10px; }
+      .pix-chave input { padding: 10px 12px; }
+      .pix-botao { padding: 12px; }
+      .pix-link { margin-top: 8px; }
+      .pix-rodape { margin-top: 14px; padding-top: 12px; gap: 6px; }
+      .pix-finalizar { padding: 12px 28px; }
+    }
     @media (max-width: 720px) {
       .pix-grade { grid-template-columns: 1fr; }
       .pix-campanha img { width: 88px; height: 76px; }
+      .pix-finalizar { min-width: 0; width: 100%; }
     }
   `;
 
@@ -136,6 +182,7 @@
   const ICONE_CORACAO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ec4d6e" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.8 4.5c2.1 0 3.6 1.2 5.2 3 1.6-1.8 3.1-3 5.2-3 3.8 0 5.9 3.9 4.4 7.3C19.5 16.4 12 21 12 21z"/></svg>';
   const ICONE_FECHAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   const ICONE_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/></svg>';
+  const ICONE_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   const ICONE_COPIAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>';
 
   // ---------- Tipo e exibição da chave ----------
@@ -207,6 +254,11 @@
             <div class="pix-lado-topo"><span class="pix-selo" aria-hidden="true"><i></i></span><strong>Pagamento via PIX</strong></div>
           </div>
         </div>
+        <div class="pix-rodape">
+          <p class="pix-rodape-texto">Já fez o Pix? Avise quem organizou a campanha:</p>
+          <button type="button" class="pix-finalizar">${ICONE_CHECK}<span>Confirmo que a doação foi concluída</span></button>
+          <p class="pix-rodape-aviso" role="alert" hidden></p>
+        </div>
       </div>
     `;
 
@@ -234,6 +286,7 @@
 
     if (!campanha.chavePix) {
       fundo.querySelector(".pix-escolha").remove();
+      fundo.querySelector(".pix-rodape").remove();
       const aviso = document.createElement("p");
       aviso.className = "pix-sem-chave";
       aviso.textContent = "Esta campanha ainda não tem chave Pix cadastrada. Volte mais tarde ou entre em contato com quem organizou.";
@@ -278,12 +331,87 @@
     function atualizarPix() {
       const codigo = montarPixCopiaECola(campanha.chavePix, valorEscolhido, campanha.recebedor, campanha.cidade);
       areaQr.innerHTML = "";
-      new QRCode(areaQr, { text: codigo, width: 170, height: 170, correctLevel: QRCode.CorrectLevel.M });
+      // QR Code menor em telas baixas, para a janela caber sem rolagem
+      const tamanhoQr = window.innerHeight < 920 ? 140 : 170;
+      new QRCode(areaQr, { text: codigo, width: tamanhoQr, height: tamanhoQr, correctLevel: QRCode.CorrectLevel.M });
       lado.querySelector('[data-acao="copia-e-cola"]').onclick = (evento) =>
         copiar(codigo, evento.currentTarget, "Copiar Pix copia e cola");
       lado.querySelector(".pix-legenda").textContent = valorEscolhido > 0
         ? `Valor: ${valorEscolhido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
         : "Escolha um valor ou digite no app do banco";
+    }
+
+        // ---------- Doação finalizada: o doador avisa, quem organizou confirma ----------
+
+    function formatarMoeda(valor) {
+      return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    const avisoRodape = fundo.querySelector(".pix-rodape-aviso");
+    fundo.querySelector(".pix-finalizar").addEventListener("click", () => {
+      if (valorEscolhido <= 0) {
+        avisoRodape.textContent = "Escolha ou digite o valor que você doou.";
+        avisoRodape.hidden = false;
+        campoLivre.focus();
+        return;
+      }
+      avisoRodape.hidden = true;
+      abrirConfirmacao();
+    });
+
+    function abrirConfirmacao() {
+      const caixa = document.createElement("div");
+      caixa.className = "pix-confirmacao";
+      caixa.innerHTML = `
+        <div class="pix-confirmacao-caixa" role="alertdialog" aria-modal="true" aria-labelledby="pix-pergunta">
+          <p class="pix-pergunta" id="pix-pergunta"></p>
+          <p class="pix-detalhe">Quem organizou a campanha vai conferir o extrato e confirmar o recebimento.</p>
+          <div class="pix-acoes">
+            <button type="button" class="pix-botao pix-botao-claro" data-acao="voltar">Voltar</button>
+            <button type="button" class="pix-botao" data-acao="confirmar">Confirmar</button>
+          </div>
+          <p class="pix-erro" role="alert" hidden></p>
+        </div>
+      `;
+      caixa.querySelector(".pix-pergunta").textContent = `Confirmo que doei ${formatarMoeda(valorEscolhido)}.`;
+
+      const fecharCaixa = () => caixa.remove();
+      caixa.querySelector('[data-acao="voltar"]').addEventListener("click", fecharCaixa);
+
+      const botaoConfirmar = caixa.querySelector('[data-acao="confirmar"]');
+      botaoConfirmar.addEventListener("click", async () => {
+        const areaErro = caixa.querySelector(".pix-erro");
+        areaErro.hidden = true;
+        botaoConfirmar.disabled = true;
+        try {
+          const resposta = await fetch(`/api/publico/campanhas/${campanha.id}/doacao-informada`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ valor: valorEscolhido }),
+          });
+          const dados = await resposta.json().catch(() => ({}));
+          if (!resposta.ok) throw new Error(dados.erro || "Não foi possível registrar agora. Tente de novo.");
+
+          const conteudo = caixa.querySelector(".pix-confirmacao-caixa");
+          conteudo.innerHTML = `
+            <p class="pix-pergunta">Obrigado pela doação!</p>
+            <p class="pix-detalhe"></p>
+            <button type="button" class="pix-botao" data-acao="fechar-tudo">Fechar</button>
+          `;
+          conteudo.querySelector(".pix-detalhe").textContent =
+            dados.mensagem || "Quem organizou a campanha vai confirmar o recebimento.";
+          const botaoFechar = conteudo.querySelector('[data-acao="fechar-tudo"]');
+          botaoFechar.addEventListener("click", () => { fecharCaixa(); fechar(); });
+          botaoFechar.focus();
+        } catch (erro) {
+          areaErro.textContent = erro.message;
+          areaErro.hidden = false;
+          botaoConfirmar.disabled = false;
+        }
+      });
+
+      fundo.appendChild(caixa);
+      botaoConfirmar.focus();
     }
 
     function marcar(botao) {

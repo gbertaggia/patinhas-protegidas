@@ -1,4 +1,5 @@
-from flask import Blueprint, current_app, jsonify
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import Blueprint, current_app, jsonify, request
 from database.connection import conectar_banco
 
 publico_bp = Blueprint('publico', __name__)
@@ -155,3 +156,57 @@ def dados_publicos():
         lista.append(independentes)
 
     return jsonify({'valoresDoacao': VALORES_DOACAO, 'ongs': lista})
+
+
+
+# Proteções do aviso de doação (rota aberta, sem login)
+VALOR_MAXIMO_DOACAO = Decimal('100000.00')
+LIMITE_PENDENTES_POR_CAMPANHA = 30
+
+
+@publico_bp.route('/api/publico/campanhas/<int:campanha_id>/doacao-informada', methods=['POST'])
+def informar_doacao(campanha_id):
+    """O visitante avisa que fez um Pix para a campanha.
+
+    Não mexe no arrecadado nem em Finanças: só cria um aviso pendente,
+    que o dono da campanha confirma (ou não) na tela de Finanças.
+    """
+    dados = request.get_json(silent=True) or {}
+    try:
+        valor = Decimal(str(dados.get('valor', '')).strip().replace(',', '.'))
+    except InvalidOperation:
+        return jsonify({"erro": "Valor inválido."}), 400
+    if not valor.is_finite() or valor <= 0 or valor > VALOR_MAXIMO_DOACAO:
+        return jsonify({"erro": "Informe um valor entre R$ 0,01 e R$ 100.000,00."}), 400
+    valor = valor.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM campanhas WHERE id = %s AND status = 'ativa'",
+                (campanha_id,)
+            )
+            if cursor.fetchone() is None:
+                return jsonify({"erro": "Campanha não encontrada ou encerrada."}), 404
+
+            # Evita que alguém encha a lista de avisos falsos
+            cursor.execute(
+                "SELECT COUNT(*) AS total FROM doacoes_informadas WHERE campanha_id = %s AND status = 'pendente'",
+                (campanha_id,)
+            )
+            if cursor.fetchone()['total'] >= LIMITE_PENDENTES_POR_CAMPANHA:
+                return jsonify({"erro": "Esta campanha já tem muitas doações aguardando confirmação. Tente mais tarde."}), 429
+
+            cursor.execute(
+                "INSERT INTO doacoes_informadas (campanha_id, valor) VALUES (%s, %s)",
+                (campanha_id, valor)
+            )
+        conexao.commit()
+        return jsonify({"mensagem": "Quem organizou a campanha vai conferir e confirmar o recebimento."}), 201
+    except Exception:
+        conexao.rollback()
+        current_app.logger.exception("Erro ao registrar doação informada")
+        return jsonify({"erro": "Não foi possível registrar agora. Tente de novo."}), 500
+    finally:
+        conexao.close()

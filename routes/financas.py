@@ -499,3 +499,134 @@ def pagina_financas():
     finally:
         conexao.close()
     return render_template('financas.html', animais=animais)
+
+
+
+# ==========================================
+# DOAÇÕES INFORMADAS PELOS VISITANTES
+# ==========================================
+
+@financas_bp.route('/api/financas/doacoes-pendentes')
+@api_login_required
+def listar_doacoes_pendentes():
+    """Avisos de doação ainda não analisados, das campanhas do usuário logado."""
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT d.id, d.valor, UNIX_TIMESTAMP(d.criado_em) AS informado_em,
+                       c.id AS campanha_id, c.titulo
+                FROM doacoes_informadas d
+                JOIN campanhas c ON c.id = d.campanha_id
+                WHERE c.usuario_id = %s AND d.status = 'pendente'
+                ORDER BY d.criado_em DESC
+                """,
+                (session['id_usuario'],)
+            )
+            linhas = cursor.fetchall()
+    finally:
+        conexao.close()
+
+    return jsonify([{
+        "id": l['id'],
+        "valor": str(l['valor']),
+        "informado_em": int(l['informado_em']),
+        "campanha_id": l['campanha_id'],
+        "campanha": l['titulo'],
+    } for l in linhas])
+
+
+@financas_bp.route('/api/financas/doacoes-pendentes/<int:doacao_id>/confirmar', methods=['POST'])
+@api_login_required
+def confirmar_doacao_informada(doacao_id):
+    """Confirma o recebimento: soma no arrecadado e lança em Receitas > Doação via Campanha."""
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            # Trava o aviso para não ser confirmado duas vezes ao mesmo tempo
+            cursor.execute(
+                """
+                SELECT d.id, d.valor, c.id AS campanha_id, c.titulo, c.animal_id
+                FROM doacoes_informadas d
+                JOIN campanhas c ON c.id = d.campanha_id
+                WHERE d.id = %s AND c.usuario_id = %s AND d.status = 'pendente'
+                FOR UPDATE
+                """,
+                (doacao_id, session['id_usuario'])
+            )
+            doacao = cursor.fetchone()
+            if doacao is None:
+                conexao.rollback()
+                return _erro("Doação não encontrada ou já analisada.", 404)
+
+            cursor.execute(
+                "SELECT id FROM categorias WHERE tipo = 'RECEITA' AND nome = 'Doação via Campanha' LIMIT 1"
+            )
+            categoria = cursor.fetchone()
+            if categoria is None:
+                raise RuntimeError("Categoria 'Doação via Campanha' não encontrada.")
+
+            cursor.execute(
+                "UPDATE campanhas SET arrecadado = arrecadado + %s WHERE id = %s",
+                (doacao['valor'], doacao['campanha_id'])
+            )
+            # origem_id fica vazio: a ligação com o aviso fica em doacoes_informadas.transacao_id
+            cursor.execute(
+                """
+                INSERT INTO transacoes
+                (usuario_id, animal_id, categoria_id, tipo, valor, descricao,
+                 data_transacao, origem_tipo, campanha_id)
+                VALUES (%s, %s, %s, 'RECEITA', %s, %s, %s, 'CAMPANHA', %s)
+                """,
+                (
+                    session['id_usuario'], doacao['animal_id'], categoria['id'], doacao['valor'],
+                    f"Doação para campanha: {doacao['titulo']}"[:255], date.today(), doacao['campanha_id']
+                )
+            )
+            transacao_id = cursor.lastrowid
+            cursor.execute(
+                """
+                UPDATE doacoes_informadas
+                SET status = 'confirmada', transacao_id = %s, analisado_em = CURRENT_TIMESTAMP
+                WHERE id = %s
+                """,
+                (transacao_id, doacao_id)
+            )
+        conexao.commit()
+        return jsonify({"mensagem": "Doação confirmada e lançada em Receitas.", "transacao_id": transacao_id})
+    except Exception:
+        conexao.rollback()
+        current_app.logger.exception("Erro ao confirmar doação informada")
+        return _erro("Não foi possível confirmar a doação.", 500)
+    finally:
+        conexao.close()
+
+
+@financas_bp.route('/api/financas/doacoes-pendentes/<int:doacao_id>/recusar', methods=['POST'])
+@api_login_required
+def recusar_doacao_informada(doacao_id):
+    """Marca o aviso como não recebido. Nada entra em Finanças."""
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE doacoes_informadas d
+                JOIN campanhas c ON c.id = d.campanha_id
+                SET d.status = 'recusada', d.analisado_em = CURRENT_TIMESTAMP
+                WHERE d.id = %s AND c.usuario_id = %s AND d.status = 'pendente'
+                """,
+                (doacao_id, session['id_usuario'])
+            )
+            alterados = cursor.rowcount
+        conexao.commit()
+        if alterados == 0:
+            return _erro("Doação não encontrada ou já analisada.", 404)
+        return jsonify({"mensagem": "Doação marcada como não recebida."})
+    except Exception:
+        conexao.rollback()
+        current_app.logger.exception("Erro ao recusar doação informada")
+        return _erro("Não foi possível atualizar a doação.", 500)
+    finally:
+        conexao.close()
