@@ -2,11 +2,11 @@
 
 Este documento registra como o sistema está organizado, o que foi feito desde a refatoração do back-end e quais decisões foram tomadas. Ele deve ser atualizado a cada etapa concluída.
 
-Última atualização: 01/11/2026.
+Última atualização: 09/11/2026.
 
 ## 1. Visão geral
 
-O Patinhas Protegidas é uma aplicação web em Flask (Python) para protetoras e ONGs de animais. Cada pessoa cadastrada controla seus animais, com saúde (vacinas, medicamentos, consultas e histórico veterinário). O módulo **Pet Finanças**, em desenvolvimento, acrescenta o controle de receitas e despesas.
+O Patinhas Protegidas é uma aplicação web em Flask (Python) para protetoras e ONGs de animais. Cada pessoa cadastrada controla seus animais, com saúde (vacinas, medicamentos, consultas e histórico veterinário). O módulo **Pet Finanças** controla receitas e despesas, com lançamentos automáticos a partir dos registros de saúde, gráficos de acompanhamento e campanhas de arrecadação com doação via Pix.
 
 O sistema tem três camadas:
 
@@ -36,8 +36,13 @@ routes/
   publico.py            API pública dos animais divulgados (sem login)
 utils/
   auth.py               controle de acesso (login e dono do registro)
+  financeiro.py         lê valores digitados e cria a despesa ligada a vacinas, medicamentos e consultas
+  pix.py                valida e padroniza a chave Pix do perfil
 templates/              páginas HTML
 static/                 JavaScript e dados da página pública
+  js/doacao_pix.js      janela de doação via Pix (QR Code, copia e cola e aviso de doação)
+  js/doacoes_pendentes.js  seção "Confirmar doações recebidas" em Finanças
+  js/graficos_financas.js  gráficos de Finanças
 tests/                  testes automatizados (pytest)
 docs/                   documentação do projeto
 pytest.ini              configuração do pytest
@@ -261,6 +266,61 @@ Limitações:
 - O resultado na página pública depende de a página (feita por outra integrante do grupo) passar a usar a API, o que ainda não aconteceu.
 - Não há aviso na tela do painel de quais animais estão divulgados; isso só aparece na tela de edição.
 
+### 4.15 Valor em vacinas, medicamentos e consultas (PR #33, branch `vacina-com-valor`)
+
+Os formulários de cadastro de vacina, medicação e consulta ganharam o campo **Valor (R$)**, opcional. Quando preenchido, o registro de saúde e a despesa são gravados no mesmo `commit`: se um falhar, nenhum dos dois fica salvo.
+
+- A despesa entra na categoria correspondente (Vacina, Medicamento ou Consulta), ligada ao animal, com `origem_tipo` e `origem_id` apontando para o registro de saúde.
+- A data da despesa é a da vacina, a do início do tratamento ou a da consulta.
+- A função `sincronizar_lancamento` (`utils/financeiro.py`) cria ou atualiza a despesa, mas **nunca apaga**. Valor vazio ou zero não gera lançamento.
+- A função `ler_valor` aceita "120", "120,50", "1.200" e "1.200,50".
+- Ainda falta: a edição desses registros não atualiza a despesa.
+
+### 4.16 Campanhas no painel (PR #34, branch `campanhas-no-painel`)
+
+O painel passou a mostrar as campanhas ativas do usuário em cards com foto, animal vinculado e barra de progresso (arrecadado/meta). Depois de publicar uma campanha, o usuário volta ao painel, e não mais à tela de Finanças.
+
+### 4.17 Chave Pix e janela de doação (migração 006, PR #35, branch `chave-pix`)
+
+- **Banco:** coluna `usuarios.chave_pix` (`VARCHAR(77)`, opcional).
+- **Perfil:** campo "Chave Pix para doações". A função `normalizar_chave_pix` (`utils/pix.py`) aceita CPF, CNPJ, e-mail, telefone e chave aleatória, confere o dígito verificador de CPF e CNPJ e grava a chave no formato que os bancos usam (por exemplo, `(11) 91234-5678` vira `+5511912345678`).
+- **Todas as campanhas do usuário usam a chave do perfil.** Trocar a chave no perfil muda a de todas as campanhas.
+- **API pública:** cada campanha passa a trazer `chavePix`, `recebedor` (nome da ONG, ou "Protetor(a) independente") e `cidade`.
+- **Janela de doação** (`static/js/doacao_pix.js`): valores sugeridos, valor livre, QR Code e "Pix copia e cola" com o valor escolhido embutido, no padrão BR Code do Banco Central. O QR Code é gerado no navegador, com a biblioteca qrcodejs.
+- O Pix vai **direto** para quem criou a campanha: o site não recebe nem repassa dinheiro.
+
+### 4.18 Aviso e confirmação de doações (migração 007, PR #36, branch `confirmar-doacao`)
+
+Como o Pix não passa pelo site, o sistema não sabe quando uma doação acontece. O fluxo é em duas etapas:
+
+1. **O doador avisa.** Na janela de doação, o botão "Confirmo que a doação foi concluída" abre a confirmação "Confirmo que doei R$ X". Isso grava um aviso **pendente** na tabela `doacoes_informadas`. Nada entra em Finanças.
+2. **O dono da campanha confirma.** Em Finanças, a seção "Confirmar doações recebidas" lista os avisos. "Confirmar recebimento" lança o valor em Receitas > Doação via Campanha e soma no `arrecadado` da campanha. "Não recebi" descarta o aviso.
+
+Proteções: a rota do aviso é aberta (sem login), mas aceita no máximo 30 avisos pendentes por campanha. A confirmação trava o aviso (`SELECT ... FOR UPDATE`) para não lançar o mesmo valor duas vezes. Só o dono da campanha vê, confirma ou descarta os avisos dela.
+
+Rotas: `POST /api/publico/campanhas/<id>/doacao-informada`, `GET /api/financas/doacoes-pendentes`, `POST /api/financas/doacoes-pendentes/<id>/confirmar` e `POST /api/financas/doacoes-pendentes/<id>/recusar`.
+
+### 4.19 Gráficos em Finanças (PR #37, branch `graficos-financas`)
+
+Dois gráficos dos últimos 6 meses, abaixo da seção de doações: **Gastos por categoria** (rosca, com total e percentuais) e **Gastos vs Recebimentos** (barras mês a mês). A nova rota `GET /api/financas/mensal` devolve os totais por mês, com os meses sem lançamento zerados. Os gráficos usam Chart.js.
+
+### 4.20 Jornadas concluídas (migração 008, PR #38, branch `jornadas-concluidas`)
+
+O painel ganhou os títulos "Meus animais", "Minhas campanhas" e "Jornadas concluídas". Cada card tem um menu ••• para mover o animal ou a campanha para "Jornadas concluídas", e para trazê-los de volta.
+
+- **Animal:** a coluna `animais.jornada_concluida_em` guarda a data. Animal concluído sai da página de adoção, mas a opção de divulgação não é apagada: se voltar, ele reaparece.
+- **Campanha:** usa o status `concluida`, que já existia. Campanha concluída sai da página pública e para de aceitar avisos de doação.
+
+Isso resolve, em parte, o "arquivar animal" da seção 7.
+
+### 4.21 Rolagem nos últimos lançamentos (PR #39, branch `ajuste-lancamentos`)
+
+A tabela de Finanças mostra no máximo 10 linhas, com rolagem e cabeçalho fixo. A tela passou a carregar os 250 lançamentos mais recentes (antes eram 20). O `static/js/financas.js` também é usado na página do animal, onde a lista cresce sem rolagem.
+
+### 4.22 Corrigir o valor de uma doação (PR #40, branch `corrigir-valor-doacao`)
+
+Nos avisos de doação, o botão **Corrigir valor** permite confirmar com o valor que realmente caiu na conta. O valor informado pelo doador continua guardado no aviso, e a descrição do lançamento registra a correção, por exemplo: "(valor corrigido; informado: R$ 15,00)".
+
 ## 5. Decisões de projeto e motivos
 
 | Decisão | Motivo |
@@ -272,6 +332,12 @@ Limitações:
 | `origem_tipo` e `origem_id` com chave única | garantem que a mesma vacina, por exemplo, nunca gere dois lançamentos, evitando contar o gasto em dobro |
 | Animal vazio = lançamento geral | quem diz se o gasto é do animal ou da organização é o `animal_id`, e não a categoria |
 | 404 em vez de 403 | não revelar a existência de registros de outras pessoas |
+| Despesa de saúde nunca é apagada automaticamente | evita sumir dinheiro do histórico sem ninguém perceber; correções são feitas à mão |
+| Chave Pix no perfil, e não em cada campanha | a pessoa cadastra uma vez só, e todas as campanhas ficam consistentes |
+| Pix direto para quem criou a campanha | o site não intermedia dinheiro: sem taxa, sem conta do projeto e sem responsabilidade de repasse |
+| Doação em duas etapas (aviso + confirmação) | o site não sabe quando um Pix acontece; só quem recebe pode confirmar, o que impede lançamentos falsos |
+| Doação confirmada com `origem_id` vazio | a chave única (`origem_tipo`, `origem_id`) impediria mais de uma doação por campanha; a ligação com o aviso fica em `doacoes_informadas.transacao_id` |
+| Jornada concluída retira da página pública | animal adotado não deve continuar aparecendo para adoção, nem campanha encerrada recebendo doações |
 
 Pontos que diferem do relatório parcial e devem ser corrigidos no relatório final: `BIGINT` para `INT`; `ENTRADA`/`SAIDA` para `RECEITA`/`DESPESA`; categoria como tabela; `ON DELETE RESTRICT`; campos de Pix e status de pagamento movidos para uma migração futura (a migração 002 ficou com o perfil e a divulgação de animais).
 
@@ -288,7 +354,11 @@ pytest -v
 
 Como só existe um banco, cada teste cria os próprios registros (com e-mail iniciado em `pytest_`) e apaga apenas o que criou.
 
+As funcionalidades das seções 4.15 a 4.22 foram testadas manualmente e ainda não têm testes automatizados.
+
 ## 7. Próximos passos
+
+**Feito desde a última atualização:** lançamentos automáticos a partir da saúde (4.15), gráficos em Finanças (4.19), campanhas com chave Pix e doação (4.17, 4.18 e 4.22) e "arquivar" animais e campanhas (4.20).
 
 **Em andamento (prioridade, prazo de entrega em 06/11/2026):** divulgação de animais na página pública.
 Já feitos nesta frente: o preparo do banco (seção 4.10), o cadastro com perfil, cidade e estado (4.11), a edição do perfil (4.12), a API pública (4.13) e o formulário do animal com a divulgação (4.14).
@@ -296,13 +366,13 @@ Já feitos nesta frente: o preparo do banco (seção 4.10), o cadastro com perfi
 1. Página pública (feita por outra integrante do grupo) passar a usar `/api/publico/dados` no lugar do arquivo de exemplo, escapar os textos, mostrar os novos campos, ganhar o botão "Entrar" para protetores e ONGs e o botão de adoção/apadrinhamento levando ao formulário externo.
 
 **Depois, se houver tempo:**
-2. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
-3. Tela de finanças: filtros e gráfico de despesas por categoria.
+2. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor. - OK 
+3. Tela de finanças: filtros e gráfico de despesas por categoria. - OK
 4. Testes não funcionais: responsividade, acessibilidade e latência do banco.
-5. Campanhas, chave Pix e a integração com o Pix (Mercado Pago, em Sandbox), em uma migração futura.
+5. Campanhas, chave Pix e a integração com o Pix (Mercado Pago, em Sandbox), em uma migração futura. - OK (campanhas e pix)
 6. Avisos de erro e sucesso padronizados em JavaScript.
 7. Regenerar o `schema.sql` do repositório a partir do banco real, que hoje está desatualizado.
-8. Permitir editar e apagar lançamentos e/ou "arquivar" um animal. Hoje, um animal que tenha lançamentos não pode ser apagado (seção 4.9), e ainda não existe como corrigir ou remover um lançamento.
+8. Permitir editar e apagar lançamentos e/ou "arquivar" um animal. Hoje, um animal que tenha lançamentos não pode ser apagado (seção 4.9), e ainda não existe como corrigir ou remover um lançamento. - OK função "arquivar" animais e campanhas (4.20)
 9. Verificação de ONGs (CNPJ e aprovação manual), para evitar perfis falsos (seção 4.11).
 
 ## 8. Pendências conhecidas de segurança
