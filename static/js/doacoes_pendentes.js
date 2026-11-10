@@ -18,12 +18,20 @@
     });
   }
 
+  // Aceita "15", "15,50", "1.200,00" e "15.50"
+  function lerValor(texto) {
+    let limpo = String(texto || "").trim().replace(/\s|R\$/g, "");
+    if (limpo.includes(",")) limpo = limpo.replace(/\./g, "").replace(",", ".");
+    const numero = Number(limpo);
+    return Number.isFinite(numero) && numero > 0 ? Math.round(numero * 100) / 100 : 0;
+  }
+
   function mostrarErro(texto) {
     areaErro.textContent = texto;
     areaErro.hidden = !texto;
   }
 
-  async function analisar(doacao, acao, linha) {
+  async function analisar(doacao, acao, linha, valorCorrigido) {
     if (acao === "recusar" &&
         !window.confirm(`Marcar a doação de ${formatarMoeda(doacao.valor)} como não recebida?`)) {
       return;
@@ -31,7 +39,12 @@
     mostrarErro("");
     linha.querySelectorAll("button").forEach((b) => { b.disabled = true; });
     try {
-      const resposta = await fetch(`/api/financas/doacoes-pendentes/${doacao.id}/${acao}`, { method: "POST" });
+      const opcoes = { method: "POST" };
+      if (valorCorrigido) {
+        opcoes.headers = { "Content-Type": "application/json" };
+        opcoes.body = JSON.stringify({ valor: valorCorrigido });
+      }
+      const resposta = await fetch(`/api/financas/doacoes-pendentes/${doacao.id}/${acao}`, opcoes);
       if (resposta.status === 401) {
         window.location.href = "/login";
         return;
@@ -50,6 +63,61 @@
       mostrarErro(erro.message);
       linha.querySelectorAll("button").forEach((b) => { b.disabled = false; });
     }
+  }
+
+  // Troca os botões da linha por um campo para digitar o valor que realmente caiu na conta
+  function abrirCorrecao(doacao, linha, acoes) {
+    const area = document.createElement("div");
+    area.className = "d-flex flex-wrap align-items-center gap-2";
+
+    const grupo = document.createElement("div");
+    grupo.className = "input-group input-group-sm";
+    grupo.style.width = "150px";
+    const prefixo = document.createElement("span");
+    prefixo.className = "input-group-text";
+    prefixo.textContent = "R$";
+    const campo = document.createElement("input");
+    campo.type = "text";
+    campo.inputMode = "decimal";
+    campo.className = "form-control";
+    campo.setAttribute("aria-label", "Valor recebido");
+    campo.value = Number(doacao.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+    grupo.append(prefixo, campo);
+
+    const salvar = document.createElement("button");
+    salvar.type = "button";
+    salvar.className = "btn btn-success btn-sm";
+    salvar.textContent = "Confirmar com este valor";
+
+    const cancelar = document.createElement("button");
+    cancelar.type = "button";
+    cancelar.className = "btn btn-link btn-sm text-secondary";
+    cancelar.textContent = "Cancelar";
+
+    function confirmarCorrecao() {
+      const valor = lerValor(campo.value);
+      if (!valor) {
+        mostrarErro("Digite o valor recebido, por exemplo 15,00.");
+        campo.focus();
+        return;
+      }
+      analisar(doacao, "confirmar", linha, valor);
+    }
+
+    salvar.addEventListener("click", confirmarCorrecao);
+    campo.addEventListener("keydown", (evento) => {
+      if (evento.key === "Enter") confirmarCorrecao();
+      if (evento.key === "Escape") cancelar.click();
+    });
+    cancelar.addEventListener("click", () => {
+      mostrarErro("");
+      area.replaceWith(acoes);
+    });
+
+    area.append(grupo, salvar, cancelar);
+    acoes.replaceWith(area);
+    campo.focus();
+    campo.select();
   }
 
   function montarLinha(doacao) {
@@ -73,13 +141,23 @@
     confirmar.textContent = "Confirmar recebimento";
     confirmar.addEventListener("click", () => analisar(doacao, "confirmar", linha));
 
+    const corrigir = document.createElement("button");
+    corrigir.type = "button";
+    corrigir.className = "btn btn-outline-primary btn-sm";
+    corrigir.textContent = "Corrigir valor";
+
     const recusar = document.createElement("button");
     recusar.type = "button";
     recusar.className = "btn btn-outline-secondary btn-sm";
     recusar.textContent = "Não recebi";
     recusar.addEventListener("click", () => analisar(doacao, "recusar", linha));
 
-    linha.append(texto, confirmar, recusar);
+    const acoes = document.createElement("div");
+    acoes.className = "d-flex flex-wrap gap-2";
+    acoes.append(confirmar, corrigir, recusar);
+    corrigir.addEventListener("click", () => abrirCorrecao(doacao, linha, acoes));
+
+    linha.append(texto, acoes);
     return linha;
   }
 

@@ -599,7 +599,23 @@ def listar_doacoes_pendentes():
 @financas_bp.route('/api/financas/doacoes-pendentes/<int:doacao_id>/confirmar', methods=['POST'])
 @api_login_required
 def confirmar_doacao_informada(doacao_id):
-    """Confirma o recebimento: soma no arrecadado e lança em Receitas > Doação via Campanha."""
+    """Confirma o recebimento: soma no arrecadado e lança em Receitas > Doação via Campanha.
+
+    Se vier um "valor" no corpo, é o valor corrigido pelo dono da campanha
+    (o que realmente caiu na conta). O valor informado pelo doador fica guardado
+    em doacoes_informadas, sem alteração.
+    """
+    dados = request.get_json(silent=True) or {}
+    valor_corrigido = None
+    if dados.get('valor') not in (None, ''):
+        try:
+            valor_corrigido = Decimal(str(dados['valor']).strip())
+        except InvalidOperation:
+            return _erro("Valor inválido.")
+        if not valor_corrigido.is_finite() or valor_corrigido <= 0 or valor_corrigido > VALOR_MAXIMO:
+            return _erro("Informe um valor maior que zero.")
+        valor_corrigido = valor_corrigido.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
     conexao = conectar_banco()
     try:
         with conexao.cursor() as cursor:
@@ -619,6 +635,12 @@ def confirmar_doacao_informada(doacao_id):
                 conexao.rollback()
                 return _erro("Doação não encontrada ou já analisada.", 404)
 
+            valor = valor_corrigido if valor_corrigido is not None else doacao['valor']
+            descricao = f"Doação para campanha: {doacao['titulo']}"
+            if valor != doacao['valor']:
+                informado = format(doacao['valor'], '.2f').replace('.', ',')
+                descricao += f" (valor corrigido; informado: R$ {informado})"
+
             cursor.execute(
                 "SELECT id FROM categorias WHERE tipo = 'RECEITA' AND nome = 'Doação via Campanha' LIMIT 1"
             )
@@ -628,7 +650,7 @@ def confirmar_doacao_informada(doacao_id):
 
             cursor.execute(
                 "UPDATE campanhas SET arrecadado = arrecadado + %s WHERE id = %s",
-                (doacao['valor'], doacao['campanha_id'])
+                (valor, doacao['campanha_id'])
             )
             # origem_id fica vazio: a ligação com o aviso fica em doacoes_informadas.transacao_id
             cursor.execute(
@@ -639,8 +661,8 @@ def confirmar_doacao_informada(doacao_id):
                 VALUES (%s, %s, %s, 'RECEITA', %s, %s, %s, 'CAMPANHA', %s)
                 """,
                 (
-                    session['id_usuario'], doacao['animal_id'], categoria['id'], doacao['valor'],
-                    f"Doação para campanha: {doacao['titulo']}"[:255], date.today(), doacao['campanha_id']
+                    session['id_usuario'], doacao['animal_id'], categoria['id'], valor,
+                    descricao[:255], date.today(), doacao['campanha_id']
                 )
             )
             transacao_id = cursor.lastrowid
