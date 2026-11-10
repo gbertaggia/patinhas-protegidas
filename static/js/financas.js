@@ -71,7 +71,7 @@ async function carregarResumo() {
 }
 
 async function carregarLancamentos() {
-  const lancamentos = await buscarJson(montarUrl('/api/financas/transacoes', { limite: 20 }));
+  const lancamentos = await buscarJson(montarUrl('/api/financas/transacoes', { limite: 250 }));
   const corpo = document.getElementById('lancamentos');
   corpo.replaceChildren();
   document.getElementById('sem-lancamentos').hidden = lancamentos.length > 0;
