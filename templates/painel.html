@@ -38,6 +38,28 @@
                     </div>                   
                     
                 </div>
+                {# Menu de 3 pontinhos usado nos cards do painel #}
+                {% macro menu_jornada(acao, rotulo, nome) %}
+                    <div class="dropdown flex-shrink-0">
+                        <button type="button" class="btn btn-sm btn-light border-0 px-2" data-bs-toggle="dropdown"
+                                aria-expanded="false" aria-label="Mais opções de {{ nome }}">
+                            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="5" cy="12" r="2.2" fill="currentColor"/>
+                                <circle cx="12" cy="12" r="2.2" fill="currentColor"/>
+                                <circle cx="19" cy="12" r="2.2" fill="currentColor"/>
+                            </svg>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li>
+                                <form method="post" action="{{ acao }}" class="m-0">
+                                    <button type="submit" class="dropdown-item">{{ rotulo }}</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                {% endmacro %}
+
+                <h3 class="text-primary fw-bold mb-3">Meus animais</h3>                
 
                 {% if animais %}
                     <div class="row row-cols-1 row-cols-md-3 justify-content-center g-4 mb-5">
@@ -49,7 +71,10 @@
                                     <img src="{{ bichinho.foto_url if bichinho.foto_url else 'https://dummyimage.com/300x200/e9ecef/6c757d.png&text=Sem+foto' }}" class="card-img-top" alt="Foto do animal" style="height: 200px; object-fit: cover;">
                                     
                                     <div class="card-body">
-                                        <h5 class="card-title text-primary fw-bold">{{ bichinho.nome }}</h5>
+                                        <div class="d-flex justify-content-between align-items-start gap-2">
+                                            <h5 class="card-title text-primary fw-bold">{{ bichinho.nome }}</h5>
+                                            {{ menu_jornada(url_for('animais.concluir_jornada_animal', id_animal=bichinho.id), 'Mover para Jornadas concluídas', bichinho.nome) }}
+                                        </div>
                                         <div class="card-text text-muted mb-3">
                                             <p class="mb-1"><strong>Idade:</strong> {{ bichinho.idade }}</p>
                                             <p class="mb-1"><strong>Raça:</strong> {{ bichinho.raca }}</p>
@@ -83,7 +108,10 @@
                                     <img src="{{ campanha.foto_url if campanha.foto_url else 'https://dummyimage.com/300x200/fff3cd/856404.png&text=Campanha' }}" class="card-img-top" alt="Foto da campanha" style="height: 200px; object-fit: cover;">
 
                                     <div class="card-body d-flex flex-column">
-                                        <h5 class="card-title text-warning fw-bold">{{ campanha.titulo }}</h5>
+                                        <div class="d-flex justify-content-between align-items-start gap-2">
+                                            <h5 class="card-title text-warning fw-bold">{{ campanha.titulo }}</h5>
+                                            {{ menu_jornada(url_for('animais.concluir_campanha', id_campanha=campanha.id), 'Mover para Jornadas concluídas', campanha.titulo) }}
+                                        </div>
                                         {% if campanha.nome_animal %}
                                             <p class="text-muted mb-2"><strong>Para:</strong> {{ campanha.nome_animal }}</p>
                                         {% endif %}
@@ -108,6 +136,55 @@
                 {% else %}
                     <div class="alert alert-warning shadow-sm" role="alert">
                         Você ainda não tem campanhas ativas. Clique em "Criar campanha" para começar!
+                    </div>
+                {% endif %}
+
+                <h3 class="text-success fw-bold mb-3">Jornadas concluídas</h3>
+
+                {% if animais_concluidos or campanhas_concluidas %}
+                    <div class="row row-cols-1 row-cols-md-3 justify-content-center g-4 mb-5">
+
+                        {% for bichinho in animais_concluidos %}
+                            <div class="col">
+                                <div class="card shadow-sm h-100 mx-auto border-success" style="width: 100%; max-width: 18rem;">
+                                    <img src="{{ bichinho.foto_url if bichinho.foto_url else 'https://dummyimage.com/300x200/e9ecef/6c757d.png&text=Sem+foto' }}" class="card-img-top" alt="Foto de {{ bichinho.nome }}" style="height: 200px; object-fit: cover;">
+                                    <div class="card-body d-flex flex-column">
+                                        <div class="d-flex justify-content-between align-items-start gap-2">
+                                            <h5 class="card-title text-success fw-bold">{{ bichinho.nome }}</h5>
+                                            {{ menu_jornada(url_for('animais.reabrir_jornada_animal', id_animal=bichinho.id), 'Voltar para Meus animais', bichinho.nome) }}
+                                        </div>
+                                        <p class="mb-3"><span class="badge text-bg-success">Animal</span>
+                                            <span class="text-muted small">Jornada concluída em {{ bichinho.jornada_concluida_em.strftime('%d/%m/%Y') }}</span></p>
+                                        <a href="{{ url_for('animais.pagina_animal', id_animal=bichinho.id) }}" class="btn btn-outline-success w-100 fw-bold mt-auto">Página Pet</a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+
+                        {% for campanha in campanhas_concluidas %}
+                            <div class="col">
+                                <div class="card shadow-sm h-100 mx-auto border-success" style="width: 100%; max-width: 18rem;">
+                                    <img src="{{ campanha.foto_url if campanha.foto_url else 'https://dummyimage.com/300x200/fff3cd/856404.png&text=Campanha' }}" class="card-img-top" alt="Foto da campanha" style="height: 200px; object-fit: cover;">
+                                    <div class="card-body d-flex flex-column">
+                                        <div class="d-flex justify-content-between align-items-start gap-2">
+                                            <h5 class="card-title text-success fw-bold">{{ campanha.titulo }}</h5>
+                                            {{ menu_jornada(url_for('animais.reabrir_campanha', id_campanha=campanha.id), 'Voltar para Minhas campanhas', campanha.titulo) }}
+                                        </div>
+                                        <p class="mb-3"><span class="badge text-bg-success">Campanha</span>
+                                            <span class="text-muted small">
+                                                Arrecadou R$ {{ ('%.2f' | format(campanha.arrecadado)).replace('.', ',') }}
+                                                de R$ {{ ('%.2f' | format(campanha.meta)).replace('.', ',') }}
+                                            </span></p>
+                                        <a href="{{ url_for('financas.pagina_financas') }}" class="btn btn-outline-success w-100 fw-bold mt-auto">Ver finanças</a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+
+                    </div>
+                {% else %}
+                    <div class="alert alert-light border shadow-sm" role="alert">
+                        Quando um animal for adotado ou uma campanha terminar, use o menu ••• no card para movê-lo para cá.
                     </div>
                 {% endif %}
 

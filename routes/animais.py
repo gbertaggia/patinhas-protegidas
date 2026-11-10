@@ -347,21 +347,85 @@ def painel():
         # Campanhas ativas do usuário, das mais novas para as mais antigas
         cursor.execute(
             """
-            SELECT c.id, c.titulo, c.meta, c.arrecadado, c.foto_url, a.nome AS nome_animal
+            SELECT c.id, c.titulo, c.meta, c.arrecadado, c.foto_url, c.status, a.nome AS nome_animal
             FROM campanhas c
             LEFT JOIN animais a ON a.id = c.animal_id
-            WHERE c.usuario_id = %s AND c.status = 'ativa'
+            WHERE c.usuario_id = %s AND c.status IN ('ativa', 'concluida')
             ORDER BY c.criado_em DESC
             """,
             (id_protetor,)
         )
         lista_campanhas = cursor.fetchall()
+        
+        # Separa o que está em andamento do que já concluiu a jornada
+        animais_ativos = [a for a in lista_animais if not a.get('jornada_concluida_em')]
+        animais_concluidos = [a for a in lista_animais if a.get('jornada_concluida_em')]
+        campanhas_ativas = [c for c in lista_campanhas if c['status'] == 'ativa']
+        campanhas_concluidas = [c for c in lista_campanhas if c['status'] == 'concluida']
 
         cursor.close()
         conexao.close()
 
-        return render_template('painel.html', email=email_do_usuario, animais=lista_animais, campanhas=lista_campanhas)
-
+        return render_template('painel.html', email=email_do_usuario,
+                               animais=animais_ativos, campanhas=campanhas_ativas,
+                               animais_concluidos=animais_concluidos,
+                               campanhas_concluidas=campanhas_concluidas)
+    
     except Exception as e:
         current_app.logger.exception("Erro ao carregar o painel")
         return "<h1>Erro ao carregar o painel. Tente novamente.</h1>"
+
+
+
+# ---------- Jornadas concluídas (menu de 3 pontinhos do painel) ----------
+
+def _alterar_jornada(sql, parametros):
+    """Executa a mudança (sempre filtrando pelo usuário logado) e volta ao painel."""
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    try:
+        cursor.execute(sql, parametros)
+        conexao.commit()
+    except Exception:
+        conexao.rollback()
+        current_app.logger.exception("Erro ao alterar jornada")
+    finally:
+        cursor.close()
+        conexao.close()
+    return redirect('/painel')
+
+
+@bp.route('/painel/animal/<int:id_animal>/concluir', methods=['POST'])
+@login_required
+def concluir_jornada_animal(id_animal):
+    return _alterar_jornada(
+        "UPDATE animais SET jornada_concluida_em = CURRENT_TIMESTAMP WHERE id = %s AND usuario_id = %s",
+        (id_animal, session['id_usuario'])
+    )
+
+
+@bp.route('/painel/animal/<int:id_animal>/reabrir', methods=['POST'])
+@login_required
+def reabrir_jornada_animal(id_animal):
+    return _alterar_jornada(
+        "UPDATE animais SET jornada_concluida_em = NULL WHERE id = %s AND usuario_id = %s",
+        (id_animal, session['id_usuario'])
+    )
+
+
+@bp.route('/painel/campanha/<int:id_campanha>/concluir', methods=['POST'])
+@login_required
+def concluir_campanha(id_campanha):
+    return _alterar_jornada(
+        "UPDATE campanhas SET status = 'concluida' WHERE id = %s AND usuario_id = %s AND status = 'ativa'",
+        (id_campanha, session['id_usuario'])
+    )
+
+
+@bp.route('/painel/campanha/<int:id_campanha>/reabrir', methods=['POST'])
+@login_required
+def reabrir_campanha(id_campanha):
+    return _alterar_jornada(
+        "UPDATE campanhas SET status = 'ativa' WHERE id = %s AND usuario_id = %s AND status = 'concluida'",
+        (id_campanha, session['id_usuario'])
+    )
