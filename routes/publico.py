@@ -35,7 +35,7 @@ def dados_publicos():
                            u.logo_url, u.link_formulario_adocao, u.missao
                     FROM animais a
                     JOIN usuarios u ON u.id = a.usuario_id
-                    WHERE a.visivel_publico = 1
+                    WHERE a.visivel_publico = 1 AND a.jornada_concluida_em IS NULL
                     ORDER BY u.nome, u.id, a.id DESC
                     """
                 )
