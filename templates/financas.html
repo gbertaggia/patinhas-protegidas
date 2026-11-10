@@ -6,6 +6,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finanças - Patinhas Protegidas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Gráficos de Finanças */
+        #secao-graficos [hidden] { display: none !important; }
+        .grafico-categorias { display: grid; grid-template-columns: 190px 1fr; gap: 20px; align-items: center; }
+        .grafico-rosca { position: relative; width: 190px; height: 190px; }
+        .grafico-rosca-centro { position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; pointer-events: none; }
+        .grafico-rosca-centro strong { font-size: 1.05rem; }
+        .grafico-rosca-centro span { color: #6c757d; font-size: .85rem; }
+        .grafico-legenda { list-style: none; padding: 0; margin: 0; font-size: .9rem; }
+        .grafico-legenda li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto 3em;
+            gap: 10px; align-items: center; padding: 3px 0; }
+        .grafico-nome { overflow-wrap: anywhere; }
+        .grafico-percentual { color: #6c757d; text-align: right; }
+        .grafico-ponto { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: middle; }
+        .grafico-barras { position: relative; height: 210px; }
+        @media (max-width: 575px) {
+            .grafico-categorias { grid-template-columns: 1fr; justify-items: center; }
+            .grafico-legenda { width: 100%; }
+        }
+    </style>
 </head>
 
 <body class="bg-light">
@@ -73,6 +94,50 @@
                     </p>
                     <div id="erro-doacoes-pendentes" class="alert alert-danger py-2" role="alert" hidden></div>
                     <ul id="lista-doacoes-pendentes" class="list-group"></ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="secao-graficos" aria-labelledby="titulo-graficos" class="mb-4">
+            <h2 id="titulo-graficos" class="visually-hidden">Gráficos dos últimos 6 meses</h2>
+            <div id="erro-graficos" class="alert alert-warning" role="alert" hidden>
+                Não foi possível carregar os gráficos agora.
+            </div>
+            <div class="row g-3">
+                <div class="col-12 col-lg-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h3 class="h6 fw-bold mb-3">Gastos por categoria</h3>
+                            <p id="categorias-vazio" class="text-muted text-center my-4" hidden>Nenhuma despesa nos últimos 6 meses.</p>
+                            <div id="categorias-conteudo" class="grafico-categorias">
+                                <div class="grafico-rosca">
+                                    <canvas id="grafico-categorias" role="img" aria-label="Gráfico de gastos por categoria"></canvas>
+                                    <div class="grafico-rosca-centro" aria-hidden="true">
+                                        <strong id="categorias-total">…</strong>
+                                        <span>Total</span>
+                                    </div>
+                                </div>
+                                <ul id="categorias-legenda" class="grafico-legenda"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                <h3 class="h6 fw-bold mb-0">Gastos vs Recebimentos</h3>
+                                <div class="d-flex gap-3 small text-muted" aria-hidden="true">
+                                    <span><span class="grafico-ponto" style="background:#f2678f"></span> Gastos</span>
+                                    <span><span class="grafico-ponto" style="background:#4cc28a"></span> Recebimentos</span>
+                                </div>
+                            </div>
+                            <p id="mensal-vazio" class="text-muted text-center my-4" hidden>Nenhum lançamento nos últimos 6 meses.</p>
+                            <div id="mensal-conteudo" class="grafico-barras">
+                                <canvas id="grafico-mensal" role="img" aria-label="Gráfico de gastos e recebimentos por mês"></canvas>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -148,6 +213,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/financas.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/doacoes_pendentes.js') }}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+    <script src="{{ url_for('static', filename='js/graficos_financas.js') }}" defer></script>
 </body>
 
 </html>

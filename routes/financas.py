@@ -9,6 +9,7 @@ from utils.auth import animal_do_usuario, api_login_required, login_required
 financas_bp = Blueprint('financas', __name__)
 
 VALOR_MAXIMO = Decimal('99999999.99')
+MESES_MAXIMOS = 120  # limite de barras no gráfico mensal (10 anos)
 
 
 def _erro(mensagem, status=400):
@@ -265,6 +266,64 @@ def resumo_financeiro():
         } for l in linhas],
     })
 
+@financas_bp.route('/api/financas/mensal')
+@api_login_required
+def resumo_mensal():
+    """Totais de receitas e despesas mês a mês, para o gráfico de barras.
+
+    Aceita os mesmos filtros do resumo. Meses sem lançamento aparecem zerados
+    dentro do período, para o gráfico não "pular" meses.
+    """
+    condicoes, parametros, erro = _montar_filtros()
+    if erro:
+        return _erro(erro)
+
+    consulta = f"""
+        SELECT YEAR(t.data_transacao) AS ano, MONTH(t.data_transacao) AS numero_mes,
+               t.tipo, SUM(t.valor) AS total
+        FROM transacoes t
+        WHERE {' AND '.join(condicoes)}
+        GROUP BY YEAR(t.data_transacao), MONTH(t.data_transacao), t.tipo
+        ORDER BY ano, numero_mes
+    """
+
+    conexao = conectar_banco()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute(consulta, parametros)
+            linhas = cursor.fetchall()
+    finally:
+        conexao.close()
+
+    zero = Decimal('0.00')
+    totais = {}
+    for l in linhas:
+        mes = totais.setdefault((l['ano'], l['numero_mes']), {'RECEITA': zero, 'DESPESA': zero})
+        mes[l['tipo']] = l['total']
+
+    # Intervalo de meses: o período pedido ou, sem ele, do primeiro ao último lançamento.
+    inicio, _ = _ler_data('inicio')
+    fim, _ = _ler_data('fim')
+    meses_com_dados = sorted(totais)
+    primeiro = (inicio.year, inicio.month) if inicio else (meses_com_dados[0] if meses_com_dados else None)
+    ultimo = (fim.year, fim.month) if fim else (meses_com_dados[-1] if meses_com_dados else primeiro)
+    if primeiro is None:
+        return jsonify([])
+
+    resultado = []
+    ano, numero_mes = primeiro
+    while (ano, numero_mes) <= ultimo and len(resultado) < MESES_MAXIMOS:
+        mes = totais.get((ano, numero_mes), {'RECEITA': zero, 'DESPESA': zero})
+        resultado.append({
+            "mes": f"{ano:04d}-{numero_mes:02d}",
+            "receitas": format(mes['RECEITA'], '.2f'),
+            "despesas": format(mes['DESPESA'], '.2f'),
+        })
+        numero_mes += 1
+        if numero_mes > 12:
+            ano, numero_mes = ano + 1, 1
+
+    return jsonify(resultado)
 
 # ==========================================
 # ROTAS DO MÓDULO DE CAMPANHAS
