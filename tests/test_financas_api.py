@@ -230,9 +230,11 @@ def test_pagina_do_animal_tem_link_para_voltar_ao_painel_no_celular(client_logad
     import re
 
     html = client_logado.get(f'/pagina_animal/{animal}').get_data(as_text=True)
-    links = re.findall(r'<a\b[^>]*>', html)
-    # d-lg-none = visível só em telas pequenas (a navbar não tem botão de menu)
-    assert any('d-lg-none' in a and 'href="/painel"' in a for a in links)
+    menu = re.search(r'<nav class="pp-menu".*?</nav>', html, re.S).group(0)
+    # o menu da barra do topo aparece em todos os tamanhos de tela (no celular ele
+    # passa para uma linha abaixo do logo), então o link "Painel" sempre existe
+    assert 'href="/painel"' in menu
+    assert 'd-none' not in menu and 'd-lg' not in menu  # nada esconde o menu em tela pequena
 
 
 def test_animal_com_lancamentos_nao_pode_ser_apagado(client_logado, animal):

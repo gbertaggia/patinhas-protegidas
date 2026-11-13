@@ -8,6 +8,7 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tema.css') }}">
     <style>
       /* 1. CONFIGURAÇÕES GERAIS */
       body {
@@ -51,7 +52,7 @@
 
       .badge-agendada {
         background-color: #fff3e0;
-        color: #ef6c00;
+        color: #8f4400;
         padding: 2px 8px;
         border-radius: 12px;
         font-size: 0.75rem;
@@ -164,26 +165,9 @@
     </style>
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg bg-body-tertiary">
-      <div class="container-fluid">
-        <a class="navbar-brand d-flex align-items-center" href="/painel" style="text-decoration: none;">
-        <span style="color: transparent; text-shadow: 0 0 0 #9b59b6; font-size: 2rem; margin-right: 10px;">🐾</span>     
-        <span class="text-primary" style="font-weight: bold; font-size: 1.5rem;">Patinhas Protegidas</span>
-        </a>
-        <a class="nav-link text-primary fw-bold d-lg-none" href="/painel">⬅️ Voltar ao Painel</a>
-        <div class="collapse navbar-collapse" id="navbarNavDropdown">
-          <ul class="navbar-nav me-auto">
-            <li class="nav-item"><a class="nav-link text-primary fw-bold" href="/painel">⬅️ Voltar ao Painel</a></li>
-          </ul>
-          <ul class="navbar-nav">
-            <!--li class="nav-item"><a class="nav-link" href="#">Vacinas</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Histórico</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Medicação</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Consultas</a></li>
-          </ul-->
-        </div>
-      </div>
-    </nav>
+    {% set pagina_ativa = 'painel' %}
+    {% set navbar_larga = true %}
+    {% include '_navbar.html' %}
 
     <div id="grid-principal">
       
