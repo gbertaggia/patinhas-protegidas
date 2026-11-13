@@ -1,0 +1,38 @@
+{#
+  Barra do topo de todas as páginas (painel, finanças, página do animal e página pública).
+  Uso, no começo do body da página:
+      set pagina_ativa = 'painel'   (ou 'financas', 'publica'), para destacar o item do menu
+      set navbar_larga = true       (opcional), para a barra ocupar a largura toda
+      set navbar_publica = true     (só na página pública), para o logo levar à página inicial
+      include '_navbar.html'
+  Quem não está logado vê os botões "Entrar" e "Criar conta"; quem está vê o menu.
+  Os estilos estão em static/css/tema.css.
+#}
+{% set logado = session.get('id_usuario') %}
+<header class="pp-navbar">
+  <div class="pp-navbar-inner{% if navbar_larga %} pp-navbar-inner--larga{% elif navbar_publica %} pp-navbar-inner--publica{% endif %}">
+    <a class="pp-marca" href="{{ '/' if navbar_publica else '/painel' }}" aria-label="Patinhas Protegidas, {{ 'ir para a página inicial' if navbar_publica else 'ir para o painel' }}">
+      <span class="pp-marca-icone"><img src="{{ url_for('static', filename='img/favicon.svg') }}" alt="" width="26" height="26"></span>
+      <span>Patinhas <strong>Protegidas</strong></span>
+    </a>
+
+    {% if logado %}
+    <nav class="pp-menu" aria-label="Menu principal">
+      <a href="/painel"{% if pagina_ativa == 'painel' %} aria-current="page"{% endif %}>Painel</a>
+      <a href="{{ url_for('financas.pagina_financas') }}"{% if pagina_ativa == 'financas' %} aria-current="page"{% endif %}>Finanças</a>
+      <a href="/"{% if pagina_ativa == 'publica' %} aria-current="page"{% endif %}>Página pública</a>
+    </nav>
+
+    <div class="pp-acoes">
+      <span class="pp-ola">Olá, {{ session.get('nome_usuario', '') }}!</span>
+      <a class="pp-btn" href="{{ url_for('auth.editar_perfil_usuario') }}">Editar perfil</a>
+      <a class="pp-btn pp-btn-neutro" href="/logout">Sair</a>
+    </div>
+    {% else %}
+    <div class="pp-acoes">
+      <a class="pp-btn" href="{{ url_for('auth.fazer_login') }}">Entrar</a>
+      <a class="pp-btn pp-btn-cheio" href="/cadastro">Criar conta</a>
+    </div>
+    {% endif %}
+  </div>
+</header>
