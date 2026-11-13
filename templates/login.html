@@ -20,15 +20,19 @@
                 <h1 class="text-center mb-1">Entrar</h1>
                 <p class="text-center text-muted mb-4">Acesse sua conta para cuidar dos seus animais, campanhas e finanças.</p>
 
+                {% if erro %}
+                <div class="alert alert-danger" role="alert">{{ erro }}</div>
+                {% endif %}
+
                 <form method="POST" action="/login">
                     <div class="mb-3">
                         <label for="email" class="form-label">E-mail</label>
-                        <input type="email" class="form-control" id="email" name="email" placeholder="protetora@email.com" autocomplete="email" required>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="protetora@email.com" value="{{ email or '' }}" autocomplete="email" required>
                     </div>
 
                     <div class="mb-4">
                         <label for="senha" class="form-label">Senha</label>
-                        <input type="password" class="form-control" id="senha" name="senha" autocomplete="current-password" required>
+                        <input type="password" class="form-control" id="senha" name="senha" autocomplete="current-password" required{% if erro %} autofocus{% endif %}>
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Entrar</button>
