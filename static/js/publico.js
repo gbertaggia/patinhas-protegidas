@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let ongSelecionada = null;
   let limiteAnimaisExibidos = 6;
   const PASSO_PAGINACAO = 6;
+  const FOTO_PADRAO = "https://dummyimage.com/600x400/e9ecef/6c757d.png&text=Sem+foto";
 
   const elementos = {
     telaOngs: document.getElementById("tela-ongs"),
@@ -12,35 +13,78 @@ document.addEventListener("DOMContentLoaded", () => {
     listaOngs: document.getElementById("lista-ongs"),
     estadoOngs: document.getElementById("estado-ongs"),
     voltarOngs: document.getElementById("voltar-ongs"),
-    
+
     ongAvatar: document.getElementById("ong-avatar"),
     ongNome: document.getElementById("ong-nome"),
     ongLocal: document.getElementById("ong-local"),
     ongDescricao: document.getElementById("ong-descricao"),
-    ongLinkHero: document.getElementById("ong-link-formulario"),
-    
+
     contadorAnimais: document.getElementById("contador-animais"),
     listaAnimais: document.getElementById("lista-animais"),
     sentinelaAnimais: document.getElementById("sentinela-animais"),
     fimAnimais: document.getElementById("fim-animais"),
     listaCampanhas: document.getElementById("lista-campanhas"),
     semCampanhas: document.getElementById("sem-campanhas"),
-    
+
     barraDoacao: document.getElementById("barra-doacao"),
     valoresDoacao: document.getElementById("valores-doacao"),
     doarValorLivre: document.getElementById("doar-valor-livre"),
     toast: document.getElementById("toast")
   };
 
-  // Helper para renderizar logo com fallback para ícone
-  function gerarHtmlAvatar(logoUrl, iconePadrao = "🐾") {
-    if (logoUrl) {
-      return `<img src="${logoUrl}" alt="Logo" class="avatar-img" onerror="this.parentElement.textContent='${iconePadrao}'">`;
-    }
-    return iconePadrao;
+  // ---------- Segurança: texto do servidor nunca entra como HTML ----------
+  // Nomes, descrições e links vêm de quem se cadastrou. Por isso esta página
+  // só monta elementos com createElement + textContent (que tratam tudo como
+  // texto) e nunca com innerHTML. Veja também urlSegura() para endereços.
+
+  function criar(tag, classe, texto) {
+    const elemento = document.createElement(tag);
+    if (classe) elemento.className = classe;
+    if (texto !== undefined && texto !== null) elemento.textContent = texto;
+    return elemento;
   }
 
-  // Carrega os dados direto da API do banco de dados
+  // Só aceita endereços http(s). Qualquer outra coisa (javascript:, data:...) vira null.
+  function urlSegura(url) {
+    if (typeof url !== "string" || !url.trim()) return null;
+    try {
+      const endereco = new URL(url.trim(), window.location.origin);
+      return endereco.protocol === "http:" || endereco.protocol === "https:" ? endereco.href : null;
+    } catch (erro) {
+      return null;
+    }
+  }
+
+  function formatarMoeda(valor) {
+    return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  // Foto com texto alternativo; se o link estiver quebrado, usa a foto padrão
+  function criarImagem(classe, url, textoAlternativo) {
+    const imagem = criar("img", classe);
+    imagem.alt = textoAlternativo || "";
+    imagem.src = urlSegura(url) || FOTO_PADRAO;
+    imagem.addEventListener("error", () => { imagem.src = FOTO_PADRAO; }, { once: true });
+    return imagem;
+  }
+
+  // Logo da organização, com o ícone de patinha como alternativa
+  function preencherAvatar(recipiente, logoUrl, icone) {
+    recipiente.replaceChildren();
+    const url = urlSegura(logoUrl);
+    if (!url) {
+      recipiente.textContent = icone;
+      return;
+    }
+    const imagem = criar("img", "avatar-img");
+    imagem.alt = "";
+    imagem.src = url;
+    imagem.addEventListener("error", () => { recipiente.textContent = icone; }, { once: true });
+    recipiente.appendChild(imagem);
+  }
+
+  // ---------- Carregamento ----------
+
   async function carregarDados() {
     try {
       const resposta = await fetch("/api/publico/dados");
@@ -48,21 +92,23 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(`Erro na requisição: ${resposta.statusText}`);
       }
       dadosApp = await resposta.json();
-      
+
       renderizarListaOngs(dadosApp.ongs);
       renderizarValoresDoacao(dadosApp.valoresDoacao || []);
     } catch (erro) {
       console.error("Erro ao carregar os dados:", erro);
-      mostrarToast("Erro ao carregar informações das ONGs.");
+      elementos.estadoOngs.textContent = "Não foi possível carregar as organizações agora. Tente novamente em instantes.";
+      elementos.estadoOngs.classList.remove("hidden");
+      mostrarToast("Erro ao carregar informações das organizações.");
     }
   }
 
   function renderizarListaOngs(ongs) {
-    elementos.listaOngs.innerHTML = "";
+    elementos.listaOngs.replaceChildren();
 
     if (!ongs || ongs.length === 0) {
       elementos.estadoOngs.classList.remove("hidden");
-      elementos.contadorOngs.textContent = "0 ONGs encontradas";
+      elementos.contadorOngs.textContent = "0 organizações encontradas";
       return;
     }
 
@@ -70,18 +116,24 @@ document.addEventListener("DOMContentLoaded", () => {
     elementos.contadorOngs.textContent = `${ongs.length} ${ongs.length === 1 ? "organização encontrada" : "organizações encontradas"}`;
 
     ongs.forEach((ong) => {
-      const card = document.createElement("article");
-      card.className = "ong-card";
+      const card = criar("article", "ong-card");
       card.tabIndex = 0;
-      card.innerHTML = `
-        <div class="ong-icon">${gerarHtmlAvatar(ong.logoUrl, ong.icone || "🐾")}</div>
-        <div>
-          <h3>${ong.nome}</h3>
-          <p><strong>${ong.regiao || ""}</strong></p>
-          <p>${ong.resumo || ""}</p>
-          <span class="card-arrow">Ver animais e apoiar →</span>
-        </div>
-      `;
+
+      const icone = criar("div", "ong-icon");
+      preencherAvatar(icone, ong.logoUrl, ong.icone || "🐾");
+
+      const regiao = criar("p");
+      regiao.appendChild(criar("strong", null, ong.regiao || ""));
+
+      const corpo = criar("div");
+      corpo.append(
+        criar("h3", null, ong.nome),
+        regiao,
+        criar("p", null, ong.resumo || ""),
+        criar("span", "card-arrow", "Ver animais e apoiar →")
+      );
+
+      card.append(icone, corpo);
 
       card.addEventListener("click", () => abrirPaginaOng(ong));
       card.addEventListener("keydown", (e) => {
@@ -109,29 +161,19 @@ document.addEventListener("DOMContentLoaded", () => {
   function abrirPaginaOng(ong) {
     ongSelecionada = ong;
     limiteAnimaisExibidos = PASSO_PAGINACAO;
-  
+
     // Avatar da ONG (Logo ou Ícone)
-    elementos.ongAvatar.innerHTML = gerarHtmlAvatar(ong.logoUrl, ong.icone || "🐾");
+    preencherAvatar(elementos.ongAvatar, ong.logoUrl, ong.icone || "🐾");
     elementos.ongNome.textContent = ong.nome;
     elementos.ongLocal.textContent = ong.regiao;
     elementos.ongDescricao.textContent = ong.descricao || "Nenhuma descrição informada.";
-  
-    // Botão de formulário geral no banner superior
-    if (elementos.ongLinkHero) {
-      if (ong.linkFormulario) {
-        elementos.ongLinkHero.href = ong.linkFormulario;
-        elementos.ongLinkHero.classList.remove("hidden");
-      } else {
-        elementos.ongLinkHero.classList.add("hidden");
-      }
-    }
-  
+
     renderizarAnimais();
     renderizarCampanhas();
-  
+
     elementos.telaOngs.classList.add("hidden");
     elementos.telaOng.classList.remove("hidden");
-    elementos.barraDoacao.classList.remove("hidden");
+    atualizarBarraDoacao();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -147,24 +189,25 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderizarAnimais() {
-    elementos.listaAnimais.innerHTML = "";
+    elementos.listaAnimais.replaceChildren();
     const animais = ongSelecionada.animais || [];
     elementos.contadorAnimais.textContent = `${animais.length} ${animais.length === 1 ? "animal" : "animais"}`;
 
     if (animais.length === 0) {
-      elementos.listaAnimais.innerHTML = '<p class="empty-state">Nenhum animal disponível para adoção no momento.</p>';
+      elementos.listaAnimais.appendChild(
+        criar("p", "empty-state", "Nenhum animal disponível para adoção no momento.")
+      );
       elementos.sentinelaAnimais.classList.add("hidden");
       elementos.fimAnimais.classList.add("hidden");
       return;
     }
 
     const animaisParaExibir = animais.slice(0, limiteAnimaisExibidos);
-    const temFormulario = Boolean(ongSelecionada && ongSelecionada.linkFormulario);
+    const linkAdocao = urlSegura(ongSelecionada.linkFormulario);
 
     animaisParaExibir.forEach((animal) => {
-      const card = document.createElement("article");
-      card.className = "animal-card";
-      
+      const card = criar("article", "animal-card");
+
       const detalhesSaude = [
         animal.castrado ? "Castrado" : null,
         animal.vacinado ? "Vacinado" : null,
@@ -172,28 +215,40 @@ document.addEventListener("DOMContentLoaded", () => {
       ].filter(Boolean).join(" • ");
 
       // Botão habilitado ou desabilitado conforme a presença de link de formulário
-      const botaoAdocaoHtml = temFormulario
-        ? `<button class="outline-button btn-adotar" type="button">Quero Adotar</button>`
-        : `<button class="outline-button btn-desabilitado" type="button" disabled title="Esta organização ainda não cadastrou o formulário de adoção">Adoção indisponível</button>`;
-
-      card.innerHTML = `
-        <img class="animal-photo" src="${animal.foto}" alt="${animal.nome}">
-        <div class="animal-info">
-          <span class="tag">${animal.especie}</span>
-          <h3>${animal.nome}</h3>
-          <div class="animal-meta">${animal.raca ? animal.raca + ' • ' : ''}${animal.idade}</div>
-          ${detalhesSaude ? `<p class="animal-description" style="margin-bottom: 6px;"><strong>Saúde:</strong> ${detalhesSaude}</p>` : ''}
-          ${animal.infoSaude ? `<p class="animal-description">${animal.infoSaude}</p>` : ''}
-          ${botaoAdocaoHtml}
-        </div>
-      `;
-
-      if (temFormulario) {
-        card.querySelector(".btn-adotar").addEventListener("click", () => {
-          window.open(ongSelecionada.linkFormulario, "_blank", "noopener,noreferrer");
+      const botaoAdocao = criar("button", "outline-button");
+      botaoAdocao.type = "button";
+      if (linkAdocao) {
+        botaoAdocao.classList.add("btn-adotar");
+        botaoAdocao.textContent = "Quero Adotar";
+        botaoAdocao.addEventListener("click", () => {
+          window.open(linkAdocao, "_blank", "noopener,noreferrer");
         });
+      } else {
+        botaoAdocao.classList.add("btn-desabilitado");
+        botaoAdocao.textContent = "Adoção indisponível";
+        botaoAdocao.disabled = true;
+        botaoAdocao.title = "Esta organização ainda não cadastrou o formulário de adoção";
       }
 
+      const informacoes = criar("div", "animal-info");
+      informacoes.append(
+        criar("span", "tag", animal.especie),
+        criar("h3", null, animal.nome),
+        criar("div", "animal-meta", [animal.raca, animal.idade].filter(Boolean).join(" • "))
+      );
+
+      if (detalhesSaude) {
+        const saude = criar("p", "animal-description");
+        saude.style.marginBottom = "6px";
+        saude.append(criar("strong", null, "Saúde:"), ` ${detalhesSaude}`);
+        informacoes.appendChild(saude);
+      }
+      if (animal.infoSaude) {
+        informacoes.appendChild(criar("p", "animal-description", animal.infoSaude));
+      }
+      informacoes.appendChild(botaoAdocao);
+
+      card.append(criarImagem("animal-photo", animal.foto, animal.nome), informacoes);
       elementos.listaAnimais.appendChild(card);
     });
 
@@ -219,7 +274,7 @@ document.addEventListener("DOMContentLoaded", () => {
   observadorScroll.observe(elementos.sentinelaAnimais);
 
   function renderizarCampanhas() {
-    elementos.listaCampanhas.innerHTML = "";
+    elementos.listaCampanhas.replaceChildren();
     const campanhas = ongSelecionada.campanhas || [];
 
     if (campanhas.length === 0) {
@@ -234,56 +289,76 @@ document.addEventListener("DOMContentLoaded", () => {
       const arrecadado = Number(campanha.arrecadado) || 0;
       const percentual = Math.min(100, Math.round((arrecadado / meta) * 100));
 
-      const card = document.createElement("article");
-      card.className = "campaign-card";
-      card.innerHTML = `
-        <img src="${campanha.foto}" alt="${campanha.titulo}">
-        <div class="campaign-body">
-          <h3>${campanha.titulo}</h3>
-          <p>${campanha.descricao}</p>
-          <div class="progress-track">
-            <div class="progress-fill" style="width: ${percentual}%"></div>
-          </div>
-          <div class="campaign-totals">
-            <span>Arrecadado: <strong>R$ ${arrecadado}</strong></span>
-            <span>Meta: <strong>R$ ${meta}</strong></span>
-          </div>
-          <button class="donate-button" type="button">Ajudar com esta campanha</button>
-        </div>
-      `;
+      const card = criar("article", "campaign-card");
 
-      card.querySelector(".donate-button").addEventListener("click", () => {
+      const barra = criar("div", "progress-track");
+      const preenchimento = criar("div", "progress-fill");
+      preenchimento.style.width = `${percentual}%`;
+      barra.appendChild(preenchimento);
+
+      const totais = criar("div", "campaign-totals");
+      const textoArrecadado = criar("span", null, "Arrecadado: ");
+      textoArrecadado.appendChild(criar("strong", null, formatarMoeda(arrecadado)));
+      const textoMeta = criar("span", null, "Meta: ");
+      textoMeta.appendChild(criar("strong", null, formatarMoeda(meta)));
+      totais.append(textoArrecadado, textoMeta);
+
+      const botaoDoar = criar("button", "donate-button", "Ajudar com esta campanha");
+      botaoDoar.type = "button";
+      botaoDoar.addEventListener("click", () => {
         window.abrirDoacaoPix(campanha);
       });
 
+      const corpo = criar("div", "campaign-body");
+      corpo.append(
+        criar("h3", null, campanha.titulo),
+        criar("p", null, campanha.descricao),
+        barra,
+        totais,
+        botaoDoar
+      );
+
+      card.append(criarImagem(null, campanha.foto, campanha.titulo), corpo);
       elementos.listaCampanhas.appendChild(card);
     });
   }
 
+  // ---------- Doação geral (barra fixa) ----------
+  // Os botões de valor abrem a tela de Pix da campanha de "despesas gerais"
+  // da organização (a que não está ligada a nenhum animal). Se a organização
+  // não tem essa campanha, a barra fica escondida: não existe para onde doar.
+  // O cartão "Protetores independentes" (id 0) junta várias pessoas, então
+  // também não tem doação geral.
+
+  function campanhaGeralDaOng(ong) {
+    if (!ong || ong.id === 0) return null;
+    return (ong.campanhas || []).find((c) => c.animalId === null || c.animalId === undefined) || null;
+  }
+
+  function atualizarBarraDoacao() {
+    elementos.barraDoacao.classList.toggle("hidden", !campanhaGeralDaOng(ongSelecionada));
+  }
+
+  function doarParaDespesasGerais(valor) {
+    const campanha = campanhaGeralDaOng(ongSelecionada);
+    if (!campanha) {
+      mostrarToast("Esta organização ainda não tem uma campanha de despesas gerais.");
+      return;
+    }
+    window.abrirDoacaoPix(campanha, valor);
+  }
+
   function renderizarValoresDoacao(valores) {
-    elementos.valoresDoacao.innerHTML = "";
+    elementos.valoresDoacao.replaceChildren();
     valores.forEach((valor) => {
-      const botao = document.createElement("button");
-      botao.className = "amount-button";
+      const botao = criar("button", "amount-button", `R$ ${valor}`);
       botao.type = "button";
-      botao.textContent = `R$ ${valor}`;
-      botao.addEventListener("click", () => {
-        const nomeOng = ongSelecionada ? ongSelecionada.nome : "a organização";
-        mostrarToast(`Obrigado pela doação de R$ ${valor} para ${nomeOng}! ❤️`);
-      });
+      botao.addEventListener("click", () => doarParaDespesasGerais(valor));
       elementos.valoresDoacao.appendChild(botao);
     });
   }
 
-  elementos.doarValorLivre.addEventListener("click", () => {
-    const valorDigitado = prompt("Digite o valor que deseja doar (R$):");
-    if (valorDigitado && !isNaN(valorDigitado) && Number(valorDigitado) > 0) {
-      const nomeOng = ongSelecionada ? ongSelecionada.nome : "a organização";
-      mostrarToast(`Obrigado pela doação de R$ ${Number(valorDigitado).toFixed(2)} para ${nomeOng}! ❤️`);
-    } else if (valorDigitado !== null) {
-      mostrarToast("Por favor, informe um valor válido.");
-    }
-  });
+  elementos.doarValorLivre.addEventListener("click", () => doarParaDespesasGerais());
 
   function mostrarToast(mensagem) {
     elementos.toast.textContent = mensagem;
