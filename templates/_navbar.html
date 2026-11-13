@@ -1,7 +1,8 @@
 {#
   Barra do topo de todas as páginas (painel, finanças, página do animal e página pública).
   Uso, no começo do body da página:
-      set pagina_ativa = 'painel'   (ou 'financas', 'publica'), para destacar o item do menu
+      set pagina_ativa = 'painel'   (ou 'financas', 'publica', 'perfil', 'login', 'cadastro'),
+                                    para destacar o item do menu ou o botão da página atual
       set navbar_larga = true       (opcional), para a barra ocupar a largura toda
       set navbar_publica = true     (só na página pública), para o logo levar à página inicial
       include '_navbar.html'
@@ -20,18 +21,18 @@
     <nav class="pp-menu" aria-label="Menu principal">
       <a href="/painel"{% if pagina_ativa == 'painel' %} aria-current="page"{% endif %}>Painel</a>
       <a href="{{ url_for('financas.pagina_financas') }}"{% if pagina_ativa == 'financas' %} aria-current="page"{% endif %}>Finanças</a>
-      <a href="/"{% if pagina_ativa == 'publica' %} aria-current="page"{% endif %}>Página pública</a>
+      <a href="/"{% if pagina_ativa == 'publica' %} aria-current="page"{% endif %}>Campanhas e adoção</a>
     </nav>
 
     <div class="pp-acoes">
       <span class="pp-ola">Olá, {{ session.get('nome_usuario', '') }}!</span>
-      <a class="pp-btn" href="{{ url_for('auth.editar_perfil_usuario') }}">Editar perfil</a>
+      <a class="pp-btn" href="{{ url_for('auth.editar_perfil_usuario') }}"{% if pagina_ativa == 'perfil' %} aria-current="page"{% endif %}>Editar perfil</a>
       <a class="pp-btn pp-btn-neutro" href="/logout">Sair</a>
     </div>
     {% else %}
     <div class="pp-acoes">
-      <a class="pp-btn" href="{{ url_for('auth.fazer_login') }}">Entrar</a>
-      <a class="pp-btn pp-btn-cheio" href="/cadastro">Criar conta</a>
+      <a class="pp-btn" href="{{ url_for('auth.fazer_login') }}"{% if pagina_ativa == 'login' %} aria-current="page"{% endif %}>Entrar</a>
+      <a class="pp-btn pp-btn-cheio" href="/cadastro"{% if pagina_ativa == 'cadastro' %} aria-current="page"{% endif %}>Criar conta</a>
     </div>
     {% endif %}
   </div>

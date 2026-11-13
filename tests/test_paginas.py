@@ -36,8 +36,38 @@ def test_pagina_do_animal_abre_com_a_barra_do_topo(navegador, animal):
 
 
 @pytest.mark.parametrize('caminho', ['/login', '/cadastro'])
-def test_pagina_sem_login_abre(client, caminho):
-    assert client.get(caminho).status_code == 200
+def test_login_e_cadastro_tem_barra_do_topo_e_volta_para_a_pagina_publica(client, caminho):
+    resposta = client.get(caminho)
+    html = resposta.get_data(as_text=True)
+
+    assert resposta.status_code == 200
+    assert 'pp-navbar' in html
+    assert 'css/tema.css' in html
+    assert html.count('aria-current="page"') == 1  # o botão da página atual
+    assert 'href="/"' in html  # caminho de volta para a página pública
+
+
+def test_cadastro_avisa_o_que_fica_publico(client):
+    html = client.get('/cadastro').get_data(as_text=True)
+
+    assert 'Sua privacidade' in html
+    # os campos que o servidor lê continuam no formulário
+    for campo in ('tipo', 'nome', 'email', 'telefone', 'cidade', 'uf', 'missao',
+                  'logo_url', 'link_formulario_adocao', 'senha'):
+        assert f'name="{campo}"' in html
+
+
+def test_editar_perfil_abre_com_a_barra_do_topo(navegador):
+    resposta = navegador.get('/editar_usuario')
+    html = resposta.get_data(as_text=True)
+
+    assert resposta.status_code == 200
+    assert 'pp-navbar' in html
+    assert 'css/tema.css' in html
+    assert html.count('aria-current="page"') == 1  # "Editar perfil" destacado
+    for campo in ('tipo', 'nome', 'telefone', 'cidade', 'uf', 'missao',
+                  'logo_url', 'link_formulario_adocao', 'chave_pix'):
+        assert f'name="{campo}"' in html
 
 
 def test_pagina_publica_para_visitante_tem_entrar_e_criar_conta(client):
