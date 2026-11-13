@@ -2,7 +2,7 @@
 
 Este documento registra como o sistema está organizado, o que foi feito desde a refatoração do back-end e quais decisões foram tomadas. Ele deve ser atualizado a cada etapa concluída.
 
-Última atualização: 09/11/2026.
+Última atualização: 12/11/2026.
 
 ## 1. Visão geral
 
@@ -247,7 +247,7 @@ Atenção para a página pública (parte da outra integrante do grupo): como ess
 Limitações conhecidas:
 - A divulgação pela tela foi feita na etapa seguinte (seção 4.14).
 - A API devolve todos os animais divulgados de uma vez, sem paginação, o que é suficiente para o volume do projeto.
-- O cartão de cada ONG ainda não tem descrição própria nem campanhas (ficam vazios).
+- O cartão de cada ONG não tinha descrição própria nem campanhas (ficavam vazios). Isso mudou depois: o perfil ganhou logo, missão e formulário de adoção, e as campanhas passaram a vir na resposta (seções 4.16 e 4.17). A revisão dessa API está na seção 4.23.
 
 ### 4.14 Formulário do animal: divulgação e informações de saúde (branch `animal-divulgacao`)
 
@@ -313,6 +313,24 @@ O painel ganhou os títulos "Meus animais", "Minhas campanhas" e "Jornadas concl
 
 Isso resolve, em parte, o "arquivar animal" da seção 7.
 
+### 4.23 Revisão da API pública depois das campanhas e do Pix (branch `teste-publico-logo`)
+
+Com as campanhas, o Pix e o perfil de ONG (seções 4.16 a 4.22), a resposta de `GET /api/publico/dados` ganhou campos novos: `logoUrl` em cada cartão e, em cada campanha, `chavePix`, `recebedor` e `cidade`. Ao rodar a suíte depois de juntar as alterações do grupo, 89 dos 90 testes passaram. O que falhou foi o teste que trava a lista de campos do cartão, por causa do `logoUrl`. Esse campo é público por natureza (é o logo da ONG), então o teste foi atualizado, e a falha cumpriu o papel para o qual o teste existe: obrigar uma decisão consciente antes de um campo novo ficar público.
+
+A leitura de `routes/publico.py` mostrou três inconsistências, corrigidas nesta etapa:
+
+1. **Cartão "Protetores independentes".** Ele pegava o formulário de adoção e o logo do primeiro protetor que tivesse, entre todos. Quem quisesse adotar o animal de uma pessoa podia cair no formulário de outra, e o cartão, que deveria ser anônimo, mostrava o logo e o link escolhidos por alguém. Agora esse cartão usa só o formulário único do grupo (`LINK_FORMULARIO`) e não tem logo.
+2. **ONG sem link de formulário no perfil.** A API devolvia `null`, e o botão de adoção ficava sem destino. Agora o padrão é o formulário único do grupo.
+3. **ONG com campanha ativa e sem animal divulgado.** A campanha não aparecia. Agora a ONG aparece, com a campanha. O cartão da ONG passou a ser montado por uma função só (`_cartao_da_ong`), usada tanto para quem tem animais quanto para quem só tem campanha, e os cartões saem em ordem de nome.
+
+Uma quarta correção, pequena: o aviso de doação (`POST /api/publico/campanhas/<id>/doacao-informada`) respondia com erro 500 quando o corpo da requisição era um JSON que não é um objeto (por exemplo, uma lista ou um texto). Agora responde 400, como nos demais valores inválidos.
+
+Decisões de privacidade que foram **mantidas** e merecem registro no relatório:
+- **A chave Pix é pública**, porque sem ela ninguém consegue doar. Como pode ser CPF, telefone ou e-mail (dado pessoal), a tela do perfil avisa que ela fica visível e recomenda a chave aleatória. Nas campanhas de protetores independentes o nome é escondido ("Protetor(a) independente"), mas a chave, se for um CPF, pode identificar a pessoa; por isso a recomendação.
+- **O cartão dos independentes não mostra nome, telefone nem e-mail de ninguém**, e a chave Pix só aparece dentro da campanha. Os testes novos conferem os dois pontos.
+
+O que foi acrescentado de testes: 21 testes automatizados em `tests/test_publico_campanhas.py`, que cobrem as campanhas na API pública, o formulário e o logo dos cartões e o aviso de doação (descrição na seção 3.3 do `TESTES.md`).
+
 ### 4.21 Rolagem nos últimos lançamentos (PR #39, branch `ajuste-lancamentos`)
 
 A tabela de Finanças mostra no máximo 10 linhas, com rolagem e cabeçalho fixo. A tela passou a carregar os 250 lançamentos mais recentes (antes eram 20). O `static/js/financas.js` também é usado na página do animal, onde a lista cresce sem rolagem.
@@ -343,7 +361,7 @@ Pontos que diferem do relatório parcial e devem ser corrigidos no relatório fi
 
 ## 6. Como testar
 
-Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 90 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, o link de volta ao painel, a exclusão de animais, o cadastro de contas, a edição do perfil, a API pública e a divulgação pelo formulário do animal.
+Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 111 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, o link de volta ao painel, a exclusão de animais, o cadastro de contas, a edição do perfil, a API pública (animais, campanhas e aviso de doação) e a divulgação pelo formulário do animal.
 
 Para rodar os automatizados, com a venv ativa e o `.env` configurado:
 
@@ -354,7 +372,7 @@ pytest -v
 
 Como só existe um banco, cada teste cria os próprios registros (com e-mail iniciado em `pytest_`) e apaga apenas o que criou.
 
-As funcionalidades das seções 4.15 a 4.22 foram testadas manualmente e ainda não têm testes automatizados.
+As funcionalidades das seções 4.15 a 4.22 foram testadas manualmente. Dessas, só a parte pública das campanhas (campanhas na API pública e o aviso de doação) tem testes automatizados, descritos na seção 4.23. Ainda só têm teste manual: os lançamentos automáticos de saúde, a validação da chave Pix, a janela de doação, a confirmação e a recusa de avisos em Finanças, os gráficos e as jornadas concluídas.
 
 ## 7. Próximos passos
 
@@ -384,6 +402,8 @@ Já feitos nesta frente: o preparo do banco (seção 4.10), o cadastro com perfi
 - Banco separado para desenvolvimento e produção.
 - A página pública lê dados com `innerHTML`; trocar por `textContent` (ou escapar) onde o conteúdo vier do banco, agora que a API pública entrega textos digitados por usuários (seção 4.13).
 - A API pública não tem limite de requisições; para o porte do projeto é aceitável.
+- O aviso de doação é uma rota aberta, sem login. O limite de 30 avisos pendentes por campanha impede que a lista seja enchida sem fim, mas alguém mal-intencionado poderia ocupar as 30 vagas e bloquear os avisos de doadores de verdade. Não há limite por origem (endereço de IP).
+- A chave Pix é pública (necessário para doar) e pode ser um dado pessoal (CPF, telefone ou e-mail). A tela do perfil recomenda a chave aleatória, mas o sistema não impede o uso de outros tipos (seção 4.23).
 
 ## 9. Glossário rápido
 

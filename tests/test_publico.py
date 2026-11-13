@@ -136,7 +136,7 @@ def test_so_a_lista_fixa_de_campos_e_divulgada(client, usuario, animal):
     ong, dados_do_animal = _buscar(client, animal)
 
     assert set(ong) == {
-        'id', 'nome', 'icone', 'regiao', 'cidade', 'estado', 'resumo',
+        'id', 'nome', 'icone', 'logoUrl', 'regiao', 'cidade', 'estado', 'resumo',
         'descricao', 'linkFormulario', 'animais', 'campanhas',
     }
     assert set(dados_do_animal) == {
