@@ -3,87 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patinhas Protegidas - Cadastro</title>
+    <title>Criar conta | Patinhas Protegidas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tema.css') }}">
 </head>
 
-<body class="bg-light d-flex align-items-center justify-content-center py-4" style="min-height: 100vh;">
+<body class="bg-light">
+    {% set pagina_ativa = 'cadastro' %}
+    {% set navbar_publica = true %}
+    {% include '_navbar.html' %}
 
-    <div class="card shadow p-4 m-3" style="width: 100%; max-width: 480px;">
-        <h3 class="text-center text-success mb-4">🐾 Criar conta</h3>
+    <main class="container py-4 py-md-5">
+        <div class="pp-cartao pp-cartao--larga">
+            <a class="pp-voltar" href="/">← Voltar para campanhas e adoção</a>
 
-        <form method="POST" action="/cadastrar">
+            <div class="card shadow-sm p-4">
+                <h1 class="text-center mb-1">Criar conta</h1>
+                <p class="text-center text-muted mb-2">Para protetores independentes e ONGs que cuidam de animais.</p>
 
-            <fieldset class="mb-3">
-                <legend class="form-label fs-6 fw-bold">Você é</legend>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="tipo" id="tipo-protetor" value="PROTETOR" required>
-                    <label class="form-check-label" for="tipo-protetor">Protetor(a) independente</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="tipo" id="tipo-ong" value="ONG" required>
-                    <label class="form-check-label" for="tipo-ong">ONG</label>
-                </div>
-            </fieldset>
+                <form method="POST" action="/cadastrar">
 
-            <div class="mb-3">
-                <label for="nome" class="form-label">Nome</label>
-                <input type="text" class="form-control" id="nome" name="nome" required>
+                    <fieldset class="mb-3">
+                        <legend class="pp-secao">Você é</legend>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="tipo" id="tipo-protetor" value="PROTETOR" required>
+                            <label class="form-check-label" for="tipo-protetor">Protetor(a) independente</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="tipo" id="tipo-ong" value="ONG" required>
+                            <label class="form-check-label" for="tipo-ong">ONG</label>
+                        </div>
+                    </fieldset>
+
+                    <h2 class="pp-secao">Seus dados</h2>
+
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome" maxlength="100" autocomplete="name" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-mail</label>
+                        <input type="email" class="form-control" id="email" name="email" autocomplete="email" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="telefone" class="form-label">WhatsApp / Telefone</label>
+                        <input type="tel" class="form-control" id="telefone" name="telefone" autocomplete="tel" placeholder="(00) 00000-0000">
+                    </div>
+
+                    <!-- Linha exclusiva para Cidade e Estado -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-8">
+                            <label for="cidade" class="form-label">Cidade</label>
+                            <input type="text" class="form-control" id="cidade" name="cidade" maxlength="100" required>
+                        </div>
+                        <div class="col-4">
+                            <label for="uf" class="form-label">Estado</label>
+                            <select class="form-select" id="uf" name="uf" required>
+                                <option value="">UF</option>
+                                {% for sigla in ufs %}
+                                <option value="{{ sigla }}">{{ sigla }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <h2 class="pp-secao">Sobre o seu trabalho</h2>
+
+                    <div class="mb-3">
+                        <label for="missao" id="label-missao" class="form-label">Sobre você / Missão</label>
+                        <textarea class="form-control" id="missao" name="missao" rows="3" placeholder="Conte brevemente sobre o seu trabalho de proteção aos animais..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="logo_url" id="label-logo" class="form-label">Foto de perfil ou Logo (URL)</label>
+                        <input type="url" class="form-control" id="logo_url" name="logo_url" placeholder="https://exemplo.com/sua-foto.png">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="link_formulario_adocao" class="form-label">Link do seu Formulário de Adoção</label>
+                        <input type="url" class="form-control" id="link_formulario_adocao" name="link_formulario_adocao" placeholder="https://forms.gle/exemplo">
+                        <div class="form-text">Cole o link do seu Google Forms, Typeform ou questionário para os adotantes responderem.</div>
+                    </div>
+
+                    <h2 class="pp-secao">Acesso</h2>
+
+                    <div class="mb-3">
+                        <label for="senha" class="form-label">Senha</label>
+                        <input type="password" class="form-control" id="senha" name="senha" autocomplete="new-password" required>
+                    </div>
+
+                    <p class="pp-aviso">
+                        <strong>Sua privacidade:</strong> o nome, a cidade e o estado, a missão, a logo e o link do formulário
+                        podem aparecer na página de campanhas e adoção (protetores independentes aparecem agrupados, sem o nome).
+                        O e-mail e o telefone não são exibidos, e a senha é guardada criptografada.
+                    </p>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Criar conta</button>
+                </form>
             </div>
 
-            <div class="mb-3">
-                <label for="email" class="form-label">E-mail</label>
-                <input type="email" class="form-control" id="email" name="email" required>
-            </div>
-
-            <div class="mb-3">
-                <label for="telefone" class="form-label">WhatsApp / Telefone</label>
-                <input type="text" class="form-control" id="telefone" name="telefone">
-            </div>
-
-            <!-- Linha exclusiva para Cidade e Estado -->
-            <div class="row g-2 mb-3">
-                <div class="col-8">
-                    <label for="cidade" class="form-label">Cidade</label>
-                    <input type="text" class="form-control" id="cidade" name="cidade" maxlength="100" required>
-                </div>
-                <div class="col-4">
-                    <label for="uf" class="form-label">Estado</label>
-                    <select class="form-select" id="uf" name="uf" required>
-                        <option value="">UF</option>
-                        {% for sigla in ufs %}
-                        <option value="{{ sigla }}">{{ sigla }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
-            <!-- Campos adicionais de perfil (fora da row da cidade) -->
-            <div class="mb-3">
-                <label for="missao" id="label-missao" class="form-label">Sobre você / Missão</label>
-                <textarea class="form-control" id="missao" name="missao" rows="3" placeholder="Conte brevemente sobre o seu trabalho de proteção aos animais..."></textarea>
-            </div>
-            
-            <div class="mb-3">
-                <label for="logo_url" id="label-logo" class="form-label">Foto de perfil ou Logo (URL)</label>
-                <input type="url" class="form-control" id="logo_url" name="logo_url" placeholder="https://exemplo.com/sua-foto.png">
-            </div>
-            
-            <div class="mb-3">
-                <label for="link_formulario_adocao" class="form-label">Link do seu Formulário de Adoção</label>
-                <input type="url" class="form-control" id="link_formulario_adocao" name="link_formulario_adocao" placeholder="https://forms.gle/exemplo">
-                <div class="form-text">Cole o link do seu Google Forms, Typeform ou questionário para os adotantes responderem.</div>
-            </div>
-
-            <div class="mb-4">
-                <label for="senha" class="form-label">Senha</label>
-                <input type="password" class="form-control" id="senha" name="senha" required>
-            </div>
-
-            <button type="submit" class="btn btn-success w-100 mb-2 py-2 fw-bold">Criar Conta</button>
-            <a href="/login" class="btn btn-outline-secondary w-100">Já tenho conta (Voltar)</a>
-        </form>
-    </div>
+            <p class="text-center mt-3 mb-0">Já tem conta? <a href="/login" class="fw-bold">Entrar</a></p>
+        </div>
+    </main>
 
     <script src="{{ url_for('static', filename='js/cadastro.js') }}"></script>
 </body>

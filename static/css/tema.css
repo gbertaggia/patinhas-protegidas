@@ -115,6 +115,8 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
 .pp-btn:hover { background: var(--pp-verde-claro); color: var(--pp-verde-escuro); }
 .pp-btn-cheio { background: var(--pp-verde); color: #fff; }
 .pp-btn-cheio:hover { background: var(--pp-verde-escuro); color: #fff; }
+.pp-btn[aria-current="page"] { background: var(--pp-verde-claro); color: var(--pp-verde-escuro); }
+.pp-btn-cheio[aria-current="page"] { background: var(--pp-verde-escuro); color: #fff; }
 .pp-btn-neutro { border-color: #6c757d; color: #495057; }
 .pp-btn-neutro:hover { background: #f1f3f2; color: #212529; }
 
@@ -128,6 +130,35 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
   .pp-marca-icone img { width: 22px; height: 22px; }
   .pp-navbar-inner--publica { width: 92%; }
 }
+
+/* ---------- Telas de formulário (login, cadastro, perfil) ---------- */
+
+.pp-cartao { width: 100%; max-width: 440px; margin: 0 auto; }
+.pp-cartao--larga { max-width: 520px; }
+.pp-cartao h1 { font-size: 1.6rem; color: var(--pp-verde-escuro); }
+.pp-secao {
+  margin: 26px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--pp-linha);
+  color: var(--pp-verde-escuro);
+  font-family: 'DM Sans', var(--bs-body-font-family);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.pp-aviso {
+  margin: 20px 0;
+  padding: 12px 14px;
+  border: 1px solid #b7d7c4;
+  border-radius: 12px;
+  background: var(--pp-verde-claro);
+  color: var(--pp-tinta);
+  font-size: .88rem;
+  line-height: 1.5;
+}
+.pp-voltar { display: inline-block; margin-bottom: 14px; font-weight: 700; text-decoration: none; }
+.pp-voltar:hover { text-decoration: underline; }
 
 /* ---------- Bootstrap com as cores da marca ---------- */
 

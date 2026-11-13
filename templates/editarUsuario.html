@@ -3,107 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patinhas Protegidas - Editar Perfil</title>
+    <title>Meu perfil | Patinhas Protegidas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 30px 0;
-        }
-        @media (max-width: 480px) {
-            .card { border: none; box-shadow: none !important; background-color: transparent !important; }
-            body { background-color: #fff !important; }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tema.css') }}">
 </head>
 <body class="bg-light">
+    {% set pagina_ativa = 'perfil' %}
+    {% include '_navbar.html' %}
 
-    <div class="container d-flex justify-content-center">
-        <div class="card shadow p-4" style="width: 100%; max-width: 480px;">
-            <h3 class="text-center text-primary mb-4">👤 Meu perfil</h3>
+    <main class="container py-4 py-md-5">
+        <div class="pp-cartao pp-cartao--larga">
+            <div class="card shadow-sm p-4">
+                <h1 class="text-center mb-2">Meu perfil</h1>
 
-            <form method="POST" action="{{ url_for('auth.editar_perfil_usuario') }}">
+                <form method="POST" action="{{ url_for('auth.editar_perfil_usuario') }}">
 
-                <fieldset class="mb-3">
-                    <legend class="form-label fs-6 fw-bold">Você é</legend>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="tipo" id="tipo-protetor" value="PROTETOR" {% if usuario.tipo == 'PROTETOR' %}checked{% endif %} required>
-                        <label class="form-check-label" for="tipo-protetor">Protetor(a) independente</label>
+                    <fieldset class="mb-3">
+                        <legend class="pp-secao">Você é</legend>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="tipo" id="tipo-protetor" value="PROTETOR" {% if usuario.tipo == 'PROTETOR' %}checked{% endif %} required>
+                            <label class="form-check-label" for="tipo-protetor">Protetor(a) independente</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="tipo" id="tipo-ong" value="ONG" {% if usuario.tipo == 'ONG' %}checked{% endif %} required>
+                            <label class="form-check-label" for="tipo-ong">ONG</label>
+                        </div>
+                    </fieldset>
+
+                    <h2 class="pp-secao">Seus dados</h2>
+
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" id="nome" name="nome" class="form-control" maxlength="100" value="{{ usuario.nome }}" required>
                     </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="tipo" id="tipo-ong" value="ONG" {% if usuario.tipo == 'ONG' %}checked{% endif %} required>
-                        <label class="form-check-label" for="tipo-ong">ONG</label>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-mail de login</label>
+                        <input type="email" id="email" class="form-control bg-light" value="{{ usuario.email }}" readonly>
+                        <div class="form-text">O e-mail de acesso não pode ser alterado.</div>
                     </div>
-                </fieldset>
 
-                <div class="mb-3">
-                    <label for="nome" class="form-label fw-bold">Nome</label>
-                    <input type="text" id="nome" name="nome" class="form-control" value="{{ usuario.nome }}" required>
-                </div>
-
-                <div class="mb-3">
-                    <label for="email" class="form-label fw-bold">E-mail de Login:</label>
-                    <input type="email" id="email" class="form-control bg-light" value="{{ usuario.email }}" readonly>
-                    <div class="form-text text-muted">O e-mail de acesso não pode ser alterado.</div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="telefone" class="form-label fw-bold">Telefone / WhatsApp:</label>
-                    <input type="text" id="telefone" name="telefone" class="form-control" value="{{ usuario.telefone if usuario.telefone else '' }}" placeholder="(00) 00000-0000">
-                </div>
-
-                <div class="row g-2 mb-3">
-                    <div class="col-8">
-                        <label for="cidade" class="form-label fw-bold">Cidade</label>
-                        <input type="text" class="form-control" id="cidade" name="cidade" maxlength="100" value="{{ usuario.cidade if usuario.cidade else '' }}" required>
+                    <div class="mb-3">
+                        <label for="telefone" class="form-label">Telefone / WhatsApp</label>
+                        <input type="tel" id="telefone" name="telefone" class="form-control" autocomplete="tel" value="{{ usuario.telefone if usuario.telefone else '' }}" placeholder="(00) 00000-0000">
                     </div>
-                    <div class="col-4">
-                        <label for="uf" class="form-label fw-bold">Estado</label>
-                        <select class="form-select" id="uf" name="uf" required>
-                            <option value="">UF</option>
-                            {% for sigla in ufs %}
-                            <option value="{{ sigla }}" {% if usuario.uf == sigla %}selected{% endif %}>{{ sigla }}</option>
-                            {% endfor %}
-                        </select>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-8">
+                            <label for="cidade" class="form-label">Cidade</label>
+                            <input type="text" class="form-control" id="cidade" name="cidade" maxlength="100" value="{{ usuario.cidade if usuario.cidade else '' }}" required>
+                        </div>
+                        <div class="col-4">
+                            <label for="uf" class="form-label">Estado</label>
+                            <select class="form-select" id="uf" name="uf" required>
+                                <option value="">UF</option>
+                                {% for sigla in ufs %}
+                                <option value="{{ sigla }}" {% if usuario.uf == sigla %}selected{% endif %}>{{ sigla }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Novos campos adicionados -->
-                <div class="mb-3">
-                    <label for="missao" id="label-missao" class="form-label fw-bold">Sobre você / Missão</label>
-                    <textarea class="form-control" id="missao" name="missao" rows="3" placeholder="Conte brevemente sobre sua causa ou trabalho com animais...">{{ usuario.missao if usuario.missao else '' }}</textarea>
-                </div>
+                    <h2 class="pp-secao">Sobre o seu trabalho</h2>
 
-                <div class="mb-3">
-                    <label for="logo_url" id="label-logo" class="form-label fw-bold">Foto de perfil ou Logo (URL)</label>
-                    <input type="url" class="form-control" id="logo_url" name="logo_url" value="{{ usuario.logo_url if usuario.logo_url else '' }}" placeholder="https://exemplo.com/foto.png">
-                </div>
-
-                <div class="mb-4">
-                    <label for="link_formulario_adocao" class="form-label fw-bold">Link do Formulário de Adoção</label>
-                    <input type="url" class="form-control" id="link_formulario_adocao" name="link_formulario_adocao" value="{{ usuario.link_formulario_adocao if usuario.link_formulario_adocao else '' }}" placeholder="https://forms.gle/exemplo">
-                    <div class="form-text text-muted">Link do Google Forms ou questionário externo para quem tiver interesse em adotar.</div>
-                </div>
-
-                                <div class="mb-4">
-                    <label for="chave_pix" class="form-label fw-bold">Chave Pix para doações</label>
-                    <input type="text" class="form-control" id="chave_pix" name="chave_pix" maxlength="77"
-                           autocomplete="off" value="{{ usuario.chave_pix if usuario.chave_pix else '' }}"
-                           placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
-                    <div class="form-text text-muted">
-                        Usada em todas as suas campanhas. Ela fica visível para quem quiser doar,
-                        por isso recomendamos a chave aleatória, criada no app do seu banco, em vez de CPF ou telefone pessoal.
+                    <div class="mb-3">
+                        <label for="missao" id="label-missao" class="form-label">Sobre você / Missão</label>
+                        <textarea class="form-control" id="missao" name="missao" rows="3" placeholder="Conte brevemente sobre sua causa ou trabalho com animais...">{{ usuario.missao if usuario.missao else '' }}</textarea>
                     </div>
-                </div>
-                
-                <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm">Salvar Alterações</button>
-                <a href="/painel" class="btn btn-outline-secondary w-100 mt-2">Cancelar</a>
-            </form>
+
+                    <div class="mb-3">
+                        <label for="logo_url" id="label-logo" class="form-label">Foto de perfil ou Logo (URL)</label>
+                        <input type="url" class="form-control" id="logo_url" name="logo_url" value="{{ usuario.logo_url if usuario.logo_url else '' }}" placeholder="https://exemplo.com/foto.png">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="link_formulario_adocao" class="form-label">Link do formulário de adoção</label>
+                        <input type="url" class="form-control" id="link_formulario_adocao" name="link_formulario_adocao" value="{{ usuario.link_formulario_adocao if usuario.link_formulario_adocao else '' }}" placeholder="https://forms.gle/exemplo">
+                        <div class="form-text">Link do Google Forms ou questionário externo para quem tiver interesse em adotar.</div>
+                    </div>
+
+                    <h2 class="pp-secao">Doações</h2>
+
+                    <div class="mb-4">
+                        <label for="chave_pix" class="form-label">Chave Pix para doações</label>
+                        <input type="text" class="form-control" id="chave_pix" name="chave_pix" maxlength="77"
+                               autocomplete="off" value="{{ usuario.chave_pix if usuario.chave_pix else '' }}"
+                               placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
+                        <div class="form-text">
+                            Usada em todas as suas campanhas. Ela fica visível para quem quiser doar,
+                            por isso recomendamos a chave aleatória, criada no app do seu banco, em vez de CPF ou telefone pessoal.
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm">Salvar alterações</button>
+                    <a href="/painel" class="btn btn-outline-secondary w-100 mt-2">Cancelar</a>
+                </form>
+            </div>
         </div>
-    </div>
+    </main>
 
     <script src="{{ url_for('static', filename='js/cadastro.js') }}" defer></script>
 </body>
