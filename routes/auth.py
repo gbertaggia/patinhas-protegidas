@@ -4,6 +4,7 @@ import pymysql
 from database.connection import conectar_banco
 from utils.auth import login_required
 from utils.pix import normalizar_chave_pix
+from utils.urls import normalizar_url_http
 
 # Blueprint = um "pedaço" do aplicativo, com suas próprias rotas
 bp = Blueprint('auth', __name__)
@@ -61,13 +62,15 @@ def criar_conta():
     cidade = (request.form.get('cidade') or '').strip()
     uf = request.form.get('uf')
     missao = request.form.get("missao", "").strip() or None
-    logo_url = request.form.get("logo_url", "").strip() or None
-    link_formulario_adocao = request.form.get("link_formulario_adocao", "").strip() or None
+    logo_url, erro_logo = normalizar_url_http(request.form.get("logo_url"), "O link da logo")
+    link_formulario_adocao, erro_link = normalizar_url_http(
+        request.form.get("link_formulario_adocao"), "O link do formulário de adoção"
+    )
 
     # Validação no servidor
     if not email or not senha:
         return _pagina_de_erro('Preencha e-mail e senha.', '/cadastro', 'Voltar ao cadastro')
-    erro = _validar_perfil(nome, tipo, cidade, uf)
+    erro = _validar_perfil(nome, tipo, cidade, uf) or erro_logo or erro_link
     if erro:
         return _pagina_de_erro(erro, '/cadastro', 'Voltar ao cadastro')
 
@@ -170,13 +173,15 @@ def editar_perfil_usuario():
         nova_cidade = (request.form.get('cidade') or '').strip()
         novo_uf = request.form.get('uf')
         novo_missao = request.form.get('missao', '').strip() or None
-        novo_logo_url = request.form.get('logo_url', '').strip() or None
-        novo_link_formulario = request.form.get('link_formulario_adocao', '').strip() or None
+        novo_logo_url, erro_logo = normalizar_url_http(request.form.get('logo_url'), 'O link da logo')
+        novo_link_formulario, erro_link = normalizar_url_http(
+            request.form.get('link_formulario_adocao'), 'O link do formulário de adoção'
+        )
         nova_chave_pix, erro_pix = normalizar_chave_pix(request.form.get('chave_pix'))
         if erro_pix:
             return _pagina_de_erro(erro_pix, '/editar_usuario', 'Voltar à edição do perfil')
 
-        erro = _validar_perfil(novo_nome, novo_tipo, nova_cidade, novo_uf)
+        erro = _validar_perfil(novo_nome, novo_tipo, nova_cidade, novo_uf) or erro_logo or erro_link
         if erro:
             return _pagina_de_erro(erro, '/editar_usuario', 'Voltar à edição do perfil')
 
