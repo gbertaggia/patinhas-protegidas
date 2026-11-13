@@ -21,6 +21,7 @@ UFS = (
     'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO',
 )
 TIPOS_DE_CONTA = ('PROTETOR', 'ONG')
+TAMANHO_MINIMO_DA_SENHA = 8
 
 
 @bp.route('/cadastro')
@@ -29,14 +30,24 @@ def tela_cadastro():
     return render_template('cadastro.html', ufs=UFS)
 
 
-def _pagina_de_erro(mensagem, voltar_para, texto_do_link):
-    """Página simples de erro de validação de formulário (resposta 400)."""
-    return f"""
-        <h1 style="color: red; text-align: center; margin-top: 50px;">{mensagem}</h1>
-        <div style="text-align: center;">
-            <a href="{voltar_para}" style="font-size: 18px;">{texto_do_link}</a>
-        </div>
-    """, 400
+def _pagina_de_erro(mensagem, voltar_para, texto_do_link, status=400, titulo='Não foi possível continuar',
+                    outro_link=None):
+    """
+    Página de erro no mesmo estilo das demais telas (templates/erro.html).
+
+    `outro_link` é um par opcional (endereço, texto) para uma segunda opção.
+    O texto vai para o HTML pelo Jinja, que já escapa caracteres perigosos.
+    """
+    html = render_template(
+        'erro.html', titulo=titulo, mensagem=mensagem,
+        voltar_para=voltar_para, texto_do_link=texto_do_link, outro_link=outro_link,
+    )
+    return html, status
+
+
+def _tela_de_login_com_erro(mensagem, email, status):
+    """Mostra a tela de login de novo, com a mensagem de erro e o e-mail já digitado."""
+    return render_template('login.html', erro=mensagem, email=email or ''), status
 
 
 def _validar_perfil(nome, tipo, cidade, uf):
@@ -70,6 +81,11 @@ def criar_conta():
     # Validação no servidor
     if not email or not senha:
         return _pagina_de_erro('Preencha e-mail e senha.', '/cadastro', 'Voltar ao cadastro')
+    if len(senha) < TAMANHO_MINIMO_DA_SENHA:
+        return _pagina_de_erro(
+            f'A senha deve ter pelo menos {TAMANHO_MINIMO_DA_SENHA} caracteres.',
+            '/cadastro', 'Voltar ao cadastro',
+        )
     erro = _validar_perfil(nome, tipo, cidade, uf) or erro_logo or erro_link
     if erro:
         return _pagina_de_erro(erro, '/cadastro', 'Voltar ao cadastro')
@@ -84,14 +100,11 @@ def criar_conta():
         if usuario_existente:
             cursor.close()
             conexao.close()
-            return """
-                <h1 style="color: red; text-align: center; margin-top: 50px;">E-mail já cadastrado ⚠️</h1>
-                <p style="text-align: center;">Este endereço de e-mail já possui uma conta no Patinhas Protegidas.</p>
-                <div style="text-align: center;">
-                    <a href="/cadastro" style="font-size: 18px;">Tentar outro e-mail</a> ou
-                    <a href="/login" style="font-size: 18px;">Fazer Login</a>
-                </div>
-            """
+            return _pagina_de_erro(
+                'Este endereço de e-mail já possui uma conta no Patinhas Protegidas.',
+                '/cadastro', 'Tentar outro e-mail',
+                status=409, titulo='E-mail já cadastrado', outro_link=('/login', 'Entrar'),
+            )
 
         comando_sql = """
             INSERT INTO usuarios (nome, email, senha, telefone, tipo, cidade, uf, missao, logo_url, link_formulario_adocao)
@@ -118,14 +131,20 @@ def criar_conta():
 
     except Exception:
         current_app.logger.exception("Erro ao criar conta")
-        return "<h1>Erro ao criar a conta. Tente novamente.</h1>"
+        return _pagina_de_erro(
+            'Não foi possível criar a conta agora. Tente novamente em instantes.',
+            '/cadastro', 'Voltar ao cadastro', status=500, titulo='Algo deu errado',
+        )
 
 
 @bp.route('/login', methods=['POST'])
 def fazer_login():
     """Valida as credenciais contra o banco e gerencia a sessão."""
-    email_digitado = request.form.get('email')
-    senha_digitada = request.form.get('senha')
+    email_digitado = (request.form.get('email') or '').strip()
+    senha_digitada = request.form.get('senha') or ''
+
+    if not email_digitado or not senha_digitada:
+        return _tela_de_login_com_erro('Informe o e-mail e a senha.', email_digitado, 400)
 
     try:
         conexao = conectar_banco()
@@ -154,11 +173,15 @@ def fazer_login():
             session['id_usuario'] = usuario['id']
             return redirect('/painel')
         else:
-            return "<script>alert('⚠️ Autenticação Falhou: E-mail ou senha incorretos.'); window.location.href='/login';</script>"
+            # Mesma mensagem para e-mail inexistente e senha errada: não revela quem tem conta
+            return _tela_de_login_com_erro('E-mail ou senha incorretos.', email_digitado, 401)
 
     except Exception:
         current_app.logger.exception("Erro no login")
-        return "<h1>Erro ao entrar. Tente novamente.</h1>"
+        return _pagina_de_erro(
+            'Não foi possível entrar agora. Tente novamente em instantes.',
+            '/login', 'Voltar ao login', status=500, titulo='Algo deu errado',
+        )
 
 
 @bp.route('/editar_usuario', methods=['GET', 'POST'])
@@ -207,7 +230,10 @@ def editar_perfil_usuario():
             return redirect('/painel')
         except Exception:
             current_app.logger.exception("Erro ao atualizar usuário")
-            return "<h1>Erro ao atualizar o perfil. Tente novamente.</h1>"
+            return _pagina_de_erro(
+                'Não foi possível salvar o perfil agora. Tente novamente em instantes.',
+                '/editar_usuario', 'Voltar à edição do perfil', status=500, titulo='Algo deu errado',
+            )
         finally:
             cursor.close()
             conexao.close()
@@ -238,4 +264,4 @@ def sair():
     session.pop('usuario_logado', None)
     session.pop('nome_usuario', None)
     session.pop('id_usuario', None)
-    return redirect('/login')
+    return redirect('/login')
