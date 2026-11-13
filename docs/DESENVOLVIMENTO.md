@@ -2,7 +2,7 @@
 
 Este documento registra como o sistema está organizado, o que foi feito desde a refatoração do back-end e quais decisões foram tomadas. Ele deve ser atualizado a cada etapa concluída.
 
-Última atualização: 12/11/2026.
+Última atualização: 13/11/2026.
 
 ## 1. Visão geral
 
@@ -21,7 +21,7 @@ A aplicação publicada roda no Render e é atualizada automaticamente a cada al
 ## 2. Estrutura de pastas
 
 ```
-app.py                  cria a aplicação, registra os blueprints e a página pública (/)
+app.py                  cria a aplicação, registra os blueprints, a página pública (/) e o ícone do site (/favicon.ico)
 config.py               lê o arquivo .env e valida as variáveis obrigatórias
 .env                    segredos locais (NUNCA vai para o GitHub)
 .env.example            lista os nomes das variáveis, com valores fictícios
@@ -29,7 +29,7 @@ database/
   connection.py         função conectar_banco()
   migrations/           mudanças no banco, em arquivos numerados
 routes/
-  auth.py               login, cadastro, logout e edição do perfil
+  auth.py               login, cadastro, logout, edição do perfil e páginas de erro
   animais.py            painel e cadastro, edição e exclusão de animais
   saude.py              vacinas, medicamentos, consultas e histórico veterinário
   financas.py           Pet Finanças (API em JSON)
@@ -38,8 +38,13 @@ utils/
   auth.py               controle de acesso (login e dono do registro)
   financeiro.py         lê valores digitados e cria a despesa ligada a vacinas, medicamentos e consultas
   pix.py                valida e padroniza a chave Pix do perfil
+  urls.py               confere links digitados em formulários (só http e https)
 templates/              páginas HTML
-static/                 JavaScript e dados da página pública
+  _navbar.html          barra do topo comum (usada com include em todas as telas)
+  erro.html             página de erro no mesmo estilo das telas
+static/                 JavaScript, estilos e imagens
+  css/tema.css          tema comum: cores da marca, barra do topo, contraste e telas de formulário
+  img/favicon.svg       ícone do site (patinha roxa); o favicon.ico é servido por app.py
   js/doacao_pix.js      janela de doação via Pix (QR Code, copia e cola e aviso de doação)
   js/doacoes_pendentes.js  seção "Confirmar doações recebidas" em Finanças
   js/graficos_financas.js  gráficos de Finanças
@@ -165,6 +170,8 @@ O teste da Página Pet em celular real mostrou uma lacuna de navegação que já
 
 A correção foi acrescentar, logo depois do nome do sistema, um segundo link para `/painel` com a classe `d-lg-none` (visível apenas em telas pequenas). Em telas largas continua aparecendo um único link, o do menu. Nada foi removido da barra.
 
+Essa solução foi substituída na seção 4.26: a barra comum tem um menu sempre visível (no celular ele passa para uma linha abaixo do logo), então o link para o painel existe em todos os tamanhos de tela, e o teste correspondente passou a conferir isso.
+
 ### 4.9 Exclusão de animal que tem lançamentos (branch `animal-exclusao-com-financas`)
 
 As tabelas financeiras usam `ON DELETE RESTRICT`, então o banco recusa apagar um animal que tenha lançamentos. Antes desta etapa, a rota `deletar_animal` tentava o `DELETE` direto e, ao falhar, mostrava "Erro ao excluir o animal. Tente novamente.", uma mensagem enganosa, já que tentar de novo nunca resolveria.
@@ -242,7 +249,7 @@ Privacidade e segurança:
 - A resposta usa uma **lista fixa de campos** (a consulta SQL escolhe uma a uma as colunas). Telefone, e-mail, número do chip, histórico clínico, vacinas detalhadas e finanças **nunca** entram. Um teste automatizado compara as chaves da resposta com a lista permitida, e quebra se alguém acrescentar um campo por engano.
 - Em caso de erro no banco, a rota registra o problema no log do servidor e responde 500 com uma mensagem genérica, sem detalhes técnicos.
 
-Atenção para a página pública (parte da outra integrante do grupo): como esses textos agora são **digitados por usuários**, o JavaScript não pode mais montar a página com `innerHTML` sem tratar o conteúdo, porque alguém poderia digitar código HTML ou JavaScript no nome ou na informação de saúde (ataque XSS). Os textos devem ser inseridos com `textContent` ou ter os caracteres especiais escapados.
+Atenção para a página pública (parte da outra integrante do grupo): como esses textos agora são **digitados por usuários**, o JavaScript não pode mais montar a página com `innerHTML` sem tratar o conteúdo, porque alguém poderia digitar código HTML ou JavaScript no nome ou na informação de saúde (ataque XSS). Os textos devem ser inseridos com `textContent` ou ter os caracteres especiais escapados. **Resolvido na seção 4.24.**
 
 Limitações conhecidas:
 - A divulgação pela tela foi feita na etapa seguinte (seção 4.14).
@@ -263,7 +270,7 @@ Regras:
 - Para não repetir regras, a leitura dos campos e a validação ficaram em funções únicas (`_ler_divulgacao`, `_erro_de_divulgacao` e `_conta_tem_cidade_e_uf`), usadas pelo cadastro e pela edição.
 
 Limitações:
-- O resultado na página pública depende de a página (feita por outra integrante do grupo) passar a usar a API, o que ainda não aconteceu.
+- O resultado na página pública depende de a página (feita por outra integrante do grupo) passar a usar a API. Isso já aconteceu (seções 4.17 e 4.24).
 - Não há aviso na tela do painel de quais animais estão divulgados; isso só aparece na tela de edição.
 
 ### 4.15 Valor em vacinas, medicamentos e consultas (PR #33, branch `vacina-com-valor`)
@@ -339,6 +346,61 @@ A tabela de Finanças mostra no máximo 10 linhas, com rolagem e cabeçalho fixo
 
 Nos avisos de doação, o botão **Corrigir valor** permite confirmar com o valor que realmente caiu na conta. O valor informado pelo doador continua guardado no aviso, e a descrição do lançamento registra a correção, por exemplo: "(valor corrigido; informado: R$ 15,00)".
 
+### 4.24 Página pública: falha de XSS e doação geral (branch `xss-publico`)
+
+**O problema.** O `static/js/publico.js` montava os cartões com `innerHTML`, juntando textos que vêm do banco e que são **digitados por usuários**: nome da organização, região, missão, dados do animal, título e descrição de campanha. Quem cadastrasse um nome como `<img src=x onerror=...>` faria o código rodar no navegador de **todo visitante** da página (XSS armazenado). Os endereços da foto e do formulário também entravam em atributos (`src`, `href`), onde um link `javascript:...` seria executado ao clicar.
+
+**A correção, em duas camadas** (defesa em profundidade):
+1. No navegador, o JavaScript passou a criar cada elemento com `createElement` e a colocar os textos com `textContent`, que nunca interpreta HTML. Uma função `urlSegura` aceita só endereços `http` e `https`; sem link válido, o botão de adoção aparece desativado ("Adoção indisponível"). Se uma foto não carrega, entra a imagem padrão, uma vez só.
+2. No servidor, os links digitados em formulários passam a ser validados antes de gravar (seção 4.25).
+
+**Como foi verificado.** Um navegador de teste (Chromium sem interface) abriu a página com uma API simulada cheia de textos maliciosos, nos dois arquivos, o antigo e o novo. Na versão antiga o código inserido foi executado; na nova, em nenhuma das posições testadas (nome, região, resumo, descrição, animais, campanhas, fotos e link do formulário).
+
+**Lição para o relatório.** A falha só existe onde o JavaScript monta HTML na mão. O mesmo dado é seguro no Python/Jinja e perigoso no JavaScript, dependendo de como é colocado na página: o Jinja escapa o texto automaticamente ao montar uma página no servidor, enquanto `innerHTML` no navegador não escapa nada. Um teste do login confirma o lado seguro: um e-mail com `<script>` digitado volta escapado na tela.
+
+**Doação geral.** A barra "Ajude a causa", que antes só mostrava uma mensagem, passou a abrir a janela do Pix. O `abrirDoacaoPix(campanha, valorInicial)` (em `static/js/doacao_pix.js`) recebe a **campanha geral** da organização (a que não está ligada a um animal) e o valor escolhido. A barra só aparece quando a organização tem uma campanha geral ativa, e nunca no cartão "Protetores independentes".
+
+### 4.25 Validação de links no servidor (branch `validar-links`)
+
+A validação do navegador pode ser contornada, então o servidor também confere os links. A função `normalizar_url_http(texto, rotulo, limite)` (em `utils/urls.py`) aceita só endereços completos, que começam com `http://` ou `https://` e têm servidor. Barra `javascript:`, `data:`, `ftp:`, `file:`, endereços sem esquema, com espaço ou quebra de linha no meio, e os longos demais. Devolve o link limpo (ou `None` se vazio) e uma mensagem de erro em português.
+
+Aplicada em: logo e link do formulário de adoção (cadastro e edição do perfil, limite de 500 caracteres), foto do animal (cadastro e edição, limite de 255, que é o tamanho da coluna) e foto da campanha (500). Link inválido recebe 400 e nada é gravado. Cobertura: 42 testes em `tests/test_urls.py`.
+
+### 4.26 Visual unificado e acessibilidade (branches `navbar-tema`, `telas-de-acesso`)
+
+As telas tinham estilos diferentes (a página pública tinha CSS próprio e apontava para um `css/publico.css` que nunca existiu, e a marca aparecia com duas cores). Foram criados:
+- **`static/css/tema.css`:** cores da marca (verde `#28765b`, verde escuro, roxo da patinha), fonte, barra do topo e telas de formulário. Não depende do Bootstrap, para a barra aparecer igual em todas as telas.
+- **`templates/_navbar.html`:** barra do topo incluída com `include`. Quem **não** está logado vê "Entrar" e "Criar conta"; quem está vê o menu (Painel, Finanças, Campanhas e adoção), a saudação, "Editar perfil" e "Sair". O item da página atual é marcado com `aria-current="page"`.
+- **Ícone do site:** a patinha roxa em SVG e ICO, servida em `/favicon.ico`.
+
+A página pública e as telas de login, cadastro e edição do perfil passaram a usar essa barra. O link de volta das telas de acesso se chama "← Voltar para campanhas e adoção", o mesmo nome da página no título da aba. O texto de apresentação da página pública explica o que é o sistema e convida quem cuida de animais a criar conta.
+
+**Contraste (WCAG AA, mínimo de 4,5:1 para texto normal).** O texto amarelo do Bootstrap (`#ffc107`) tinha 1,63:1 no branco e virou âmbar escuro (`#7a5200`, 6,92:1). O cinza de apoio da página pública passou de 4,24:1 para 5,60:1 (`#586860`). O verde da marca tem 5,48:1 e o escuro, 8,83:1. O selo de vacina agendada tem 6,39:1. Um script no navegador de teste confirmou que nenhum texto da página pública fica abaixo do mínimo.
+
+**Limitação.** As telas da campanha, do cadastro e da edição de animal e os formulários de saúde ainda usam o visual antigo, sem a barra comum.
+
+### 4.27 Acesso à conta: erros, privacidade e senha (branches `telas-de-acesso`, `erros-de-acesso`)
+
+- **Erro de login na própria tela.** Antes, o login errado mostrava um `alert()` do navegador e recarregava a página. Agora a tela de login volta com a faixa "E-mail ou senha incorretos." (código 401) e o e-mail digitado preenchido. A mensagem é **a mesma** para e-mail inexistente e senha errada, para não revelar quem tem conta. A senha nunca volta para a tela. Campos vazios recebem 400.
+- **Página de erro no tema (`templates/erro.html`).** Os erros de validação do cadastro e do perfil e os erros inesperados antes eram HTML solto, sem estilo. Agora usam uma página do tema, com botão de voltar. O texto vai pelo Jinja, que escapa caracteres perigosos. E-mail já cadastrado responde 409, com "Tentar outro e-mail" e "Entrar". Erro interno responde 500 (antes, 200).
+- **Senha mínima de 8 caracteres**, conferida no servidor (a regra que vale) e no formulário (`minlength`, para avisar sem ir ao servidor). Contas antigas com senha curta continuam entrando.
+- **Aviso de privacidade no cadastro:** informa quais dados podem aparecer na página pública (nome, cidade e estado, missão, logo e link do formulário), que protetores independentes aparecem agrupados e sem nome, e que e-mail e telefone não são exibidos.
+- **Formulários** do cadastro e do perfil organizados em blocos (Você é, Seus dados, Sobre o seu trabalho, Acesso ou Doações), com sugestão de preenchimento do navegador nos campos.
+- Cobertura: 15 testes em `tests/test_acesso.py` (login, senha mínima e páginas de erro) e 11 em `tests/test_paginas.py` (barra do topo, telas de acesso e arquivos do tema).
+
+### 4.28 Preparo dos dados para a entrega (13/11/2026)
+
+Como o banco é um só (local e Render), o que ficou de teste aparecia na página pública real. Depois de um backup completo, foi feito no Workbench, em uma transação:
+- a conta que mostrava um nome real de pessoa na página pública foi apagada, com 3 campanhas, 1 lançamento e 1 animal (de 23 contas para 22);
+- todas as chaves Pix de demonstração viraram chaves aleatórias (formato UUID v4), porque a chave é pública e um e-mail ou telefone de teste poderia receber doações de verdade (procedimento em `TESTES.md`, seção 6);
+- a logo de uma organização de exemplo, que era uma imagem de terceiros, foi removida.
+
+As contas que ninguém vê na página pública foram mantidas: a senha é guardada com hash, e a API pública não devolve e-mail nem telefone. O acesso direto ao banco exige a senha do Aiven, que fica no `.env` de quem trabalha no projeto e nas variáveis do Render.
+
+### 4.29 `schema.sql` regenerado (13/11/2026)
+
+O `schema.sql` do repositório estava desatualizado: não tinha as tabelas `categorias`, `transacoes`, `campanhas` e `doacoes_informadas`, nem as colunas de perfil, divulgação, valor, Pix e jornada, e ainda tinha uma coluna `created_at` em `usuarios` que o banco real não tem. Ele foi refeito a partir de uma exportação só da estrutura do banco real (MySQL 8.4), na ordem em que as tabelas dependem umas das outras, com `CREATE TABLE IF NOT EXISTS` (sem `DROP`) e com as 15 categorias iniciais. As migrações em `database/migrations/` continuam sendo o histórico das mudanças.
+
 ## 5. Decisões de projeto e motivos
 
 | Decisão | Motivo |
@@ -356,12 +418,18 @@ Nos avisos de doação, o botão **Corrigir valor** permite confirmar com o valo
 | Doação em duas etapas (aviso + confirmação) | o site não sabe quando um Pix acontece; só quem recebe pode confirmar, o que impede lançamentos falsos |
 | Doação confirmada com `origem_id` vazio | a chave única (`origem_tipo`, `origem_id`) impediria mais de uma doação por campanha; a ligação com o aviso fica em `doacoes_informadas.transacao_id` |
 | Jornada concluída retira da página pública | animal adotado não deve continuar aparecendo para adoção, nem campanha encerrada recebendo doações |
+| Textos da página pública com `textContent`, e links só `http` e `https` | impedem que um texto ou link digitado por usuário execute código no navegador de quem visita (XSS) |
+| Validar links também no servidor | o HTML e o JavaScript do navegador podem ser contornados; a regra que vale é a do servidor |
+| Mesma mensagem para e-mail inexistente e senha errada | não revelar quais e-mails têm conta |
+| Senha mínima de 8 caracteres, conferida no servidor | o `minlength` do HTML é só um aviso; sem a regra no servidor, uma requisição direta ignoraria o limite |
+| Chaves Pix de demonstração aleatórias | a chave é pública e pode receber dinheiro de verdade; uma chave aleatória sem banco não leva a ninguém |
+| Barra do topo e tema em um arquivo só (`_navbar.html` e `tema.css`) | corrigir cor ou contraste uma vez e valer em todas as telas |
 
 Pontos que diferem do relatório parcial e devem ser corrigidos no relatório final: `BIGINT` para `INT`; `ENTRADA`/`SAIDA` para `RECEITA`/`DESPESA`; categoria como tabela; `ON DELETE RESTRICT`; campos de Pix e status de pagamento movidos para uma migração futura (a migração 002 ficou com o perfil e a divulgação de animais).
 
 ## 6. Como testar
 
-Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 111 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, o link de volta ao painel, a exclusão de animais, o cadastro de contas, a edição do perfil, a API pública (animais, campanhas e aviso de doação) e a divulgação pelo formulário do animal.
+Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 180 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, a exclusão de animais, o cadastro de contas, o login e a senha mínima, a edição do perfil, a validação de links, a barra do topo e as páginas de erro, a API pública (animais, campanhas e aviso de doação) e a divulgação pelo formulário do animal.
 
 Para rodar os automatizados, com a venv ativa e o `.env` configurado:
 
@@ -376,34 +444,32 @@ As funcionalidades das seções 4.15 a 4.22 foram testadas manualmente. Dessas, 
 
 ## 7. Próximos passos
 
-**Feito desde a última atualização:** lançamentos automáticos a partir da saúde (4.15), gráficos em Finanças (4.19), campanhas com chave Pix e doação (4.17, 4.18 e 4.22) e "arquivar" animais e campanhas (4.20).
+**Concluído até a entrega:** divulgação de animais na página pública (4.10 a 4.14), lançamentos automáticos a partir da saúde (4.15), campanhas com chave Pix e doação (4.16, 4.17, 4.18 e 4.22), gráficos em Finanças (4.19), "arquivar" animais e campanhas (4.20), correção de XSS e de links (4.24 e 4.25), visual unificado (4.26), acesso à conta (4.27) e preparo dos dados e do `schema.sql` (4.28 e 4.29).
 
-**Em andamento (prioridade, prazo de entrega em 06/11/2026):** divulgação de animais na página pública.
-Já feitos nesta frente: o preparo do banco (seção 4.10), o cadastro com perfil, cidade e estado (4.11), a edição do perfil (4.12), a API pública (4.13) e o formulário do animal com a divulgação (4.14).
-
-1. Página pública (feita por outra integrante do grupo) passar a usar `/api/publico/dados` no lugar do arquivo de exemplo, escapar os textos, mostrar os novos campos, ganhar o botão "Entrar" para protetores e ONGs e o botão de adoção/apadrinhamento levando ao formulário externo.
-
-**Depois, se houver tempo:**
-2. Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor. - OK 
-3. Tela de finanças: filtros e gráfico de despesas por categoria. - OK
-4. Testes não funcionais: responsividade, acessibilidade e latência do banco.
-5. Campanhas, chave Pix e a integração com o Pix (Mercado Pago, em Sandbox), em uma migração futura. - OK (campanhas e pix)
-6. Avisos de erro e sucesso padronizados em JavaScript.
-7. Regenerar o `schema.sql` do repositório a partir do banco real, que hoje está desatualizado.
-8. Permitir editar e apagar lançamentos e/ou "arquivar" um animal. Hoje, um animal que tenha lançamentos não pode ser apagado (seção 4.9), e ainda não existe como corrigir ou remover um lançamento. - OK função "arquivar" animais e campanhas (4.20)
-9. Verificação de ONGs (CNPJ e aprovação manual), para evitar perfis falsos (seção 4.11).
+**Melhorias futuras** (não fazem parte da entrega):
+1. Pedir confirmação antes de excluir um animal e trocar as exclusões por POST com proteção contra CSRF.
+2. Páginas 404 e 500 personalizadas.
+3. Recuperação de senha e limite de tentativas de login.
+4. Mostrar vacinas com data já passada como "atrasada" (hoje aparecem como "agendada").
+5. Levar a barra do topo e o tema às telas que ainda usam o visual antigo (campanha, cadastro e edição de animal, formulários de saúde).
+6. A busca da página pública ignorar acentos (hoje "sao paulo" não encontra "São Paulo").
+7. Editar e apagar lançamentos financeiros (hoje só o histórico é preservado, seção 4.9).
+8. Verificação de ONGs (CNPJ e aprovação manual), para evitar perfis falsos (seção 4.11).
+9. Testes automatizados do JavaScript, acessibilidade com leitor de tela e teclado (incluindo `aria-label` nos botões que só têm emoji) e medição de latência do banco.
+10. Banco separado para desenvolvimento e produção, e verificação do certificado SSL na conexão.
 
 ## 8. Pendências conhecidas de segurança
 
 - As exclusões usam links (GET); o ideal é POST com proteção contra CSRF.
 - Verificação do certificado SSL na conexão com o banco.
 - Limite de tentativas de login.
-- Recuperação de senha.
+- Recuperação de senha. A senha tem só o tamanho mínimo de 8 caracteres, sem exigência de letras, números ou símbolos.
 - Banco separado para desenvolvimento e produção.
-- A página pública lê dados com `innerHTML`; trocar por `textContent` (ou escapar) onde o conteúdo vier do banco, agora que a API pública entrega textos digitados por usuários (seção 4.13).
+- *(Resolvido na seção 4.24)* A página pública lia dados com `innerHTML`; hoje usa `textContent`, e os links são validados no navegador e no servidor.
 - A API pública não tem limite de requisições; para o porte do projeto é aceitável.
 - O aviso de doação é uma rota aberta, sem login. O limite de 30 avisos pendentes por campanha impede que a lista seja enchida sem fim, mas alguém mal-intencionado poderia ocupar as 30 vagas e bloquear os avisos de doadores de verdade. Não há limite por origem (endereço de IP).
-- A chave Pix é pública (necessário para doar) e pode ser um dado pessoal (CPF, telefone ou e-mail). A tela do perfil recomenda a chave aleatória, mas o sistema não impede o uso de outros tipos (seção 4.23).
+- A chave Pix é pública (necessário para doar) e pode ser um dado pessoal (CPF, telefone ou e-mail). A tela do perfil recomenda a chave aleatória, mas o sistema não impede o uso de outros tipos (seção 4.23). Os dados de demonstração usam chaves aleatórias (seção 4.28).
+- O banco do Aiven está em período de teste, que termina por volta de 30/11/2026 (seção 4.3). Depois dessa data, é preciso escolher um plano ou os dados deixam de existir.
 
 ## 9. Glossário rápido
 
@@ -416,4 +482,7 @@ Já feitos nesta frente: o preparo do banco (seção 4.10), o cadastro com perfi
 - **`fetch`:** comando do JavaScript que chama o servidor sem recarregar a página.
 - **Migração:** arquivo `.sql` guardado no repositório que descreve uma mudança no banco.
 - **Chave estrangeira:** coluna que aponta para o registro de outra tabela e garante que o vínculo seja válido.
+- **XSS (*cross-site scripting*):** falha em que um texto digitado por uma pessoa vira código que roda no navegador de outra. Evita-se escapando o texto ou inserindo-o como texto puro (`textContent`).
+- **Escapar:** trocar caracteres como `<` e `>` por versões que o navegador mostra como texto e não interpreta como código. O Jinja faz isso por padrão.
+- **Contraste (WCAG AA):** diferença entre a cor do texto e a do fundo; o mínimo recomendado é 4,5:1 para texto normal, para que pessoas com baixa visão consigam ler.
 - **Branch, commit, push e Pull Request:** ramo de trabalho, registro de uma mudança, envio para o GitHub e pedido para juntar a branch com a `main`.
