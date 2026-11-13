@@ -2,7 +2,7 @@
 
 Este documento registra como o sistema é testado, o que já foi verificado, os resultados e as medições. Deve ser atualizado a cada etapa nova.
 
-Última atualização: 01/11/2026.
+Última atualização: 12/11/2026.
 
 ## 1. Estratégia
 
@@ -11,7 +11,7 @@ Este documento registra como o sistema é testado, o que já foi verificado, os 
 | Funcional manual | uso das telas e das rotas, com duas contas (uma em janela normal e outra em janela anônima) | realizado a cada etapa |
 | Controle de acesso | rotas sem login, registros de outra conta, API sem login | realizado (manual e automatizado) |
 | Validação de entradas | valores, datas, filtros e textos inválidos | realizado (manual e automatizado) |
-| Automatizado (`pytest`) | testes em Python que chamam a API, as páginas e o cadastro e conferem as respostas | 69 testes, todos passando |
+| Automatizado (`pytest`) | testes em Python que chamam a API, as páginas e o cadastro e conferem as respostas | 111 testes, todos passando |
 | Banco de dados | conferência das migrações e da restauração de backup com consultas SQL | realizado |
 | Não funcional | responsividade em celular, acessibilidade (WCAG 2.2) e latência do banco | planejado |
 
@@ -165,12 +165,12 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 ### 3.2 Como funcionam
 
 - Cada teste é uma função `test_...` que chama a API como um navegador e confere a resposta com `assert`.
-- As **fixtures** (em `tests/conftest.py`) preparam e limpam o cenário: criam uma pessoa de teste no banco (e-mail iniciado em `pytest_`), um animal quando preciso, e fazem o login simulado. No fim de cada teste, apagam tudo o que foi criado (transações, animais e usuário). Nos testes do cadastro, que criam contas pela própria tela, a fixture `emails_de_teste` guarda os e-mails usados e apaga essas contas no fim.
+- As **fixtures** (em `tests/conftest.py`) preparam e limpam o cenário: criam uma pessoa de teste no banco (e-mail iniciado em `pytest_`), um animal quando preciso, e fazem o login simulado. No fim de cada teste, apagam tudo o que foi criado (transações, animais e usuário). Nos testes do cadastro, que criam contas pela própria tela, a fixture `emails_de_teste` guarda os e-mails usados e apaga essas contas no fim. Nos testes de campanhas, a fixture `campanhas` apaga os avisos de doação e as campanhas criadas antes de a pessoa de teste ser removida, porque a chave estrangeira de `campanhas` é `RESTRICT`.
 - Como só existe um banco, os testes nunca limpam tabelas inteiras: removem só os registros que eles mesmos criaram. Os dados reais do grupo não são tocados.
 
-### 3.3 O que é testado (90 testes)
+### 3.3 O que é testado (111 testes)
 
-Os testes de finanças, da página do animal e da exclusão ficam em `tests/test_financas_api.py`, os do cadastro em `tests/test_cadastro.py`, os da edição do perfil em `tests/test_perfil.py`, os da API pública em `tests/test_publico.py` e os da divulgação pelo formulário do animal em `tests/test_divulgacao.py`.
+Os testes de finanças, da página do animal e da exclusão ficam em `tests/test_financas_api.py`, os do cadastro em `tests/test_cadastro.py`, os da edição do perfil em `tests/test_perfil.py`, os da API pública dos animais em `tests/test_publico.py`, os da divulgação pelo formulário do animal em `tests/test_divulgacao.py` e os das campanhas e do aviso de doação em `tests/test_publico_campanhas.py`.
 
 | Assunto | Teste | O que verifica |
 |---|---|---|
@@ -222,7 +222,7 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | API pública | `test_numero_do_chip_nunca_e_divulgado` | com chip cadastrado, só `temChip` sai; o número não aparece na resposta |
 | API pública | `test_vacinado_so_com_vacina_aplicada` | vacina agendada não conta; ao ficar `aplicada`, `vacinado` vira verdadeiro |
 | API pública | `test_protetor_independente_vai_para_o_cartao_agrupado_sem_nome` | nome e telefone da pessoa não aparecem; o animal vai para o cartão "Protetores independentes" |
-| API pública | `test_so_a_lista_fixa_de_campos_e_divulgada` | as chaves do animal e do cartão são exatamente as permitidas (trava contra vazamento de campo novo) |
+| API pública | `test_so_a_lista_fixa_de_campos_e_divulgada` | as chaves do animal e do cartão (agora incluindo `logoUrl`) são exatamente as permitidas (trava contra vazamento de campo novo) |
 | Divulgação | `test_tela_de_cadastro_libera_a_divulgacao_com_cidade_e_estado` | com cidade e estado, a opção de divulgar vem habilitada, junto com o campo de saúde |
 | Divulgação | `test_tela_de_cadastro_bloqueia_a_divulgacao_sem_cidade_e_estado` | sem eles, a opção vem desabilitada e a tela traz o link para o perfil |
 | Divulgação | `test_tela_de_edicao_mostra_o_que_esta_salvo` | a edição traz o texto de saúde e a opção marcada, como salvos |
@@ -235,10 +235,24 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | Divulgação | `test_editar_para_divulgar_sem_cidade_e_estado_e_recusado` | 400 e o animal continua não divulgado |
 | Divulgação | `test_nao_divulga_animal_de_outra_conta` | outra pessoa não consegue divulgar nem alterar o texto do animal alheio |
 | Divulgação | `test_animal_divulgado_pelo_formulario_aparece_na_api_publica` | de ponta a ponta: animal cadastrado com divulgação aparece na API, sem login, com cidade, estado e texto, e o número do chip não sai |
+| Campanhas | `test_campanha_de_ong_aparece_no_cartao_com_campos_fixos` | campanha ativa de ONG aparece no cartão da ONG, só com os campos previstos, e o recebedor é o nome da ONG |
+| Campanhas | `test_ong_com_campanha_e_sem_animal_divulgado_aparece` | a ONG com campanha ativa aparece mesmo sem animais divulgados |
+| Campanhas | `test_campanha_de_protetor_independente_nao_revela_dados_da_pessoa` | o recebedor é "Protetor(a) independente"; nome, telefone e e-mail da pessoa não aparecem |
+| Campanhas | `test_chave_pix_aparece_so_dentro_da_campanha` | a chave Pix aparece uma única vez na resposta, dentro da campanha |
+| Campanhas | `test_campanha_encerrada_nao_aparece` (2 casos) | campanha concluída ou cancelada não aparece na página pública |
+| Cartões | `test_cartao_dos_independentes_nao_usa_logo_nem_link_de_ninguem` | o cartão agrupado usa o formulário do grupo e não tem logo, mesmo que o protetor tenha cadastrado os dois |
+| Cartões | `test_ong_usa_o_proprio_formulario_e_logo` | a ONG com link e logo no perfil usa os próprios |
+| Cartões | `test_ong_sem_formulario_usa_o_formulario_do_grupo` | a ONG sem link usa o formulário do grupo |
+| Aviso de doação | `test_aviso_de_doacao_cria_pendente_sem_mexer_no_arrecadado` | sem login, valor "25,50" cria um aviso pendente (201) e o arrecadado continua zerado |
+| Aviso de doação | `test_aviso_com_valor_invalido_e_recusado` (7 casos) | 0, negativo, letras, vazio, acima de R$ 100.000, `NaN` e `Infinity` dão 400 e nada é gravado |
+| Aviso de doação | `test_corpo_que_nao_e_objeto_json_e_recusado` | corpo vazio, lista, texto e JSON malformado dão 400 (antes, lista e texto davam 500) |
+| Aviso de doação | `test_aviso_em_campanha_inexistente_e_recusado` | 404 |
+| Aviso de doação | `test_aviso_em_campanha_encerrada_e_recusado` | 404 e nada gravado |
+| Aviso de doação | `test_aviso_tem_limite_de_pendentes_por_campanha` | com 30 avisos pendentes, o seguinte recebe 429 |
 
 ### 3.4 Resultado
 
-Última execução completa: **90 passaram em 500,86 s** (8 min 20 s).
+Última execução completa: **111 passaram em 697,79 s** (11 min 37 s).
 
 ## 4. Medições
 
@@ -254,6 +268,8 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | 01/11/2026, com os testes da edição do perfil | 69 | 364,06 s | 5,3 s |
 | 01/11/2026, com os testes da API pública | 77 | 405,15 s | 5,3 s |
 | 01/11/2026, com os testes da divulgação no formulário do animal | 90 | 500,86 s | 5,6 s |
+| 12/11/2026, depois de juntar as alterações do grupo (1 teste desatualizado por causa do `logoUrl`) | 90 | 511,84 s | 5,7 s |
+| 12/11/2026, com os testes de campanhas e do aviso de doação | 111 | 697,79 s | 6,3 s |
 
 Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre várias conexões (criar o usuário, lançar, consultar e limpar). O tempo é, portanto, dominado pela comunicação com o banco. Esses números são apenas um indício: não separam a latência de conexão da latência de consulta. A medição específica de latência, prevista no relatório, ainda será feita.
 
@@ -264,7 +280,7 @@ Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre vá
 - Filtros e gráfico na tela de finanças.
 - Testes automatizados do login e das rotas de animais e saúde (o cadastro e a edição de perfil já são cobertos; o restante só por testes manuais).
 - Testes não funcionais: acessibilidade (WCAG 2.2) e medição de latência. A responsividade da página de finanças e da Página Pet já foi verificada em celular real (seções 2.4 e 2.5).
-- Campanhas e integração com o Pix.
+- Campanhas: a parte pública (campanhas na API e aviso de doação) é coberta; ainda sem teste automatizado estão a criação de campanhas, a confirmação e a recusa de avisos em Finanças, a validação da chave Pix, os gráficos e as jornadas concluídas (só verificados manualmente pelo grupo).
 
 ## 6. Limpeza de resíduos
 
@@ -275,6 +291,15 @@ Para remover resíduos, no MySQL Workbench:
 ```sql
 SET SQL_SAFE_UPDATES = 0;
 
+DELETE d FROM doacoes_informadas d
+JOIN campanhas c ON c.id = d.campanha_id
+JOIN usuarios u ON u.id = c.usuario_id
+WHERE u.email LIKE 'pytest\_%@exemplo.invalido';
+
+DELETE c FROM campanhas c
+JOIN usuarios u ON u.id = c.usuario_id
+WHERE u.email LIKE 'pytest\_%@exemplo.invalido';
+
 DELETE t FROM transacoes t
 JOIN usuarios u ON u.id = t.usuario_id
 WHERE u.email LIKE 'pytest\_%@exemplo.invalido';
@@ -282,13 +307,16 @@ WHERE u.email LIKE 'pytest\_%@exemplo.invalido';
 DELETE FROM usuarios WHERE email LIKE 'pytest\_%@exemplo.invalido';
 ```
 
-A segunda linha também apaga os animais (e suas vacinas) dessas pessoas, porque a chave estrangeira de `animais` é em cascata. A primeira vem antes porque as transações têm `RESTRICT`.
+A última linha também apaga os animais (e suas vacinas) dessas pessoas, porque a chave estrangeira de `animais` é em cascata. As outras vêm antes, e nessa ordem, porque campanhas e transações têm `RESTRICT` sobre o usuário, e os avisos de doação pendem das campanhas.
 
-Para conferir se ficou algo para trás, as duas consultas abaixo devem voltar **sem nenhuma linha de teste**:
+Para conferir se ficou algo para trás, as consultas abaixo devem voltar **sem nenhuma linha de teste**:
 
 ```sql
 SELECT id, email FROM usuarios WHERE email LIKE 'pytest\_%@exemplo.invalido';
 SELECT id, nome, usuario_id FROM animais WHERE visivel_publico = 1;
+SELECT c.id, c.titulo FROM campanhas c
+JOIN usuarios u ON u.id = c.usuario_id
+WHERE u.email LIKE 'pytest\_%@exemplo.invalido';
 ```
 
 (A segunda lista os animais divulgados de verdade; só não pode haver animal de teste nela.)
