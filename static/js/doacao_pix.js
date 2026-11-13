@@ -221,7 +221,7 @@
     setTimeout(() => { botao.textContent = rotuloOriginal; }, 2000);
   }
 
-  function abrirDoacaoPix(campanha) {
+  function abrirDoacaoPix(campanha, valorInicial) {
     garantirEstilos();
 
     const fundo = document.createElement("div");
@@ -451,9 +451,20 @@
       atualizarPix();
     });
 
-    // Começa com o primeiro valor já escolhido, como no modelo
+    // Começa com o valor pedido (ex.: botões da barra de doação); sem pedido, com o primeiro valor
     document.body.appendChild(fundo);
-    areaValores.querySelector(".pix-valor").click();
+    const botaoInicial = Array.from(areaValores.querySelectorAll(".pix-valor"))
+      .find((botao) => botao.textContent === `R$ ${valorInicial}`);
+    if (botaoInicial) {
+      botaoInicial.click(); // valor igual a um dos botões
+    } else if (valorInicial > 0) {
+      marcar(botaoOutro); // outro valor: vai para o campo personalizado
+      campoLivre.value = String(valorInicial).replace(".", ",");
+      valorEscolhido = valorInicial;
+      atualizarPix();
+    } else {
+      areaValores.querySelector(".pix-valor").click();
+    }
     fundo.querySelector(".pix-fechar").focus();
   }
 
