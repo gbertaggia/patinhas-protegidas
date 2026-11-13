@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, send_from_directory
 import config
 from routes.auth import bp as auth_bp
 from routes.animais import bp as animais_bp
@@ -25,6 +25,12 @@ app.register_blueprint(financas_bp)
 def pagina_publica():
     return render_template("publico.html")
 
+# ÍCONE DO SITE (aba do navegador): o navegador pede /favicon.ico sozinho
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(
+        app.static_folder, "img/favicon.ico", mimetype="image/vnd.microsoft.icon"
+    )
 
 # INICIALIZAÇÃO DA APLICAÇÃO
 if __name__ == '__main__':
