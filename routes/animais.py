@@ -2,12 +2,16 @@ from flask import Blueprint, render_template, request, session, redirect, abort,
 import pymysql
 from database.connection import conectar_banco
 from utils.auth import login_required, animal_do_usuario
+from utils.urls import normalizar_url_http
 
 # Blueprint dos animais e do painel do usuário
 bp = Blueprint('animais', __name__)
 
 # Tamanho máximo do texto de saúde (a coluna info_saude é VARCHAR(500))
 LIMITE_INFO_SAUDE = 500
+
+# Tamanho da coluna foto_url (VARCHAR(255))
+LIMITE_FOTO_ANIMAL = 255
 
 
 def _conta_tem_cidade_e_uf(id_usuario):
@@ -56,6 +60,15 @@ def _erro_de_divulgacao(divulgar, info_saude, id_usuario, link_de_volta):
         ), 400
 
     return None
+
+
+def _erro_de_link(mensagem, link_de_volta):
+    """Página de erro (400) para um link de foto recusado."""
+    return (
+        "<h1>Link da foto inválido</h1>"
+        f"<p>{mensagem}</p>"
+        f'<p><a href="{link_de_volta}">Voltar</a></p>'
+    ), 400
 
 
 @bp.route('/cadastro_animal')
@@ -135,7 +148,9 @@ def cadastrar_animal():
     id_protetor = session['id_usuario']
 
     # --- TRATAMENTO DE CAMPOS VAZIOS (Converte '' para None/NULL) ---
-    foto_animal = request.form.get('foto-pet') if request.form.get('foto-pet') else None
+    foto_animal, erro_foto = normalizar_url_http(
+        request.form.get('foto-pet'), 'O link da foto do animal', LIMITE_FOTO_ANIMAL
+    )
     nome_animal = request.form.get('nome')
     especie_animal = request.form.get('especie')
     idade_animal = request.form.get('idade') if request.form.get('idade') else None
@@ -156,6 +171,8 @@ def cadastrar_animal():
         erro = _erro_de_divulgacao(divulgar, info_saude, id_protetor, '/cadastro_animal')
         if erro:
             return erro
+        if erro_foto:
+            return _erro_de_link(erro_foto, '/cadastro_animal')
 
         conexao = conectar_banco()
         cursor = conexao.cursor()
@@ -274,7 +291,9 @@ def salvar_edicao_animal(id_animal):
     nova_especie = request.form.get('especie')
     nova_idade = request.form.get('idade') if request.form.get('idade') else None
     nova_raca = request.form.get('raca')
-    nova_foto = request.form.get('foto-pet') if request.form.get('foto-pet') else None
+    nova_foto, erro_foto = normalizar_url_http(
+        request.form.get('foto-pet'), 'O link da foto do animal', LIMITE_FOTO_ANIMAL
+    )
 
     novo_chip = request.form.get('chip') if request.form.get('chip') else None
     # O formulário envia '1' (Sim) ou '0' (Não): só '1', 'sim', 'true' ou 'on' contam como castrado
@@ -290,6 +309,8 @@ def salvar_edicao_animal(id_animal):
         erro = _erro_de_divulgacao(divulgar, info_saude, id_protetor, f'/editar_animal/{id_animal}')
         if erro:
             return erro
+        if erro_foto:
+            return _erro_de_link(erro_foto, f'/editar_animal/{id_animal}')
 
         conexao = conectar_banco()
         cursor = conexao.cursor()

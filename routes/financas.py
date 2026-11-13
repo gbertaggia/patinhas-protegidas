@@ -5,6 +5,7 @@ from flask import Blueprint, current_app, jsonify, render_template, request, ses
 
 from database.connection import conectar_banco
 from utils.auth import animal_do_usuario, api_login_required, login_required
+from utils.urls import normalizar_url_http
 
 financas_bp = Blueprint('financas', __name__)
 
@@ -378,9 +379,9 @@ def criar_campanha():
         if animal_id is None or not animal_do_usuario(animal_id):
             return _erro("Animal não encontrado ou não pertence ao usuário.", 404)
 
-    foto_url = dados.get('foto_url')
-    if foto_url:
-        foto_url = str(foto_url).strip() or None
+    foto_url, erro_foto = normalizar_url_http(dados.get('foto_url'), 'O link da foto da campanha')
+    if erro_foto:
+        return _erro(erro_foto)
 
     conexao = conectar_banco()
     try:
