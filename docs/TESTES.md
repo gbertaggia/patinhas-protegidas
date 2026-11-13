@@ -2,7 +2,7 @@
 
 Este documento registra como o sistema é testado, o que já foi verificado, os resultados e as medições. Deve ser atualizado a cada etapa nova.
 
-Última atualização: 12/11/2026.
+Última atualização: 13/11/2026.
 
 ## 1. Estratégia
 
@@ -11,9 +11,9 @@ Este documento registra como o sistema é testado, o que já foi verificado, os 
 | Funcional manual | uso das telas e das rotas, com duas contas (uma em janela normal e outra em janela anônima) | realizado a cada etapa |
 | Controle de acesso | rotas sem login, registros de outra conta, API sem login | realizado (manual e automatizado) |
 | Validação de entradas | valores, datas, filtros e textos inválidos | realizado (manual e automatizado) |
-| Automatizado (`pytest`) | testes em Python que chamam a API, as páginas e o cadastro e conferem as respostas | 111 testes, todos passando |
+| Automatizado (`pytest`) | testes em Python que chamam a API, as páginas, o cadastro, o login e a validação de links e conferem as respostas | 180 testes, todos passando |
 | Banco de dados | conferência das migrações e da restauração de backup com consultas SQL | realizado |
-| Não funcional | responsividade em celular, acessibilidade (WCAG 2.2) e latência do banco | planejado |
+| Não funcional | responsividade em celular, acessibilidade (WCAG 2.2) e latência do banco | responsividade e contraste de cores (WCAG AA) conferidos nas telas revisadas (seções 2.4, 2.5, 2.11 e 2.12); leitor de tela, teclado e latência do banco: planejados |
 
 ## 2. Testes manuais realizados
 
@@ -149,6 +149,50 @@ Feito no navegador, com o sistema rodando localmente, na conta principal do grup
 | Editar o animal, marcar "Divulgar" e salvar; abrir `/api/publico/dados` | o animal aparece no cartão dos protetores independentes, com cidade, estado e texto de saúde, `temChip: true` e sem o número do chip |
 | Editar de novo, desmarcar "Divulgar" e salvar | o animal some da API pública |
 
+### 2.11 Página pública: segurança e doação geral
+
+Feitos em 13/11/2026. A verificação de segurança usou um navegador de teste (Chromium sem interface, controlado por script) e uma API simulada com textos maliciosos; a de doação foi feita no navegador, com o sistema rodando localmente.
+
+| Teste | Resultado |
+|---|---|
+| Textos com código HTML (`<img src=x onerror=...>`) no nome, na região, no resumo e na descrição da ONG, no animal e na campanha, e aspas dentro do endereço da foto | **versão antiga:** o código inserido foi executado; **versão nova:** nada foi executado e o texto aparece literal na tela |
+| Link do formulário de adoção com `javascript:...` | a versão nova não cria o link: o botão aparece desativado, "Adoção indisponível" |
+| Link do formulário de adoção válido (`https://...`) | botão "Quero Adotar" abre o formulário |
+| Foto que não carrega | aparece a imagem padrão, sem ficar em repetição |
+| Barra "Ajude a causa" numa organização com campanha geral ativa | os valores sugeridos e "Outro valor" abrem a janela do Pix, já com o valor escolhido |
+| Barra "Ajude a causa" numa organização sem campanha geral, e no cartão "Protetores independentes" | a barra não aparece |
+| API fora do ar | mensagem de erro na tela, em vez de página vazia |
+| Busca por nome ou região | filtra os cartões e atualiza o contador; o texto "Nenhuma organização encontrada" aparece quando nada combina |
+
+### 2.12 Visual, navegação e acesso à conta
+
+Feitos em 13/11/2026, no navegador, com o sistema rodando localmente.
+
+| Teste | Resultado |
+|---|---|
+| Barra do topo comum no painel, em Finanças, na Página Pet, na página pública, no login, no cadastro e na edição do perfil | mesma barra, logo com a patinha roxa e o item da página atual destacado |
+| Barra para quem **não** está logado | botões "Entrar" e "Criar conta"; a frase de convite aparece abaixo do texto de apresentação |
+| Barra para quem está logado | menu Painel, Finanças e Campanhas e adoção, saudação com o nome, "Editar perfil" e "Sair"; a frase de convite não aparece |
+| Link "← Voltar para campanhas e adoção" no login e no cadastro | leva à página pública |
+| Login e cadastro em tela de celular (modo dispositivo, 400 px de largura) | formulários legíveis, sem corte e sem rolagem lateral |
+| Rótulos do cadastro ao trocar entre Protetor(a) e ONG | os rótulos do nome, da missão e da logo trocam, como antes |
+| Login com senha errada | volta para a tela de login com a faixa "E-mail ou senha incorretos." e o e-mail digitado preenchido |
+| Cadastro com senha de 2 caracteres | o navegador barra e pede 8 ou mais |
+| Cadastro com e-mail já usado | página de erro no tema, com "Tentar outro e-mail" e "Entrar" |
+| Contraste de cores (WCAG AA), por cálculo e por script no navegador de teste | texto amarelo do Bootstrap (1,63:1 no branco) trocado por âmbar escuro (6,92:1); verde da marca 5,48:1 e 8,83:1 (escuro); cinza de apoio da página pública de 4,24:1 para 5,60:1; selo de vacina agendada 6,39:1. Nenhum texto da página pública abaixo de 4,5:1 |
+
+### 2.13 Dados de teste e de demonstração antes da entrega
+
+Feitos em 13/11/2026, no MySQL Workbench, depois de um backup do banco inteiro (Data Export).
+
+| Teste | Resultado |
+|---|---|
+| Contas de teste automático (`pytest_`) no banco | 0 (a limpeza dos testes está funcionando) |
+| Contas que aparecem na página pública com nome real de pessoa | uma conta apagada, com as campanhas, o lançamento e o animal dela (conferido por consulta antes e depois, dentro de uma transação, e só então confirmado) |
+| Chaves Pix de demonstração | todas trocadas por chave aleatória (formato UUID v4, que não existe em nenhum banco); a conferência mostrou 36 caracteres em cada uma |
+| Logo com imagem de terceiros em uma organização de exemplo | removida; a página mostra a patinha padrão |
+| Página pública depois da limpeza | três cartões: duas organizações de exemplo e "Protetores independentes" |
+
 ## 3. Testes automatizados (pytest)
 
 ### 3.1 Como rodar
@@ -165,12 +209,12 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 ### 3.2 Como funcionam
 
 - Cada teste é uma função `test_...` que chama a API como um navegador e confere a resposta com `assert`.
-- As **fixtures** (em `tests/conftest.py`) preparam e limpam o cenário: criam uma pessoa de teste no banco (e-mail iniciado em `pytest_`), um animal quando preciso, e fazem o login simulado. No fim de cada teste, apagam tudo o que foi criado (transações, animais e usuário). Nos testes do cadastro, que criam contas pela própria tela, a fixture `emails_de_teste` guarda os e-mails usados e apaga essas contas no fim. Nos testes de campanhas, a fixture `campanhas` apaga os avisos de doação e as campanhas criadas antes de a pessoa de teste ser removida, porque a chave estrangeira de `campanhas` é `RESTRICT`.
+- As **fixtures** (em `tests/conftest.py`) preparam e limpam o cenário: criam uma pessoa de teste no banco (e-mail iniciado em `pytest_`), um animal quando preciso, e fazem o login simulado. No fim de cada teste, apagam tudo o que foi criado (transações, animais e usuário). Nos testes do cadastro, que criam contas pela própria tela, a fixture `emails_de_teste` guarda os e-mails usados e apaga essas contas no fim. Nos testes de campanhas, a fixture `campanhas` apaga os avisos de doação e as campanhas criadas antes de a pessoa de teste ser removida, porque a chave estrangeira de `campanhas` é `RESTRICT`; nos testes de links (`test_urls.py`), a fixture `limpar_campanhas` faz o mesmo. Nos testes de acesso (`test_acesso.py`), a conta é criada pelo próprio cadastro e apagada pela fixture `emails_de_teste`, e o login é feito num navegador novo, sem sessão.
 - Como só existe um banco, os testes nunca limpam tabelas inteiras: removem só os registros que eles mesmos criaram. Os dados reais do grupo não são tocados.
 
-### 3.3 O que é testado (111 testes)
+### 3.3 O que é testado (180 testes)
 
-Os testes de finanças, da página do animal e da exclusão ficam em `tests/test_financas_api.py`, os do cadastro em `tests/test_cadastro.py`, os da edição do perfil em `tests/test_perfil.py`, os da API pública dos animais em `tests/test_publico.py`, os da divulgação pelo formulário do animal em `tests/test_divulgacao.py` e os das campanhas e do aviso de doação em `tests/test_publico_campanhas.py`.
+Os testes de finanças, da página do animal e da exclusão ficam em `tests/test_financas_api.py`, os do cadastro em `tests/test_cadastro.py`, os da edição do perfil em `tests/test_perfil.py`, os da API pública dos animais em `tests/test_publico.py`, os da divulgação pelo formulário do animal em `tests/test_divulgacao.py` os das campanhas e do aviso de doação em `tests/test_publico_campanhas.py`, os do ícone do site em `tests/test_favicon.py`, os da validação de links em `tests/test_urls.py`, os das páginas HTML (barra do topo e arquivos do tema) em `tests/test_paginas.py` e os do login, da senha mínima e das páginas de erro em `tests/test_acesso.py`.
 
 | Assunto | Teste | O que verifica |
 |---|---|---|
@@ -201,7 +245,7 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | Página | `test_pagina_financas_nao_lista_animal_de_outra_conta` | animal de outra conta não aparece |
 | Página do animal | `test_pagina_do_animal_mostra_o_painel_financeiro` | a Página Pet traz o painel, ligado ao id do animal |
 | Página do animal | `test_pagina_do_animal_de_outra_conta_da_404` | animal de outra conta responde 404 |
-| Página do animal | `test_pagina_do_animal_tem_link_para_voltar_ao_painel_no_celular` | a página traz um link para `/painel` visível em telas pequenas |
+| Página do animal | `test_pagina_do_animal_tem_link_para_voltar_ao_painel_no_celular` | o menu da barra do topo, que aparece em todos os tamanhos de tela (no celular passa para uma linha abaixo do logo), traz o link para `/painel` e nada o esconde |
 | Exclusão de animal | `test_animal_com_lancamentos_nao_pode_ser_apagado` | animal com lançamento: resposta 409 com a mensagem, e o animal continua existindo |
 | Exclusão de animal | `test_animal_sem_lancamentos_continua_podendo_ser_apagado` | animal sem lançamentos: redireciona (302) e a página do animal passa a dar 404 |
 | Cadastro | `test_tela_de_cadastro_traz_perfil_e_estados` | o formulário traz as opções Protetor(a) e ONG e a lista de estados |
@@ -249,10 +293,35 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | Aviso de doação | `test_aviso_em_campanha_inexistente_e_recusado` | 404 |
 | Aviso de doação | `test_aviso_em_campanha_encerrada_e_recusado` | 404 e nada gravado |
 | Aviso de doação | `test_aviso_tem_limite_de_pendentes_por_campanha` | com 30 avisos pendentes, o seguinte recebe 429 |
+| Ícone do site | `tests/test_favicon.py` | `/favicon.ico` responde 200 como imagem |
+| Links | `test_link_valido_e_aceito` (5 casos) | `http://` e `https://` são aceitos, com os espaços das pontas removidos |
+| Links | `test_link_vazio_vira_none_sem_erro` (4 casos) | vazio, só espaços ou ausente viram "sem link", sem erro |
+| Links | `test_link_invalido_e_recusado` (17 casos) | `javascript:`, `data:`, `vbscript:`, `ftp:`, `file:`, sem esquema, `//`, endereço sem servidor, espaço ou quebra de linha no meio, caractere nulo, colchete aberto, número e lista são recusados, com mensagem |
+| Links | `test_link_longo_demais_e_recusado`, `test_link_no_limite_e_aceito` | acima do limite de caracteres é recusado; exatamente no limite é aceito |
+| Links | `test_cadastro_recusa_link_perigoso` (2 casos), `test_cadastro_aceita_links_https` | logo e formulário com `javascript:` dão 400 e não criam a conta; links `https` são gravados |
+| Links | `test_perfil_recusa_link_perigoso` (2 casos), `test_perfil_aceita_links_https` | o mesmo na edição do perfil, sem alterar a conta |
+| Links | `test_cadastro_de_animal_recusa_foto_perigosa`, `test_cadastro_de_animal_aceita_foto_https`, `test_edicao_de_animal_recusa_foto_perigosa`, `test_edicao_de_animal_aceita_foto_https` | a foto do animal só aceita `http` e `https`, no cadastro e na edição (nada é alterado se for recusada) |
+| Links | `test_campanha_recusa_foto_perigosa`, `test_campanha_aceita_foto_https_ou_sem_foto` (3 casos) | a foto da campanha recusa `javascript:` (400) e aceita `https`, vazio ou ausente |
+| Páginas | `test_pagina_interna_abre_com_a_barra_do_topo` (2 casos), `test_pagina_do_animal_abre_com_a_barra_do_topo` | painel, Finanças e Página Pet abrem com a barra comum, o arquivo do tema, um único item destacado e o nome da pessoa |
+| Páginas | `test_login_e_cadastro_tem_barra_do_topo_e_volta_para_a_pagina_publica` (2 casos) | login e cadastro abrem com a barra, o tema e o caminho de volta para a página pública |
+| Páginas | `test_cadastro_avisa_o_que_fica_publico` | o aviso de privacidade aparece e todos os campos que o servidor lê continuam no formulário |
+| Páginas | `test_editar_perfil_abre_com_a_barra_do_topo` | a edição do perfil abre com a barra, "Editar perfil" destacado e todos os campos |
+| Páginas | `test_pagina_publica_para_visitante_tem_entrar_e_criar_conta` | visitante vê "Entrar" e "Criar conta", sem menu, e a página não aponta mais para um arquivo CSS que não existe |
+| Páginas | `test_pagina_publica_para_quem_esta_logado_tem_o_menu` | quem está logado vê o menu e não vê "Criar conta" |
+| Páginas | `test_arquivos_do_tema_existem` (2 casos) | o CSS do tema e o ícone da marca são servidos com o tipo certo |
+| Acesso | `test_login_certo_entra_no_painel` | login correto redireciona para o painel |
+| Acesso | `test_login_com_senha_errada_mostra_a_mensagem_na_tela` | 401, a mensagem na própria tela, sem `alert()`, com o e-mail preenchido e sem a senha |
+| Acesso | `test_login_com_email_inexistente_tem_a_mesma_resposta` | mesma resposta para e-mail inexistente e senha errada, para não revelar quem tem conta |
+| Acesso | `test_login_sem_preencher_pede_e_mail_e_senha` (3 casos) | campo faltando dá 400 com a mensagem |
+| Acesso | `test_login_nao_executa_o_que_foi_digitado_no_email` | um e-mail com `<script>` volta escapado na tela e não é executado |
+| Acesso | `test_cadastro_recusa_senha_curta` (3 casos), `test_cadastro_explica_o_tamanho_minimo_da_senha`, `test_cadastro_aceita_senha_com_oito_caracteres` | senha com menos de 8 caracteres dá 400 e não cria conta; com 8 é aceita |
+| Acesso | `test_erro_de_validacao_do_cadastro_usa_a_pagina_no_tema` | erro de validação usa a página do tema, com botão de voltar |
+| Acesso | `test_email_repetido_mostra_a_pagina_no_tema_com_opcao_de_entrar` | 409, mensagem "E-mail já cadastrado" e opção de entrar |
+| Acesso | `test_erro_do_perfil_usa_a_pagina_no_tema` | link perigoso no perfil dá 400 na página do tema, com link de volta para a edição |
 
 ### 3.4 Resultado
 
-Última execução completa: **111 passaram em 697,79 s** (11 min 37 s).
+Última execução completa (13/11/2026): **180 passaram em 876,43 s** (14 min 36 s).
 
 ## 4. Medições
 
@@ -270,16 +339,19 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | 01/11/2026, com os testes da divulgação no formulário do animal | 90 | 500,86 s | 5,6 s |
 | 12/11/2026, depois de juntar as alterações do grupo (1 teste desatualizado por causa do `logoUrl`) | 90 | 511,84 s | 5,7 s |
 | 12/11/2026, com os testes de campanhas e do aviso de doação | 111 | 697,79 s | 6,3 s |
+| 13/11/2026, com o ícone do site e a validação de links | 154 | 776,13 s | 5,0 s |
+| 13/11/2026, com as páginas, o login e a senha mínima (versão final) | 180 | 876,43 s | 4,9 s |
 
 Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre várias conexões (criar o usuário, lançar, consultar e limpar). O tempo é, portanto, dominado pela comunicação com o banco. Esses números são apenas um indício: não separam a latência de conexão da latência de consulta. A medição específica de latência, prevista no relatório, ainda será feita.
 
 ## 5. O que ainda não está coberto
 
 - Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
-- O JavaScript da tela de finanças e o da página pública (hoje verificados só manualmente).
+- O JavaScript da tela de finanças e o da página pública (hoje verificados só manualmente; o da página pública também foi verificado por um script no navegador de teste, que não faz parte do repositório).
 - Filtros e gráfico na tela de finanças.
-- Testes automatizados do login e das rotas de animais e saúde (o cadastro e a edição de perfil já são cobertos; o restante só por testes manuais).
-- Testes não funcionais: acessibilidade (WCAG 2.2) e medição de latência. A responsividade da página de finanças e da Página Pet já foi verificada em celular real (seções 2.4 e 2.5).
+- Testes automatizados das rotas de animais e saúde (o cadastro, o login, a edição de perfil e a validação de links já são cobertos; o restante só por testes manuais).
+- Testes não funcionais: acessibilidade com leitor de tela e navegação só pelo teclado, e medição de latência. O contraste de cores (WCAG AA) foi conferido nas telas revisadas, e a responsividade da página de finanças e da Página Pet foi verificada em celular real (seções 2.4 e 2.5), e a do login e do cadastro, no modo dispositivo do navegador (seção 2.12).
+- As telas da campanha, do cadastro e da edição de animal e dos formulários de saúde ainda não usam a barra do topo e o tema comuns; não há teste automatizado para elas além de abrirem sem erro nas rotinas já cobertas.
 - Campanhas: a parte pública (campanhas na API e aviso de doação) é coberta; ainda sem teste automatizado estão a criação de campanhas, a confirmação e a recusa de avisos em Finanças, a validação da chave Pix, os gráficos e as jornadas concluídas (só verificados manualmente pelo grupo).
 
 ## 6. Limpeza de resíduos
@@ -321,9 +393,25 @@ WHERE u.email LIKE 'pytest\_%@exemplo.invalido';
 
 (A segunda lista os animais divulgados de verdade; só não pode haver animal de teste nela.)
 
+### Dados de demonstração e chaves Pix
+
+Antes da entrega, as chaves Pix de teste foram trocadas por chaves aleatórias, porque a chave aparece na página pública, dentro das campanhas, e um endereço de e-mail ou telefone de teste poderia receber doações de verdade. A troca foi feita no Workbench, dentro de uma transação (`START TRANSACTION`, com `COMMIT` só depois de conferir), depois de um backup. O formato é o de uma chave aleatória do Pix (UUID versão 4), gerada pelo próprio MySQL:
+
+```sql
+UPDATE usuarios
+SET chave_pix = LOWER(CONCAT(
+      HEX(RANDOM_BYTES(4)), '-', HEX(RANDOM_BYTES(2)), '-4',
+      SUBSTRING(HEX(RANDOM_BYTES(2)), 2), '-',
+      ELT(1 + FLOOR(RAND() * 4), '8', '9', 'a', 'b'), SUBSTRING(HEX(RANDOM_BYTES(2)), 2), '-',
+      HEX(RANDOM_BYTES(6))))
+WHERE id IN (/* ids das contas de demonstração */);
+```
+
+A chave tem o formato certo, mas não existe em nenhum banco: se alguém tentar pagar pelo QR Code da demonstração, o banco recusa.
+
 ## 7. Como acrescentar um teste
 
 1. Escreva uma função `test_...` em `tests/test_financas_api.py` (ou em um arquivo novo `tests/test_*.py`).
 2. Peça as fixtures de que precisa pelos parâmetros: `client` (sem login), `client_logado`, `outro_client`, `animal`, `animal_de_outro`.
-3. Rode `pytest -v` e confira.
+3. Rode `pytest -v` (ou `pytest`, para uma saída mais curta) e confira.
 4. Atualize a tabela da seção 3.3 e o resultado da seção 3.4.
