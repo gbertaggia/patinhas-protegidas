@@ -68,3 +68,16 @@ def sincronizar_lancamento(cursor, usuario_id, animal_id, origem_tipo, origem_id
         (usuario_id, animal_id, categoria['id'], valor, (descricao or '')[:255] or None,
          data_transacao, origem_tipo, origem_id)
     )
+
+
+def remover_lancamento(cursor, usuario_id, origem_tipo, origem_id):
+    """Apaga a despesa que nasceu de um registro de saúde (vacina, medicamento ou consulta).
+
+    Chamada quando o registro é apagado, para a despesa não ficar "órfã" nas finanças.
+    Só mexe no lançamento daquele tipo e daquele registro; lançamentos manuais e os de
+    outros registros não são tocados. Não faz commit: quem chama confirma tudo junto.
+    """
+    cursor.execute(
+        "DELETE FROM transacoes WHERE usuario_id = %s AND origem_tipo = %s AND origem_id = %s",
+        (usuario_id, origem_tipo, origem_id)
+    )
