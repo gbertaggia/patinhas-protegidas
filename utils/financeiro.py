@@ -39,10 +39,12 @@ def sincronizar_lancamento(cursor, usuario_id, animal_id, origem_tipo, origem_id
     """Cria ou atualiza a despesa ligada a um registro de saúde.
 
     - valor maior que zero: cria a despesa, ou atualiza a que já existe;
-    - valor zero ou vazio: não faz nada (nenhuma despesa é apagada).
+    - valor zero ou vazio: apaga a despesa que existir para esse registro (se não
+      existir, não faz nada). Assim, tirar o valor de um card tira o gasto das finanças.
     Não faz commit: quem chama confirma tudo junto com o registro de saúde.
     """
     if not valor or valor <= 0:
+        remover_lancamento(cursor, usuario_id, origem_tipo, origem_id)
         return
 
     cursor.execute(

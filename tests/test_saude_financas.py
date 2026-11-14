@@ -1,7 +1,8 @@
 """Ligação entre os cards de saúde (vacina, medicamento, consulta) e as finanças.
 
-Cobre a exclusão: apagar o card tem de apagar a despesa que ele gerou, para não
-sobrar lançamento "órfão" somando em Finanças.
+Cobre a exclusão (apagar o card apaga a despesa que ele gerou, para não sobrar
+lançamento "órfão" somando em Finanças) e a edição (o formulário mostra o valor e a
+despesa acompanha o que for salvo: muda, nasce ou some).
 """
 import pytest
 
@@ -159,3 +160,100 @@ def test_apagar_card_de_outra_conta_da_404_e_preserva_a_despesa(
 
     assert _card_existe('vacina', id_card)
     assert len(_lancamentos_do_animal(outro_client, animal_de_outro)) == 1
+
+
+# ---------- Edição ----------
+
+def _url_formulario_de_edicao(tipo, id_card, animal):
+    return {'vacina': f'/editar_vacina/{id_card}/{animal}',
+            'medicamento': f'/editar_medicacao/{id_card}',
+            'consulta': f'/editar_consulta/{id_card}/{animal}'}[tipo]
+
+
+def _editar_card(client, tipo, animal, id_card, valor):
+    """Salva a edição pelo mesmo caminho que a pessoa usa na tela."""
+    if tipo == 'vacina':
+        url = f'/editar_vacina/{id_card}/{animal}'
+        dados = {'vacina': 'Raiva', 'data_vacina': '2026-11-02',
+                 'status_vacina': 'aplicada', 'dose': '1', 'valor': valor}
+    elif tipo == 'medicamento':
+        url = f'/salvar_edicao_medicacao/{id_card}/{animal}'
+        dados = {'medicacao': 'Vermífugo', 'dose_med': '1', 'frequencia': '8',
+                 'data_inicio': '2026-11-02', 'duracao': '7',
+                 'horarios_texto': '08:00', 'valor': valor}
+    else:
+        url = f'/editar_consulta/{id_card}/{animal}'
+        dados = {'data_consulta': '2026-11-02', 'hora_consulta': '10:00',
+                 'clinica': 'Clínica de teste', 'veterinario': 'Dra. Teste',
+                 'motivo': 'rotina', 'valor': valor}
+    return client.post(url, data=dados)
+
+
+@pytest.mark.parametrize('tipo', ['vacina', 'medicamento', 'consulta'])
+def test_formulario_de_edicao_mostra_o_valor(client_logado, animal, limpar_saude, tipo):
+    _salvar_card(client_logado, tipo, animal, '80,50')
+    id_card = _id_do_card(client_logado, tipo, animal)
+
+    html = client_logado.get(_url_formulario_de_edicao(tipo, id_card, animal)).get_data(as_text=True)
+
+    assert 'name="valor"' in html
+    assert 'value="80,50"' in html
+
+
+@pytest.mark.parametrize('tipo', ['vacina', 'medicamento', 'consulta'])
+def test_editar_o_valor_atualiza_a_despesa(client_logado, animal, limpar_saude, tipo):
+    _salvar_card(client_logado, tipo, animal, '80,50')
+    id_card = _id_do_card(client_logado, tipo, animal)
+
+    resposta = _editar_card(client_logado, tipo, animal, id_card, '95,90')
+
+    assert resposta.status_code == 302
+    lancamentos = _lancamentos_do_animal(client_logado, animal)
+    assert len(lancamentos) == 1  # atualizou a mesma despesa, não criou outra
+    assert lancamentos[0]['valor'] == '95.90'
+    assert lancamentos[0]['origem_id'] == id_card
+    assert lancamentos[0]['data_transacao'] == '2026-11-02'
+    assert client_logado.get('/api/financas/resumo').get_json()['despesas'] == '95.90'
+
+
+@pytest.mark.parametrize('tipo, valor', [
+    ('vacina', ''), ('vacina', '0'), ('medicamento', ''), ('consulta', ''),
+])
+def test_editar_sem_valor_apaga_a_despesa(client_logado, animal, limpar_saude, tipo, valor):
+    _salvar_card(client_logado, tipo, animal, '80')
+    id_card = _id_do_card(client_logado, tipo, animal)
+
+    resposta = _editar_card(client_logado, tipo, animal, id_card, valor)
+
+    assert resposta.status_code == 302
+    assert _card_existe(tipo, id_card)  # o card continua; só o gasto sai das finanças
+    assert _lancamentos_do_animal(client_logado, animal) == []
+    assert client_logado.get('/api/financas/resumo').get_json()['despesas'] == '0.00'
+
+
+def test_editar_card_sem_valor_dando_valor_cria_a_despesa(client_logado, animal, limpar_saude):
+    _salvar_card(client_logado, 'consulta', animal, '')
+    ids = _ids_dos_cards('consulta', animal)
+    assert len(ids) == 1
+    assert _lancamentos_do_animal(client_logado, animal) == []
+
+    resposta = _editar_card(client_logado, 'consulta', animal, ids[0], '120')
+
+    assert resposta.status_code == 302
+    lancamentos = _lancamentos_do_animal(client_logado, animal)
+    assert len(lancamentos) == 1
+    assert lancamentos[0]['valor'] == '120.00'
+    assert lancamentos[0]['origem_tipo'] == 'CONSULTA'
+
+
+@pytest.mark.parametrize('tipo', ['vacina', 'medicamento', 'consulta'])
+def test_valor_invalido_na_edicao_e_recusado(client_logado, animal, limpar_saude, tipo):
+    _salvar_card(client_logado, tipo, animal, '80')
+    id_card = _id_do_card(client_logado, tipo, animal)
+
+    resposta = _editar_card(client_logado, tipo, animal, id_card, 'abc')
+
+    assert resposta.status_code == 400
+    lancamentos = _lancamentos_do_animal(client_logado, animal)
+    assert len(lancamentos) == 1
+    assert lancamentos[0]['valor'] == '80.00'  # nada foi alterado

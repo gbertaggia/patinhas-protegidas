@@ -64,6 +64,14 @@
                     </select>
                 </div>
 
+                <div class="mb-3">
+                    <label for="valor" class="form-label">Valor (R$):</label>
+                    <input type="text" id="valor" name="valor" class="form-control"
+                           inputmode="decimal" autocomplete="off" placeholder="0,00"
+                           value="{% if consulta.valor %}{{ ('%.2f' % consulta.valor)|replace('.', ',') }}{% endif %}">
+                    <div class="form-text">Opcional. O valor entra nas despesas do animal. Se ficar vazio ou zero, a despesa é removida.</div>
+                </div>
+
                 <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm">Atualizar Registro</button>
                 <a href="{{ url_for('animais.pagina_animal', id_animal=animal.id) }}" class="btn btn-outline-secondary w-100 mt-2">Cancelar</a>
             </form>
