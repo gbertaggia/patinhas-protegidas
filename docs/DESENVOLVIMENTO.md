@@ -2,7 +2,7 @@
 
 Este documento registra como o sistema está organizado, o que foi feito desde a refatoração do back-end e quais decisões foram tomadas. Ele deve ser atualizado a cada etapa concluída.
 
-Última atualização: 13/11/2026.
+Última atualização: 14/11/2026.
 
 ## 1. Visão geral
 
@@ -279,9 +279,9 @@ Os formulários de cadastro de vacina, medicação e consulta ganharam o campo *
 
 - A despesa entra na categoria correspondente (Vacina, Medicamento ou Consulta), ligada ao animal, com `origem_tipo` e `origem_id` apontando para o registro de saúde.
 - A data da despesa é a da vacina, a do início do tratamento ou a da consulta.
-- A função `sincronizar_lancamento` (`utils/financeiro.py`) cria ou atualiza a despesa, mas **nunca apaga**. Valor vazio ou zero não gera lançamento.
+- A função `sincronizar_lancamento` (`utils/financeiro.py`) cria ou atualiza a despesa. Valor vazio ou zero não gera lançamento e, se já havia uma despesa para o registro, ela é removida (seção 4.30).
 - A função `ler_valor` aceita "120", "120,50", "1.200" e "1.200,50".
-- Ainda falta: a edição desses registros não atualiza a despesa.
+- A edição e a exclusão desses registros também acompanham a despesa (seção 4.30).
 
 ### 4.16 Campanhas no painel (PR #34, branch `campanhas-no-painel`)
 
@@ -401,6 +401,24 @@ As contas que ninguém vê na página pública foram mantidas: a senha é guarda
 
 O `schema.sql` do repositório estava desatualizado: não tinha as tabelas `categorias`, `transacoes`, `campanhas` e `doacoes_informadas`, nem as colunas de perfil, divulgação, valor, Pix e jornada, e ainda tinha uma coluna `created_at` em `usuarios` que o banco real não tem. Ele foi refeito a partir de uma exportação só da estrutura do banco real (MySQL 8.4), na ordem em que as tabelas dependem umas das outras, com `CREATE TABLE IF NOT EXISTS` (sem `DROP`) e com as 15 categorias iniciais. As migrações em `database/migrations/` continuam sendo o histórico das mudanças.
 
+### 4.30 Cards de saúde e finanças: exclusão e edição (14/11/2026)
+
+**O problema.** Um teste manual encontrou dois defeitos na ligação entre vacinas, medicamentos e consultas e as finanças (seção 4.15):
+1. Apagar um card que tinha valor deixava a despesa em Finanças, sem card de origem (lançamento "órfão"). Ela continuava somando em receitas, despesas e gráficos, e a tela de Finanças não permite apagar lançamentos.
+2. A tela de edição dos cards não tinha o campo Valor, então o valor não aparecia e não podia ser mudado.
+
+Os testes automatizados não pegaram porque as rotas de saúde só tinham teste manual (`TESTES.md`, seção 5): o cruzamento entre "apagar ou editar o card" e "o que acontece nas finanças" nunca tinha sido testado.
+
+**A correção.** Em duas etapas, cada uma com os testes escritos antes (que falharam como esperado) e depois a correção:
+- **Exclusão** (`routes/saude.py`, `utils/financeiro.py`): as rotas `deletar_vacina`, `deletar_medicacao` e `deletar_consulta` chamam a nova função `remover_lancamento`, que apaga a despesa daquele tipo e daquele card na mesma transação do `DELETE` do card. A função filtra por usuário, `origem_tipo` e `origem_id`, então lançamentos manuais, de campanha e de outros cards não são tocados. Se algo falhar, nada é apagado (`rollback`).
+- **Edição** (`routes/saude.py`, `utils/financeiro.py` e os templates `editarVacina.html`, `editar_medicacao.html` e `editarConsulta.html`): os formulários ganharam o campo **Valor (R$)**, preenchido com o valor do card (formato `80,50`; vazio se não houver valor). As rotas de edição leem o valor com `ler_valor`, gravam no card e chamam `sincronizar_lancamento`, que agora também remove a despesa quando o valor fica vazio ou zero. Resultado: a despesa muda com o card, nasce se o card ganhou valor e some se perdeu. Valor inválido responde 400 e nada é alterado.
+
+**Limpeza dos dados.** Uma consulta SQL de conferência listou 4 lançamentos órfãos que já estavam no banco, todos restos de cards apagados em testes manuais. Eles foram apagados pelo id, dentro de uma transação, e a mesma consulta depois voltou vazia.
+
+**Testes.** `tests/test_saude_financas.py`, com 20 testes (seção 3.3 do `TESTES.md`). A suíte completa passou a ter 200 testes.
+
+**Limitações que permanecem.** A tela de Finanças continua sem editar ou apagar lançamentos (seção 7), e as exclusões ainda usam links (GET), sem confirmação (seção 8).
+
 ## 5. Decisões de projeto e motivos
 
 | Decisão | Motivo |
@@ -412,7 +430,7 @@ O `schema.sql` do repositório estava desatualizado: não tinha as tabelas `cate
 | `origem_tipo` e `origem_id` com chave única | garantem que a mesma vacina, por exemplo, nunca gere dois lançamentos, evitando contar o gasto em dobro |
 | Animal vazio = lançamento geral | quem diz se o gasto é do animal ou da organização é o `animal_id`, e não a categoria |
 | 404 em vez de 403 | não revelar a existência de registros de outras pessoas |
-| Despesa de saúde nunca é apagada automaticamente | evita sumir dinheiro do histórico sem ninguém perceber; correções são feitas à mão |
+| Despesa de saúde acompanha o card: apagar o card, ou zerar o valor na edição, remove a despesa | o card é a origem do gasto; um lançamento sem card (órfão) soma nas finanças e não pode ser apagado pela tela. Lançamentos manuais e de campanha nunca são tocados |
 | Chave Pix no perfil, e não em cada campanha | a pessoa cadastra uma vez só, e todas as campanhas ficam consistentes |
 | Pix direto para quem criou a campanha | o site não intermedia dinheiro: sem taxa, sem conta do projeto e sem responsabilidade de repasse |
 | Doação em duas etapas (aviso + confirmação) | o site não sabe quando um Pix acontece; só quem recebe pode confirmar, o que impede lançamentos falsos |
@@ -429,7 +447,7 @@ Pontos que diferem do relatório parcial e devem ser corrigidos no relatório fi
 
 ## 6. Como testar
 
-Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 180 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, a exclusão de animais, o cadastro de contas, o login e a senha mínima, a edição do perfil, a validação de links, a barra do topo e as páginas de erro, a API pública (animais, campanhas e aviso de doação) e a divulgação pelo formulário do animal.
+Os testes estão descritos em [TESTES.md](TESTES.md). Resumo: existem testes manuais (feitos a cada etapa, com duas contas) e 200 testes automatizados com `pytest`, que cobrem a API, a página de finanças, o painel da Página Pet, a exclusão de animais, o cadastro de contas, o login e a senha mínima, a edição do perfil, a validação de links, a barra do topo e as páginas de erro, a API pública (animais, campanhas e aviso de doação) e a divulgação pelo formulário do animal.
 
 Para rodar os automatizados, com a venv ativa e o `.env` configurado:
 
@@ -440,11 +458,11 @@ pytest -v
 
 Como só existe um banco, cada teste cria os próprios registros (com e-mail iniciado em `pytest_`) e apaga apenas o que criou.
 
-As funcionalidades das seções 4.15 a 4.22 foram testadas manualmente. Dessas, só a parte pública das campanhas (campanhas na API pública e o aviso de doação) tem testes automatizados, descritos na seção 4.23. Ainda só têm teste manual: os lançamentos automáticos de saúde, a validação da chave Pix, a janela de doação, a confirmação e a recusa de avisos em Finanças, os gráficos e as jornadas concluídas.
+As funcionalidades das seções 4.15 a 4.22 foram testadas manualmente. Dessas, só a parte pública das campanhas (campanhas na API pública e o aviso de doação) tem testes automatizados, descritos na seção 4.23. Os lançamentos automáticos de saúde (criação, edição e exclusão a partir dos cards) passaram a ter testes automatizados na seção 4.30. Ainda só têm teste manual: a validação da chave Pix, a janela de doação, a confirmação e a recusa de avisos em Finanças, os gráficos e as jornadas concluídas.
 
 ## 7. Próximos passos
 
-**Concluído até a entrega:** divulgação de animais na página pública (4.10 a 4.14), lançamentos automáticos a partir da saúde (4.15), campanhas com chave Pix e doação (4.16, 4.17, 4.18 e 4.22), gráficos em Finanças (4.19), "arquivar" animais e campanhas (4.20), correção de XSS e de links (4.24 e 4.25), visual unificado (4.26), acesso à conta (4.27) e preparo dos dados e do `schema.sql` (4.28 e 4.29).
+**Concluído até a entrega:** divulgação de animais na página pública (4.10 a 4.14), lançamentos automáticos a partir da saúde (4.15 e 4.30), campanhas com chave Pix e doação (4.16, 4.17, 4.18 e 4.22), gráficos em Finanças (4.19), "arquivar" animais e campanhas (4.20), correção de XSS e de links (4.24 e 4.25), visual unificado (4.26), acesso à conta (4.27) e preparo dos dados e do `schema.sql` (4.28 e 4.29).
 
 **Melhorias futuras** (não fazem parte da entrega):
 1. Pedir confirmação antes de excluir um animal e trocar as exclusões por POST com proteção contra CSRF.
@@ -453,7 +471,7 @@ As funcionalidades das seções 4.15 a 4.22 foram testadas manualmente. Dessas, 
 4. Mostrar vacinas com data já passada como "atrasada" (hoje aparecem como "agendada").
 5. Levar a barra do topo e o tema às telas que ainda usam o visual antigo (campanha, cadastro e edição de animal, formulários de saúde).
 6. A busca da página pública ignorar acentos (hoje "sao paulo" não encontra "São Paulo").
-7. Editar e apagar lançamentos financeiros (hoje só o histórico é preservado, seção 4.9).
+7. Editar e apagar lançamentos financeiros pela tela de Finanças (os lançamentos automáticos já acompanham o card, seção 4.30; ficam de fora os manuais e os de campanha).
 8. Verificação de ONGs (CNPJ e aprovação manual), para evitar perfis falsos (seção 4.11).
 9. Testes automatizados do JavaScript, acessibilidade com leitor de tela e teclado (incluindo `aria-label` nos botões que só têm emoji) e medição de latência do banco.
 10. Banco separado para desenvolvimento e produção, e verificação do certificado SSL na conexão.

@@ -2,7 +2,7 @@
 
 Este documento registra como o sistema é testado, o que já foi verificado, os resultados e as medições. Deve ser atualizado a cada etapa nova.
 
-Última atualização: 13/11/2026.
+Última atualização: 14/11/2026.
 
 ## 1. Estratégia
 
@@ -11,7 +11,7 @@ Este documento registra como o sistema é testado, o que já foi verificado, os 
 | Funcional manual | uso das telas e das rotas, com duas contas (uma em janela normal e outra em janela anônima) | realizado a cada etapa |
 | Controle de acesso | rotas sem login, registros de outra conta, API sem login | realizado (manual e automatizado) |
 | Validação de entradas | valores, datas, filtros e textos inválidos | realizado (manual e automatizado) |
-| Automatizado (`pytest`) | testes em Python que chamam a API, as páginas, o cadastro, o login e a validação de links e conferem as respostas | 180 testes, todos passando |
+| Automatizado (`pytest`) | testes em Python que chamam a API, as páginas, o cadastro, o login e a validação de links e conferem as respostas | 200 testes, todos passando |
 | Banco de dados | conferência das migrações e da restauração de backup com consultas SQL | realizado |
 | Não funcional | responsividade em celular, acessibilidade (WCAG 2.2) e latência do banco | responsividade e contraste de cores (WCAG AA) conferidos nas telas revisadas (seções 2.4, 2.5, 2.11 e 2.12); leitor de tela, teclado e latência do banco: planejados |
 
@@ -193,6 +193,17 @@ Feitos em 13/11/2026, no MySQL Workbench, depois de um backup do banco inteiro (
 | Logo com imagem de terceiros em uma organização de exemplo | removida; a página mostra a patinha padrão |
 | Página pública depois da limpeza | três cartões: duas organizações de exemplo e "Protetores independentes" |
 
+### 2.14 Cards de saúde e finanças: exclusão e edição (14/11/2026)
+
+Um teste manual encontrou dois defeitos na ligação entre os cards de saúde (vacina, medicamento e consulta) e as finanças: (1) ao apagar um card que tinha valor, a despesa continuava em Finanças ("órfã"), e a tela de Finanças não permite apagar lançamentos; (2) a tela de edição desses cards não tinha o campo Valor, então o valor não aparecia nem podia ser alterado. Os dois foram corrigidos (`DESENVOLVIMENTO.md`, seção 4.30) e cobertos por testes automatizados (seção 3.3, `tests/test_saude_financas.py`). Como esse cruzamento não tinha teste automatizado, o defeito só apareceu no teste manual.
+
+| Teste | Resultado |
+|---|---|
+| Lançamentos órfãos que já estavam no banco (consulta SQL de conferência) | 4 encontrados, todos restos de cards apagados em testes manuais; apagados pelo id, dentro de uma transação (4 linhas afetadas, conferido antes do `COMMIT`); a mesma consulta depois voltou vazia |
+| Edição manual de um card com valor | o campo Valor aparece preenchido; mudar o valor atualiza a despesa sem duplicá-la; apagar o valor remove a despesa |
+| Testes automatizados novos, antes da correção | 4 falharam na exclusão e 14 na edição (o erro esperado); os outros passaram |
+| Testes automatizados novos, depois da correção | 20 passaram; suíte completa: 200 passaram |
+
 ## 3. Testes automatizados (pytest)
 
 ### 3.1 Como rodar
@@ -212,9 +223,9 @@ A configuração está em `pytest.ini`. Os testes ficam em `tests/`.
 - As **fixtures** (em `tests/conftest.py`) preparam e limpam o cenário: criam uma pessoa de teste no banco (e-mail iniciado em `pytest_`), um animal quando preciso, e fazem o login simulado. No fim de cada teste, apagam tudo o que foi criado (transações, animais e usuário). Nos testes do cadastro, que criam contas pela própria tela, a fixture `emails_de_teste` guarda os e-mails usados e apaga essas contas no fim. Nos testes de campanhas, a fixture `campanhas` apaga os avisos de doação e as campanhas criadas antes de a pessoa de teste ser removida, porque a chave estrangeira de `campanhas` é `RESTRICT`; nos testes de links (`test_urls.py`), a fixture `limpar_campanhas` faz o mesmo. Nos testes de acesso (`test_acesso.py`), a conta é criada pelo próprio cadastro e apagada pela fixture `emails_de_teste`, e o login é feito num navegador novo, sem sessão.
 - Como só existe um banco, os testes nunca limpam tabelas inteiras: removem só os registros que eles mesmos criaram. Os dados reais do grupo não são tocados.
 
-### 3.3 O que é testado (180 testes)
+### 3.3 O que é testado (200 testes)
 
-Os testes de finanças, da página do animal e da exclusão ficam em `tests/test_financas_api.py`, os do cadastro em `tests/test_cadastro.py`, os da edição do perfil em `tests/test_perfil.py`, os da API pública dos animais em `tests/test_publico.py`, os da divulgação pelo formulário do animal em `tests/test_divulgacao.py` os das campanhas e do aviso de doação em `tests/test_publico_campanhas.py`, os do ícone do site em `tests/test_favicon.py`, os da validação de links em `tests/test_urls.py`, os das páginas HTML (barra do topo e arquivos do tema) em `tests/test_paginas.py` e os do login, da senha mínima e das páginas de erro em `tests/test_acesso.py`.
+Os testes de finanças, da página do animal e da exclusão ficam em `tests/test_financas_api.py`, os do cadastro em `tests/test_cadastro.py`, os da edição do perfil em `tests/test_perfil.py`, os da API pública dos animais em `tests/test_publico.py`, os da divulgação pelo formulário do animal em `tests/test_divulgacao.py` os das campanhas e do aviso de doação em `tests/test_publico_campanhas.py`, os da ligação entre os cards de saúde e as finanças (exclusão e edição) em `tests/test_saude_financas.py`, os do ícone do site em `tests/test_favicon.py`, os da validação de links em `tests/test_urls.py`, os das páginas HTML (barra do topo e arquivos do tema) em `tests/test_paginas.py` e os do login, da senha mínima e das páginas de erro em `tests/test_acesso.py`.
 
 | Assunto | Teste | O que verifica |
 |---|---|---|
@@ -318,10 +329,19 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | Acesso | `test_erro_de_validacao_do_cadastro_usa_a_pagina_no_tema` | erro de validação usa a página do tema, com botão de voltar |
 | Acesso | `test_email_repetido_mostra_a_pagina_no_tema_com_opcao_de_entrar` | 409, mensagem "E-mail já cadastrado" e opção de entrar |
 | Acesso | `test_erro_do_perfil_usa_a_pagina_no_tema` | link perigoso no perfil dá 400 na página do tema, com link de volta para a edição |
+| Cards e finanças | `test_apagar_card_apaga_a_despesa_dele` (3 casos) | apagar vacina, medicamento ou consulta com valor apaga também a despesa; o resumo volta a 0,00 |
+| Cards e finanças | `test_apagar_card_nao_mexe_nos_outros_lancamentos` | apagar uma vacina deixa a despesa da consulta e o lançamento manual |
+| Cards e finanças | `test_apagar_card_sem_valor_continua_funcionando` | card sem valor é apagado normalmente (302) |
+| Cards e finanças | `test_apagar_card_de_outra_conta_da_404_e_preserva_a_despesa` | card de outra conta: 404, pelo animal alheio e pelo próprio, e a despesa continua |
+| Cards e finanças | `test_formulario_de_edicao_mostra_o_valor` (3 casos) | a tela de edição traz o campo Valor preenchido (`80,50`) |
+| Cards e finanças | `test_editar_o_valor_atualiza_a_despesa` (3 casos) | editar o valor muda a mesma despesa (sem duplicar), com a nova data |
+| Cards e finanças | `test_editar_sem_valor_apaga_a_despesa` (4 casos) | valor vazio ou zero na edição remove a despesa; o card continua |
+| Cards e finanças | `test_editar_card_sem_valor_dando_valor_cria_a_despesa` | dar valor a um card que não tinha cria a despesa |
+| Cards e finanças | `test_valor_invalido_na_edicao_e_recusado` (3 casos) | valor inválido dá 400 e nada é alterado |
 
 ### 3.4 Resultado
 
-Última execução completa (13/11/2026): **180 passaram em 876,43 s** (14 min 36 s).
+Última execução completa (14/11/2026): **200 passaram em 1160,08 s** (19 min 20 s).
 
 ## 4. Medições
 
@@ -340,13 +360,14 @@ Os testes de finanças, da página do animal e da exclusão ficam em `tests/test
 | 12/11/2026, depois de juntar as alterações do grupo (1 teste desatualizado por causa do `logoUrl`) | 90 | 511,84 s | 5,7 s |
 | 12/11/2026, com os testes de campanhas e do aviso de doação | 111 | 697,79 s | 6,3 s |
 | 13/11/2026, com o ícone do site e a validação de links | 154 | 776,13 s | 5,0 s |
-| 13/11/2026, com as páginas, o login e a senha mínima (versão final) | 180 | 876,43 s | 4,9 s |
+| 13/11/2026, com as páginas, o login e a senha mínima | 180 | 876,43 s | 4,9 s |
+| 14/11/2026, com os testes de exclusão dos cards de saúde | 186 | 1022,66 s | 5,5 s |
+| 14/11/2026, com os testes de edição dos cards de saúde (versão final) | 200 | 1160,08 s | 5,8 s |
 
 Os testes rodam contra o banco hospedado na nuvem (Aiven), e cada teste abre várias conexões (criar o usuário, lançar, consultar e limpar). O tempo é, portanto, dominado pela comunicação com o banco. Esses números são apenas um indício: não separam a latência de conexão da latência de consulta. A medição específica de latência, prevista no relatório, ainda será feita.
 
 ## 5. O que ainda não está coberto
 
-- Lançamentos automáticos a partir de vacinas, medicamentos e consultas com valor.
 - O JavaScript da tela de finanças e o da página pública (hoje verificados só manualmente; o da página pública também foi verificado por um script no navegador de teste, que não faz parte do repositório).
 - Filtros e gráfico na tela de finanças.
 - Testes automatizados das rotas de animais e saúde (o cadastro, o login, a edição de perfil e a validação de links já são cobertos; o restante só por testes manuais).
