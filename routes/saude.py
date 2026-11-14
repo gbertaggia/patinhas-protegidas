@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, abort,
 import pymysql
 from database.connection import conectar_banco
 from utils.auth import login_required, animal_do_usuario, registro_do_usuario
-from utils.financeiro import ler_valor, sincronizar_lancamento
+from utils.financeiro import ler_valor, remover_lancamento, sincronizar_lancamento
 
 # Blueprint da área de saúde: vacinas, medicamentos, consultas e histórico veterinário
 bp = Blueprint('saude', __name__)
@@ -84,17 +84,21 @@ def deletar_vacina(id_vacina, id_animal):
     if not registro_do_usuario('vacinas', id_vacina, id_animal):
         abort(404)
 
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
     try:
-        conexao = conectar_banco()
-        cursor = conexao.cursor()
+        # A despesa nasceu da vacina, então sai junto, na mesma transação.
+        remover_lancamento(cursor, session['id_usuario'], 'VACINA', id_vacina)
         cursor.execute("DELETE FROM vacinas WHERE id = %s", (id_vacina,))
         conexao.commit()
-        cursor.close()
-        conexao.close()
         return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
     except Exception:
+        conexao.rollback()
         current_app.logger.exception("Erro ao deletar vacina")
         return "<h1>Erro ao deletar vacina.</h1>"
+    finally:
+        cursor.close()
+        conexao.close()
 
 
 @bp.route('/editar_vacina/<int:id_vacina>/<int:id_animal>', methods=['GET', 'POST'])
@@ -223,22 +227,25 @@ def deletar_medicacao(id_medicamento, id_animal):
     if not registro_do_usuario('medicamentos', id_medicamento, id_animal):
         abort(404)
 
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
     try:
-        conexao = conectar_banco()
-        cursor = conexao.cursor()
+        # A despesa nasceu do medicamento, então sai junto, na mesma transação.
+        remover_lancamento(cursor, session['id_usuario'], 'MEDICAMENTO', id_medicamento)
 
         # Deleta exatamente o remédio clicado
         cursor.execute("DELETE FROM medicamentos WHERE id = %s", (id_medicamento,))
         conexao.commit()
 
-        cursor.close()
-        conexao.close()
-
         # Depois de deletar, atualiza a página do próprio animal
         return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
     except Exception:
+        conexao.rollback()
         current_app.logger.exception("Erro ao deletar medicamento")
         return "<h1>Erro ao deletar medicamento.</h1>"
+    finally:
+        cursor.close()
+        conexao.close()
 
 
 @bp.route('/editar_medicacao/<int:id_medicamento>')
@@ -374,21 +381,23 @@ def deletar_consulta(id_consulta, id_animal):
     if not registro_do_usuario('consultas', id_consulta, id_animal):
         abort(404)
 
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
     try:
-        conexao = conectar_banco()
-        cursor = conexao.cursor()
-
+        # A despesa nasceu da consulta, então sai junto, na mesma transação.
+        remover_lancamento(cursor, session['id_usuario'], 'CONSULTA', id_consulta)
         cursor.execute("DELETE FROM consultas WHERE id = %s", (id_consulta,))
         conexao.commit()
-
-        cursor.close()
-        conexao.close()
 
         # Depois de deletar, atualiza a página do próprio animal
         return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
     except Exception:
+        conexao.rollback()
         current_app.logger.exception("Erro ao deletar consulta")
         return "<h1>Erro ao deletar consulta.</h1>"
+    finally:
+        cursor.close()
+        conexao.close()
 
 
 @bp.route('/editar_consulta/<int:id_consulta>/<int:id_animal>', methods=['GET', 'POST'])
