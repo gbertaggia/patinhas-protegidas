@@ -121,16 +121,29 @@ def editar_vacina(id_vacina, id_animal):
         status_vacina = request.form.get('status_vacina')
         dose_vacina = request.form.get('dose')
 
+        valor, erro = ler_valor(request.form.get('valor'))
+        if erro:
+            cursor.close()
+            conexao.close()
+            return f"<h1>{erro}</h1><a href='/editar_vacina/{id_vacina}/{id_animal}'>Voltar</a>", 400
+
         try:
             sql = """
                 UPDATE vacinas
-                SET nome_vacina=%s, data_vacina=%s, status_vacina=%s, dose_vacina=%s
+                SET nome_vacina=%s, data_vacina=%s, status_vacina=%s, dose_vacina=%s, valor=%s
                 WHERE id=%s
             """
-            cursor.execute(sql, (nome_vacina, data_vacina, status_vacina, dose_vacina, id_vacina))
+            cursor.execute(sql, (nome_vacina, data_vacina, status_vacina, dose_vacina, valor, id_vacina))
+
+            # A despesa acompanha o card: muda com ele, nasce se ganhou valor, some se perdeu.
+            sincronizar_lancamento(
+                cursor, session['id_usuario'], id_animal, 'VACINA', id_vacina,
+                valor, data_vacina, f"Vacina {nome_vacina}"
+            )
             conexao.commit()
             return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
         except Exception:
+            conexao.rollback()
             current_app.logger.exception("Erro ao atualizar vacina")
             return "<h1>Erro ao atualizar vacina.</h1>"
         finally:
@@ -289,30 +302,40 @@ def salvar_edicao_medicacao(id_medicamento, id_animal):
     nova_frequencia = request.form.get('frequencia')
     novos_horarios = request.form.get('horarios_texto')
 
-    try:
-        conexao = conectar_banco()
-        cursor = conexao.cursor()
+    valor, erro = ler_valor(request.form.get('valor'))
+    if erro:
+        return f"<h1>{erro}</h1><a href='/editar_medicacao/{id_medicamento}'>Voltar</a>", 400
 
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    try:
         comando_sql = """
             UPDATE medicamentos
             SET nome_medicamento = %s, data_inicio_medicamento = %s,
                 duracao_medicamento = %s, dose_medicamento = %s,
-                frequencia = %s, horarios = %s
+                frequencia = %s, horarios = %s, valor = %s
             WHERE id = %s
         """
         valores = (novo_nome, nova_data, nova_duracao, nova_dose,
-                   nova_frequencia, novos_horarios, id_medicamento)
+                   nova_frequencia, novos_horarios, valor, id_medicamento)
 
         cursor.execute(comando_sql, valores)
-        conexao.commit()
 
-        cursor.close()
-        conexao.close()
+        # A despesa acompanha o card: muda com ele, nasce se ganhou valor, some se perdeu.
+        sincronizar_lancamento(
+            cursor, session['id_usuario'], id_animal, 'MEDICAMENTO', id_medicamento,
+            valor, nova_data, f"Medicamento {novo_nome}"
+        )
+        conexao.commit()
 
         return redirect(f'/pagina_animal/{id_animal}')
     except Exception:
+        conexao.rollback()
         current_app.logger.exception("Erro ao atualizar medicamento")
         return "<h1>Erro ao atualizar a medicação.</h1>"
+    finally:
+        cursor.close()
+        conexao.close()
 
 
 # --------------------------------------------------------------------------------#
@@ -417,18 +440,32 @@ def editar_consulta(id_consulta, id_animal):
         veterinario = request.form.get('veterinario')
         motivo = request.form.get('motivo')
 
+        valor, erro = ler_valor(request.form.get('valor'))
+        if erro:
+            cursor.close()
+            conexao.close()
+            return f"<h1>{erro}</h1><a href='/editar_consulta/{id_consulta}/{id_animal}'>Voltar</a>", 400
+
         try:
             sql = """
                 UPDATE consultas
-                SET data_consulta=%s, hora_consulta=%s, clinica=%s, veterinario=%s, motivo=%s
+                SET data_consulta=%s, hora_consulta=%s, clinica=%s, veterinario=%s, motivo=%s, valor=%s
                 WHERE id=%s
             """
-            cursor.execute(sql, (data_consulta, hora_consulta, clinica, veterinario, motivo, id_consulta))
+            cursor.execute(sql, (data_consulta, hora_consulta, clinica, veterinario, motivo, valor, id_consulta))
+
+            # A despesa acompanha o card: muda com ele, nasce se ganhou valor, some se perdeu.
+            descricao = f"Consulta ({motivo})" + (f" - {clinica}" if clinica else "")
+            sincronizar_lancamento(
+                cursor, session['id_usuario'], id_animal, 'CONSULTA', id_consulta,
+                valor, data_consulta, descricao
+            )
             conexao.commit()
 
             # Salva e volta para a página do animal
             return redirect(url_for('animais.pagina_animal', id_animal=id_animal))
         except Exception:
+            conexao.rollback()
             current_app.logger.exception("Erro ao atualizar consulta")
             return "<h1>Erro ao atualizar consulta.</h1>"
         finally:

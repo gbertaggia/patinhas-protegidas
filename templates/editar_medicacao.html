@@ -59,6 +59,14 @@
                     <input type="text" class="form-control" name="horarios_texto" value="{{ remedio.horarios or '' }}" placeholder="Ex: 08:00,20:00">
                 </div>
 
+                <div class="mb-3">
+                    <label for="valor" class="form-label">Valor (R$):</label>
+                    <input type="text" id="valor" name="valor" class="form-control"
+                           inputmode="decimal" autocomplete="off" placeholder="0,00"
+                           value="{% if remedio.valor %}{{ ('%.2f' % remedio.valor)|replace('.', ',') }}{% endif %}">
+                    <div class="form-text">Opcional. O valor entra nas despesas do animal. Se ficar vazio ou zero, a despesa é removida.</div>
+                </div>
+
                 <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm fw-bold">Salvar Alterações</button>
                 <a href="/pagina_animal/{{ remedio.animal_id }}" class="btn btn-outline-secondary w-100 mt-2 btn-sm fw-bold">Cancelar</a>
             </form>
